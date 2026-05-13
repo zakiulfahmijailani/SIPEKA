@@ -31,28 +31,23 @@ export async function getDashboardStats(role: string, userId: string) {
       const totalMk = totalMkRes[0].count
       const pendingRps = pendingRpsRes[0].count
 
-      const recentRps: Awaited<ReturnType<typeof db.query.rps.findMany>> = await db.query.rps.findMany({
+      const recentRps = await db.query.rps.findMany({
         where: eq(rps.status, "SUBMITTED"),
-        limit: 5,
+        limit: 6,
         with: {
           dosirMk: {
-            with: {
-              mk: true,
-              dosen: true
-            }
+            with: { mk: true, dosen: true }
           }
         }
       }).catch(() => [])
 
-      const recentActivity: Awaited<ReturnType<typeof db.query.auditLog.findMany>> = await db.query.auditLog.findMany({
-        limit: 5,
+      const recentActivity = await db.query.auditLog.findMany({
+        limit: 6,
         orderBy: [desc(auditLog.created_at)],
-        with: {
-          changedBy: true
-        }
+        with: { changedBy: true }
       }).catch(() => [])
 
-      // Calculate Grade Distribution (A-E)
+      // Grade distribution
       const gradeDistribution = await db.select({
         grade: sql<string>`CASE 
           WHEN nilai >= 80 THEN 'A'
@@ -70,28 +65,30 @@ export async function getDashboardStats(role: string, userId: string) {
       .catch(() => [])
 
       const chartData = cplStats.data?.chartData || []
-      const avgAttainment = chartData.length > 0 
-        ? (chartData.reduce((a: any, b: any) => a + b.attainment, 0) / chartData.length).toFixed(1)
-        : "0.0"
+      // Return avgAttainment as number (not string) for AnimatedNumber
+      const avgAttainment = chartData.length > 0
+        ? parseFloat(
+            (chartData.reduce((a: any, b: any) => a + b.attainment, 0) / chartData.length).toFixed(1)
+          )
+        : 0
 
       return {
         success: true,
         data: {
           kpi: [
-            { label: "Total Mahasiswa", value: totalMahasiswa, color: "blue" },
-            { label: "MK Berjalan", value: totalMk, color: "purple" },
-            { label: "RPS Pending", value: pendingRps, color: "red", badge: pendingRps > 0 },
-            { label: "Avg CPL Attainment", value: `${avgAttainment}%`, color: "green" }
+            { label: "Total Mahasiswa",   value: totalMahasiswa, color: "blue" },
+            { label: "MK Berjalan",        value: totalMk,        color: "purple" },
+            { label: "RPS Pending",        value: pendingRps,     color: "red",   badge: pendingRps > 0 },
+            { label: "Avg CPL Attainment", value: avgAttainment,  color: "green" },
           ],
-          charts: {
-            grades: gradeDistribution,
-            cplRadar: chartData
-          },
+          charts: { grades: gradeDistribution, cplRadar: chartData },
           recentRps,
-          recentActivity
+          recentActivity,
         }
       }
-    } else if (role === "DOSEN") {
+    }
+
+    if (role === "DOSEN") {
       const myDosirs = await db.query.dosirMk.findMany({
         where: and(
           eq(dosirMk.dosen_id, userId),
@@ -100,11 +97,7 @@ export async function getDashboardStats(role: string, userId: string) {
         with: {
           mk: true,
           rps: true,
-          enrollments: {
-            with: {
-              nilais: true
-            }
-          }
+          enrollments: { with: { nilais: true } }
         }
       })
 
@@ -112,23 +105,17 @@ export async function getDashboardStats(role: string, userId: string) {
         const totalStudents = d.enrollments.length
         const studentsWithGrades = d.enrollments.filter(e => e.nilais.length > 0).length
         const progress = totalStudents > 0 ? (studentsWithGrades / totalStudents) * 100 : 0
-        
         return {
           id: d.id,
           mk: d.mk.nama_id,
           kelas: d.kelas,
           students: totalStudents,
           statusRps: d.rps?.[0]?.status || "DRAFT",
-          progress: progress.toFixed(0)
+          progress: parseFloat(progress.toFixed(1)),
         }
       })
 
-      return {
-        success: true,
-        data: {
-          myDosirs: processedDosirs
-        }
-      }
+      return { success: true, data: { myDosirs: processedDosirs } }
     }
 
     return { success: false, error: "Role tidak dikenali" }
