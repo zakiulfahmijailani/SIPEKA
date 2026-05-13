@@ -3,28 +3,31 @@
 import { useState, useEffect } from "react"
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
-  PieChart, Pie
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Check, AlertTriangle, Lightbulb } from "lucide-react"
+import { Check, Lightbulb } from "lucide-react"
 import { getIs2020Coverage } from "./actions"
 import { toast } from "sonner"
+import { CplAttainmentSkeleton } from "@/components/skeletons"
+import { IS2020NoCurriculumEmpty, IS2020NoMappingEmpty } from "@/components/empty-states"
 
-const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
 
 export default function Is2020CoverageClient() {
   const [data, setData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true)
+      setHasError(false)
       const res = await getIs2020Coverage()
       if (res.success) {
         setData(res.data)
       } else {
+        setHasError(true)
         toast.error(res.error)
       }
       setIsLoading(false)
@@ -32,8 +35,12 @@ export default function Is2020CoverageClient() {
     fetchData()
   }, [])
 
-  if (isLoading) return <div className="p-8 text-center">Menganalisis cakupan kurikulum...</div>
-  if (!data) return <div className="p-8 text-center text-red-500">Gagal memuat data.</div>
+  if (isLoading) return <CplAttainmentSkeleton />
+
+  if (hasError || !data) return <IS2020NoCurriculumEmpty />
+
+  // No mapping yet (matrix is empty)
+  if (!data.matrix || data.matrix.length === 0) return <IS2020NoMappingEmpty />
 
   const gaps = data.realmSummary.filter((r: any) => r.percentage < 100)
 
@@ -72,7 +79,7 @@ export default function Is2020CoverageClient() {
         <Card className="border-none shadow-md bg-amber-50">
           <CardHeader>
             <CardTitle className="text-amber-800 flex items-center gap-2">
-               <Lightbulb className="h-5 w-5" /> Curriculum Gaps
+              <Lightbulb className="h-5 w-5" /> Curriculum Gaps
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -90,10 +97,9 @@ export default function Is2020CoverageClient() {
             )) : (
               <p className="text-sm text-green-700 italic">Kurikulum sudah meng-cover seluruh Realm IS2020!</p>
             )}
-            
             <div className="pt-4 border-t border-amber-200">
-               <p className="text-[10px] text-amber-700 font-medium">REKOMENDASI:</p>
-               <p className="text-xs text-amber-800">Tingkatkan cakupan pada Realm dengan persentase rendah melalui penajaman materi RPS atau penambahan MK pilihan baru.</p>
+              <p className="text-[10px] text-amber-700 font-medium">REKOMENDASI:</p>
+              <p className="text-xs text-amber-800">Tingkatkan cakupan pada Realm dengan persentase rendah melalui penajaman materi RPS atau penambahan MK pilihan baru.</p>
             </div>
           </CardContent>
         </Card>
