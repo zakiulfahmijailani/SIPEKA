@@ -1,36 +1,29 @@
-import { pgTable, text, timestamp, serial, real } from "drizzle-orm/pg-core"
-import { cpl } from "./kurikulum"
+import { pgTable, text, timestamp, numeric, pgEnum, unique } from "drizzle-orm/pg-core"
+import { createId } from "@paralleldrive/cuid2"
 import { cpmk } from "./rps"
+import { cpl } from "./kurikulum"
+import { mahasiswa, enrollment } from "./nilai"
 import { dosirMk } from "./dosir"
-import { mahasiswa } from "./nilai"
 
-// CPMK Attainment (per student per CPMK)
+export const attainmentStatusEnum = pgEnum("attainment_status", [
+  "TERCAPAI", "BELUM_TERCAPAI", "DALAM_PROSES"
+])
+
 export const cpmkAttainment = pgTable("cpmk_attainment", {
-  id: serial("id").primaryKey(),
-  mahasiswa_id: serial("mahasiswa_id")
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: "cascade" }),
-  dosir_mk_id: serial("dosir_mk_id")
-    .notNull()
-    .references(() => dosirMk.id, { onDelete: "cascade" }),
-  cpmk_id: serial("cpmk_id")
-    .notNull()
-    .references(() => cpmk.id, { onDelete: "cascade" }),
-  skor: real("skor").notNull().default(0),
-  tercapai: text("tercapai").notNull().default("BELUM"), // TERCAPAI, BELUM
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-})
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  enrollment_id: text("enrollment_id").notNull().references(() => enrollment.id, { onDelete: "cascade" }),
+  cpmk_id: text("cpmk_id").notNull().references(() => cpmk.id),
+  nilai_akhir: numeric("nilai_akhir", { precision: 5, scale: 2 }),
+  status: attainmentStatusEnum("status"),
+  calculated_at: timestamp("calculated_at").defaultNow(),
+}, (t) => [unique().on(t.enrollment_id, t.cpmk_id)])
 
-// CPL Attainment (aggregated per student per CPL)
 export const cplAttainment = pgTable("cpl_attainment", {
-  id: serial("id").primaryKey(),
-  mahasiswa_id: serial("mahasiswa_id")
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: "cascade" }),
-  cpl_id: serial("cpl_id")
-    .notNull()
-    .references(() => cpl.id, { onDelete: "cascade" }),
-  skor_rata_rata: real("skor_rata_rata").notNull().default(0),
-  tercapai: text("tercapai").notNull().default("BELUM"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-})
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  mahasiswa_id: text("mahasiswa_id").notNull().references(() => mahasiswa.id, { onDelete: "cascade" }),
+  cpl_id: text("cpl_id").notNull().references(() => cpl.id),
+  dosir_mk_id: text("dosir_mk_id").notNull().references(() => dosirMk.id),
+  nilai_attainment: numeric("nilai_attainment", { precision: 5, scale: 2 }),
+  status: attainmentStatusEnum("status"),
+  calculated_at: timestamp("calculated_at").defaultNow(),
+}, (t) => [unique().on(t.mahasiswa_id, t.cpl_id, t.dosir_mk_id)])

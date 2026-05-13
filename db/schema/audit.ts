@@ -1,16 +1,18 @@
-import { pgTable, text, timestamp, serial, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, json, pgEnum } from "drizzle-orm/pg-core"
+import { createId } from "@paralleldrive/cuid2"
 import { users } from "./auth"
 
-// Audit Log
+export const auditActionEnum = pgEnum("audit_action", [
+  "CREATE", "UPDATE", "DELETE", "STATUS_CHANGE"
+])
+
 export const auditLog = pgTable("audit_log", {
-  id: serial("id").primaryKey(),
-  user_id: text("user_id")
-    .references(() => users.id, { onDelete: "set null" }),
-  action: text("action").notNull(), // CREATE, UPDATE, DELETE
-  entity_type: text("entity_type").notNull(), // table name
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  entity_type: text("entity_type").notNull(),
   entity_id: text("entity_id").notNull(),
-  old_values: jsonb("old_values"),
-  new_values: jsonb("new_values"),
-  ip_address: text("ip_address"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+  action: auditActionEnum("action").notNull(),
+  changed_by: text("changed_by").references(() => users.id),
+  old_values: json("old_values"),
+  new_values: json("new_values"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 })

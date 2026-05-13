@@ -1,29 +1,24 @@
-import { pgTable, text, timestamp, serial, boolean } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, unique } from "drizzle-orm/pg-core"
+import { createId } from "@paralleldrive/cuid2"
 import { mataKuliah } from "./kurikulum"
 import { users } from "./auth"
 
-// Tahun Akademik (Academic Year)
 export const tahunAkademik = pgTable("tahun_akademik", {
-  id: serial("id").primaryKey(),
-  kode: text("kode").notNull().unique(), // e.g., "2024/2025-1"
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  kode: text("kode").notNull().unique(),
   nama: text("nama").notNull(),
-  is_active: boolean("is_active").notNull().default(false),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+  semester: integer("semester").notNull(),
+  tahun_mulai: integer("tahun_mulai").notNull(),
+  is_active: text("is_active").notNull().default("false"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 })
 
-// Dosir MK (Course Dossier per academic year)
 export const dosirMk = pgTable("dosir_mk", {
-  id: serial("id").primaryKey(),
-  mk_id: serial("mk_id")
-    .notNull()
-    .references(() => mataKuliah.id, { onDelete: "cascade" }),
-  tahun_akademik_id: serial("tahun_akademik_id")
-    .notNull()
-    .references(() => tahunAkademik.id, { onDelete: "cascade" }),
-  dosen_id: text("dosen_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  mk_id: text("mk_id").notNull().references(() => mataKuliah.id),
+  dosen_id: text("dosen_id").notNull().references(() => users.id),
+  tahun_akademik_id: text("tahun_akademik_id").notNull().references(() => tahunAkademik.id),
   kelas: text("kelas").notNull().default("A"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-  updated_at: timestamp("updated_at", { mode: "date" }).defaultNow(),
-})
+  is_active: text("is_active").notNull().default("true"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.mk_id, t.dosen_id, t.tahun_akademik_id, t.kelas)])

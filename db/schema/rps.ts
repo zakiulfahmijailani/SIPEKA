@@ -1,81 +1,102 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  serial,
-  integer,
-  real,
-} from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum, unique } from "drizzle-orm/pg-core"
+import { createId } from "@paralleldrive/cuid2"
 import { dosirMk } from "./dosir"
+import { users } from "./auth"
 import { cpl } from "./kurikulum"
 
-// RPS (Rencana Pembelajaran Semester / Semester Learning Plan)
+export const rpsStatusEnum = pgEnum("rps_status", [
+  "DRAFT", "SUBMITTED", "APPROVED", "REVISION_REQUIRED", "ARCHIVED"
+])
+export const bloomLevelEnum = pgEnum("bloom_level", [
+  "C1", "C2", "C3", "C4", "C5", "C6"
+])
+
 export const rps = pgTable("rps", {
-  id: serial("id").primaryKey(),
-  dosir_mk_id: serial("dosir_mk_id")
-    .notNull()
-    .references(() => dosirMk.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("DRAFT"), // DRAFT, SUBMITTED, APPROVED, REVISION_REQUIRED, ARCHIVED
-  catatan_revisi: text("catatan_revisi"),
-  approved_by: text("approved_by"),
-  approved_at: timestamp("approved_at", { mode: "date" }),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-  updated_at: timestamp("updated_at", { mode: "date" }).defaultNow(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  dosir_mk_id: text("dosir_mk_id").notNull().references(() => dosirMk.id),
+  version: integer("version").notNull().default(1),
+  status: rpsStatusEnum("status").notNull().default("DRAFT"),
+  catatan_reviewer: text("catatan_reviewer"),
+  submitted_at: timestamp("submitted_at"),
+  approved_at: timestamp("approved_at"),
+  approved_by: text("approved_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.dosir_mk_id, t.version)])
+
+export const rpsStatusLog = pgTable("rps_status_log", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
+  status_from: rpsStatusEnum("status_from"),
+  status_to: rpsStatusEnum("status_to").notNull(),
+  changed_by: text("changed_by").notNull().references(() => users.id),
+  catatan: text("catatan"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 })
 
-// CPMK (Capaian Pembelajaran Mata Kuliah / Course Learning Outcomes)
 export const cpmk = pgTable("cpmk", {
-  id: serial("id").primaryKey(),
-  rps_id: serial("rps_id")
-    .notNull()
-    .references(() => rps.id, { onDelete: "cascade" }),
-  cpl_id: serial("cpl_id")
-    .notNull()
-    .references(() => cpl.id),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
   kode: text("kode").notNull(),
   deskripsi: text("deskripsi").notNull(),
-  bobot: real("bobot").notNull().default(1),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-})
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.rps_id, t.kode)])
 
-// Sub-CPMK
+export const cpmkCpl = pgTable("cpmk_cpl", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  cpmk_id: text("cpmk_id").notNull().references(() => cpmk.id, { onDelete: "cascade" }),
+  cpl_id: text("cpl_id").notNull().references(() => cpl.id),
+}, (t) => [unique().on(t.cpmk_id, t.cpl_id)])
+
 export const subCpmk = pgTable("sub_cpmk", {
-  id: serial("id").primaryKey(),
-  cpmk_id: serial("cpmk_id")
-    .notNull()
-    .references(() => cpmk.id, { onDelete: "cascade" }),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  cpmk_id: text("cpmk_id").notNull().references(() => cpmk.id, { onDelete: "cascade" }),
   kode: text("kode").notNull(),
   deskripsi: text("deskripsi").notNull(),
-  bloom_level: text("bloom_level").notNull(), // C1-C6
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-})
+  level_bloom: bloomLevelEnum("level_bloom").notNull(),
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.cpmk_id, t.kode)])
 
-// Pertemuan (Meeting/Session Plan)
-export const pertemuan = pgTable("pertemuan", {
-  id: serial("id").primaryKey(),
-  rps_id: serial("rps_id")
-    .notNull()
-    .references(() => rps.id, { onDelete: "cascade" }),
+export const rpsPertemuan = pgTable("rps_pertemuan", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
   minggu_ke: integer("minggu_ke").notNull(),
-  topik: text("topik").notNull(),
-  sub_cpmk_id: serial("sub_cpmk_id")
-    .references(() => subCpmk.id),
-  metode_pembelajaran: text("metode_pembelajaran"),
-  metode_asesmen: text("metode_asesmen"),
+  materi: text("materi").notNull(),
+  metode: text("metode"),
+  media: text("media"),
   estimasi_waktu: text("estimasi_waktu"),
-  referensi: text("referensi"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.rps_id, t.minggu_ke)])
+
+export const pertemuanSubCpmk = pgTable("pertemuan_sub_cpmk", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  pertemuan_id: text("pertemuan_id").notNull().references(() => rpsPertemuan.id, { onDelete: "cascade" }),
+  sub_cpmk_id: text("sub_cpmk_id").notNull().references(() => subCpmk.id, { onDelete: "cascade" }),
+}, (t) => [unique().on(t.pertemuan_id, t.sub_cpmk_id)])
+
+export const komponenPenilaian = pgTable("komponen_penilaian", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
+  nama: text("nama").notNull(),
+  tipe: text("tipe").notNull(),
+  bobot: integer("bobot").notNull(),
+  deskripsi: text("deskripsi"),
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 })
 
-// Komponen Penilaian (Assessment Components)
-export const komponenPenilaian = pgTable("komponen_penilaian", {
-  id: serial("id").primaryKey(),
-  rps_id: serial("rps_id")
-    .notNull()
-    .references(() => rps.id, { onDelete: "cascade" }),
-  nama: text("nama").notNull(),
-  bobot: real("bobot").notNull(),
-  cpmk_id: serial("cpmk_id")
-    .references(() => cpmk.id),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+export const komponenCpmk = pgTable("komponen_cpmk", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  komponen_id: text("komponen_id").notNull().references(() => komponenPenilaian.id, { onDelete: "cascade" }),
+  cpmk_id: text("cpmk_id").notNull().references(() => cpmk.id, { onDelete: "cascade" }),
+}, (t) => [unique().on(t.komponen_id, t.cpmk_id)])
+
+export const rpsReferensi = pgTable("rps_referensi", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
+  jenis: text("jenis").notNull(),
+  teks: text("teks").notNull(),
+  urutan: integer("urutan").notNull(),
 })

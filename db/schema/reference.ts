@@ -1,32 +1,34 @@
-import { pgTable, text, timestamp, serial } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core"
+import { createId } from "@paralleldrive/cuid2"
 
-// IS2020 Realm (Competency Areas)
+export const is2020StatusEnum = pgEnum("is2020_status", ["REQUIRED", "ELECTIVE"])
+
 export const is2020Realm = pgTable("is2020_realm", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   kode: text("kode").notNull().unique(),
   nama: text("nama").notNull(),
   deskripsi: text("deskripsi"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 })
 
-// IS2020 Competency Area
 export const is2020Area = pgTable("is2020_area", {
-  id: serial("id").primaryKey(),
-  realm_id: serial("realm_id")
-    .notNull()
-    .references(() => is2020Realm.id, { onDelete: "cascade" }),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  realm_id: text("realm_id").notNull().references(() => is2020Realm.id),
   kode: text("kode").notNull().unique(),
   nama: text("nama").notNull(),
   deskripsi: text("deskripsi"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+  status: is2020StatusEnum("status").notNull().default("REQUIRED"),
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
 })
 
-// Profil Lulusan (Graduate Profile)
 export const profilLulusan = pgTable("profil_lulusan", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   kode: text("kode").notNull().unique(),
-  profil: text("profil").notNull(),
+  nama: text("nama").notNull(),
   deskripsi: text("deskripsi"),
-  created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
-  updated_at: timestamp("updated_at", { mode: "date" }).defaultNow(),
+  is_active: text("is_active").notNull().default("true"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
 })
