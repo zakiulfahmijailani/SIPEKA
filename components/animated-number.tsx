@@ -1,40 +1,57 @@
 "use client"
 
-import { useCountUp } from "@/hooks/use-count-up"
-import { cn } from "@/lib/utils"
+import { useEffect, useRef, useState } from "react"
 
 interface AnimatedNumberProps {
   value: number
+  decimals?: number
   suffix?: string
   prefix?: string
-  decimals?: number
   duration?: number
-  className?: string
-  enabled?: boolean
 }
 
-/**
- * AnimatedNumber — komponen angka animasi count-up.
- * Gunakan di KPI tiles, summary stats, dsb.
- *
- * @example
- * <AnimatedNumber value={142} className="text-3xl font-bold" />
- * <AnimatedNumber value={87.5} decimals={1} suffix="%" />
- */
 export function AnimatedNumber({
   value,
+  decimals = 0,
   suffix = "",
   prefix = "",
-  decimals = 0,
-  duration = 900,
-  className,
-  enabled = true,
+  duration = 600,
 }: AnimatedNumberProps) {
-  const display = useCountUp({ end: value, decimals, duration, enabled })
+  const [display, setDisplay] = useState(value)
+  const prevRef = useRef(value)
+  const frameRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    const start = prevRef.current
+    const end = value
+    prevRef.current = value
+
+    if (start === end) return
+
+    const startTime = performance.now()
+
+    const tick = (now: number) => {
+      const elapsed = Math.min((now - startTime) / duration, 1)
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - elapsed, 3)
+      setDisplay(start + (end - start) * eased)
+      if (elapsed < 1) {
+        frameRef.current = requestAnimationFrame(tick)
+      } else {
+        setDisplay(end)
+      }
+    }
+
+    frameRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (frameRef.current !== undefined) cancelAnimationFrame(frameRef.current)
+    }
+  }, [value, duration])
 
   return (
-    <span className={cn("tabular-nums", className)}>
-      {prefix}{display}{suffix}
+    <span className="tabular-nums">
+      {prefix}{display.toFixed(decimals)}{suffix}
     </span>
   )
 }
