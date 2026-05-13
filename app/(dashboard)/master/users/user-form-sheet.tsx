@@ -32,7 +32,7 @@ const userSchema = z.object({
   nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
   nidn: z.string().optional(),
   role: z.enum(["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"]),
-  password: z.string().min(8, "Password minimal 8 karakter").optional(),
+  password: z.string().min(8, "Kata sandi minimal 8 karakter").optional(),
   is_active: z.boolean().default(true),
 })
 
@@ -95,7 +95,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
     }}>
       <SheetContent className="sm:max-w-[500px]">
         <SheetHeader className="mb-6">
-          <SheetTitle>{initialData ? "Edit User" : "Tambah User"}</SheetTitle>
+          <SheetTitle>{initialData ? "Ubah Data User" : "Tambah User"}</SheetTitle>
           <SheetDescription>
             Kelola informasi profil dan hak akses pengguna.
           </SheetDescription>
@@ -141,7 +141,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
 
           {!initialData && (
             <div className="space-y-2">
-              <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+              <Label htmlFor="password">Kata Sandi <span className="text-red-500">*</span></Label>
               <Input id="password" type="password" placeholder="Minimal 8 karakter" {...register("password")} />
               {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
             </div>
