@@ -1,32 +1,36 @@
-# AG Agents Spec Pack — Sistem Manajemen Kurikulum OBE
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Isi Paket Ini
+## Getting Started
 
-| File | Deskripsi |
-|------|-----------|
-| `CLAUDE.md` | **Baca ini PERTAMA.** Panduan agent behavior, build order, coding standards, seed data. |
-| `prd-kurikulum-si-is2020.md` | Product Requirements Document — fitur lengkap, seed data CPL/MK, scope v1. |
-| `domain-model-kurikulum-si.md` | Database schema (TypeScript interfaces) + business logic kalkulasi CPL attainment. |
-| `agents-spec-kurikulum-si.md` | Task breakdown per sub-agent, routing, API endpoint reference, UX rules. |
-| `claude-prompts-kurikulum-si.md` | Prompt templates untuk 5 fitur AI assist (CPMK generator, IS2020 mapper, dsb.) |
+First, run the development server:
 
-## Konteks Proyek
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-Sistem ini untuk **Program Studi S1 Sistem Informasi** yang membangun kurikulum OBE
-berbasis standar **ACM/AIS IS2020**. Data awal (CPL dan peta kurikulum) tersedia di file
-`Matriks_CPL_20260311.xlsx` yang harus digunakan sebagai seed data.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Referensi Standar
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-- IS2020 full document: `is2020.pdf` (Appendix 2 & 3 untuk competency detail)
-- Regulasi lokal: SN-DIKTI / Permendikbud 53/2023, KKNI Level 6
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Prioritas Build
+## Learn More
 
-**Fungsional > Estetika.** Sistem harus bisa digunakan untuk rapat kurikulum nyata.
-Tampilan cukup clean dan tidak membingungkan, tidak perlu fancy.
+To learn more about Next.js, take a look at the following resources:
 
-## Stack
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Next.js + TypeScript + Supabase (PostgreSQL + Auth) + Vercel
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
