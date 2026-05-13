@@ -47,7 +47,7 @@ export function EnrollmentClientPage({ dosirs }: { dosirs: any[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Enrollment Mahasiswa</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Pendaftaran Kelas Mahasiswa</h1>
         <p className="text-muted-foreground">Import data KRS mahasiswa per kelas dari file CSV</p>
       </div>
 
