@@ -2,6 +2,9 @@
 // Run with: npm run db:seed
 // Requires DATABASE_URL in .env.local
 
+import { config } from "dotenv"
+config({ path: ".env.local" })
+
 import { db } from "./index"
 import { users } from "./schema"
 import { eq } from "drizzle-orm"
