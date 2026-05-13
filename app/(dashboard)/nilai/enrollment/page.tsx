@@ -28,35 +28,31 @@ export default async function EnrollmentPage() {
   }
 
   // Fetch Dosirs for active TA with enrollments
-  let allDosirs: Awaited<ReturnType<typeof db.query.dosirMk.findMany>> = []
-  try {
-    allDosirs = await db.query.dosirMk.findMany({
-      where: eq(dosirMk.tahun_akademik_id, activeTa.id),
-      with: {
-        mk: true,
-        dosen: true,
-        tahunAkademik: true,
-        enrollments: {
-          with: {
-            mahasiswa: true
-          }
+  const allDosirs = await db.query.dosirMk.findMany({
+    where: eq(dosirMk.tahun_akademik_id, activeTa.id),
+    with: {
+      mk: true,
+      dosen: true,
+      tahunAkademik: true,
+      enrollments: {
+        with: {
+          mahasiswa: true
         }
       }
-    })
-  } catch (e) {
+    }
+  }).catch((e) => {
     console.error("Failed to fetch dosirs:", e)
-  }
+    return []
+  })
 
   // Fetch all active students for search
-  let allStudents: Awaited<ReturnType<typeof db.query.mahasiswa.findMany>> = []
-  try {
-    allStudents = await db.query.mahasiswa.findMany({
-      where: eq(mahasiswa.is_active, true),
-      orderBy: [desc(mahasiswa.nim)]
-    })
-  } catch (e) {
+  const allStudents = await db.query.mahasiswa.findMany({
+    where: eq(mahasiswa.is_active, true),
+    orderBy: [desc(mahasiswa.nim)]
+  }).catch((e) => {
     console.error("Failed to fetch students:", e)
-  }
+    return []
+  })
 
   return (
     <EnrollmentClientPage 

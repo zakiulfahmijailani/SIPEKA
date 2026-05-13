@@ -28,43 +28,40 @@ export default async function InputNilaiPage() {
     ? and(eq(dosirMk.tahun_akademik_id, activeTa.id), eq(dosirMk.dosen_id, session.user.id))
     : eq(dosirMk.tahun_akademik_id, activeTa.id)
 
-  let myDosirs: Awaited<ReturnType<typeof db.query.dosirMk.findMany>> = []
-  try {
-    myDosirs = await db.query.dosirMk.findMany({
-      where: whereCondition,
-      with: {
-        mk: true,
-        dosen: true,
-        tahunAkademik: true,
-        rps: {
-          with: {
-            komponens: true
-          }
-        },
-        enrollments: {
-          with: {
-            mahasiswa: true
-          }
+  const myDosirs = await db.query.dosirMk.findMany({
+    where: whereCondition,
+    with: {
+      mk: true,
+      dosen: true,
+      tahunAkademik: true,
+      rps: {
+        with: {
+          komponens: true
+        }
+      },
+      enrollments: {
+        with: {
+          mahasiswa: true
         }
       }
-    })
-  } catch (e) {
+    }
+  }).catch((e) => {
     console.error("Failed to fetch dosirs:", e)
-  }
+    return []
+  })
 
   // Fetch all existing grades for these enrollments to pre-populate
   const enrollmentIds = myDosirs.flatMap(d => d.enrollments.map(e => e.id))
   
   let existingGrades: Awaited<ReturnType<typeof db.query.nilai.findMany>> = []
   if (enrollmentIds.length > 0) {
-    try {
-      const { inArray } = require("drizzle-orm")
-      existingGrades = await db.query.nilai.findMany({
-        where: inArray(nilai.enrollment_id, enrollmentIds)
-      })
-    } catch (e) {
+    const { inArray } = require("drizzle-orm")
+    existingGrades = await db.query.nilai.findMany({
+      where: inArray(nilai.enrollment_id, enrollmentIds)
+    }).catch((e) => {
       console.error("Failed to fetch existing grades:", e)
-    }
+      return []
+    })
   }
 
   return (

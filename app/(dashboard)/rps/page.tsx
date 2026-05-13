@@ -32,23 +32,21 @@ export default async function RpsPage(props: {
   // Handle RPS status filtering via a subquery or join if needed
   // For now, let's fetch all and filter in memory if simple, or use where sql
   
-  let allDosirs: Awaited<ReturnType<typeof db.query.dosirMk.findMany>> = []
-  try {
-    allDosirs = await db.query.dosirMk.findMany({
-      where: conditions.length > 0 ? and(...conditions) : undefined,
-      with: {
-        mk: true,
-        dosen: true,
-        tahunAkademik: true,
-        rps: {
-          orderBy: [desc(rps.version)],
-          limit: 1
-        }
+  const allDosirs = await db.query.dosirMk.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    with: {
+      mk: true,
+      dosen: true,
+      tahunAkademik: true,
+      rps: {
+        orderBy: [desc(rps.version)],
+        limit: 1
       }
-    })
-  } catch (e) {
+    }
+  }).catch((e) => {
     console.error("Failed to fetch dosirs for RPS:", e)
-  }
+    return []
+  })
 
   // In-memory filtering for status and search term (q)
   let filtered = allDosirs

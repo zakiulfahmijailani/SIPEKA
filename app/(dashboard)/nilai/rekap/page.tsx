@@ -34,28 +34,26 @@ export default async function RekapNilaiPage(props: {
   const conditions = [eq(dosirMk.tahun_akademik_id, taId)]
   if (mkId && mkId !== "ALL") conditions.push(eq(dosirMk.mk_id, mkId))
   
-  let enrollData: Awaited<ReturnType<typeof db.query.enrollment.findMany>> = []
-  try {
-    enrollData = await db.query.enrollment.findMany({
-      where: sql`${enrollment.dosir_mk_id} IN (SELECT id FROM ${dosirMk} WHERE ${and(...conditions)})`,
-      with: {
-        mahasiswa: true,
-        dosirMk: {
-          with: {
-            mk: true,
-            rps: {
-              with: {
-                komponens: true
-              }
+  const enrollData = await db.query.enrollment.findMany({
+    where: sql`${enrollment.dosir_mk_id} IN (SELECT id FROM ${dosirMk} WHERE ${and(...conditions)})`,
+    with: {
+      mahasiswa: true,
+      dosirMk: {
+        with: {
+          mk: true,
+          rps: {
+            with: {
+              komponens: true
             }
           }
-        },
-        nilais: true
-      }
-    })
-  } catch (e) {
+        }
+      },
+      nilais: true
+    }
+  }).catch((e) => {
     console.error("Failed to fetch enrollment data for rekap:", e)
-  }
+    return []
+  })
 
   // Calculate stats
   const studentsFiltered = angkatan 
@@ -67,7 +65,7 @@ export default async function RekapNilaiPage(props: {
     let finalScore = 0
     const components = curr.dosirMk.rps?.[0]?.komponens || []
     components.forEach(c => {
-      const n = curr.nilais.find(v => v.komponen_id === c.id)
+      const n = curr.nilais.find((v: any) => v.komponen_id === c.id)
       if (n) finalScore += (parseFloat(n.nilai || "0") * c.bobot) / 100
     })
 
