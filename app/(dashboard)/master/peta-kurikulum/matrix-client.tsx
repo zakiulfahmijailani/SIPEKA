@@ -207,7 +207,7 @@ export function MatrixClient({
           <div className="w-3 h-3 bg-slate-800 rounded-full"></div> Terpetakan
         </div>
         <div className="flex items-center gap-2 ml-4">
-          <span className="text-red-600 font-semibold">Merah</span>: Coverage &lt; 3 MK
+          <span className="text-red-600 font-semibold">Merah</span>: Cakupan &lt; 3 MK
         </div>
       </div>
     </div>
