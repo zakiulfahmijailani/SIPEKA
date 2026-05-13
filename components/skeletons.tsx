@@ -1,13 +1,15 @@
 import { cn } from "@/lib/utils"
+import { CSSProperties } from "react"
 
 // ── Base skeleton atom ──
-function Skeleton({ className }: { className?: string }) {
+function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
     <div
       className={cn(
         "animate-pulse rounded-md bg-gray-100",
         className
       )}
+      style={style}
     />
   )
 }
