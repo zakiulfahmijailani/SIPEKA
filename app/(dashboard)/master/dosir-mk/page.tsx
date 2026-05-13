@@ -22,10 +22,10 @@ export default async function DosirMkPage(props: {
     orderBy: [desc(tahunAkademik.tahun_mulai), desc(tahunAkademik.semester)],
   })
   
-  const activeTa = allTas.find(t => t.is_active === "true")
+  const activeTa = allTas.find(t => t.is_active)
 
   const allMks = await db.query.mataKuliah.findMany({
-    where: eq(mataKuliah.is_active, "true"),
+    where: eq(mataKuliah.is_active, true),
     orderBy: [asc(mataKuliah.kode)],
   })
 

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, unique } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum, unique, boolean } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 import { is2020Area, profilLulusan } from "./reference"
 
@@ -18,7 +18,7 @@ export const cpl = pgTable("cpl", {
   slug: text("slug").notNull().unique(),
   domain: cplDomainEnum("domain").notNull(),
   rumusan: text("rumusan").notNull(),
-  is_active: text("is_active").notNull().default("true"),
+  is_active: boolean("is_active").notNull().default(true),
   urutan: integer("urutan").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
@@ -49,7 +49,7 @@ export const mataKuliah = pgTable("mata_kuliah", {
   tipe_aktivitas: tipeAktivitasEnum("tipe_aktivitas").notNull().default("TEORI"),
   deskripsi: text("deskripsi"),
   bahasa: text("bahasa").default("Indonesia"),
-  is_active: text("is_active").notNull().default("true"),
+  is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -64,7 +64,7 @@ export const mkIs2020Area = pgTable("mk_is2020_area", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   mk_id: text("mk_id").notNull().references(() => mataKuliah.id, { onDelete: "cascade" }),
   is2020_area_id: text("is2020_area_id").notNull().references(() => is2020Area.id, { onDelete: "cascade" }),
-  is_primary: text("is_primary").notNull().default("false"),
+  is_primary: boolean("is_primary").notNull().default(false),
 }, (t) => [unique().on(t.mk_id, t.is2020_area_id)])
 
 export const petaKurikulum = pgTable("peta_kurikulum", {

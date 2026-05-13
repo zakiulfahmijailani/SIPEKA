@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, numeric, unique } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, numeric, unique, boolean } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 import { mkTrackEnum } from "./kurikulum"
 import { dosirMk } from "./dosir"
@@ -10,7 +10,7 @@ export const mahasiswa = pgTable("mahasiswa", {
   nama_lengkap: text("nama_lengkap").notNull(),
   angkatan: integer("angkatan").notNull(),
   track: mkTrackEnum("track").notNull().default("UMUM"),
-  is_active: text("is_active").notNull().default("true"),
+  is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 })

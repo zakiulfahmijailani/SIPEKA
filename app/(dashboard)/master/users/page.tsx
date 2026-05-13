@@ -19,7 +19,7 @@ export default async function UsersPage(props: {
 
   const conditions = []
   if (role) conditions.push(eq(users.role, role))
-  if (status) conditions.push(eq(users.is_active, status))
+  if (status) conditions.push(eq(users.is_active, status === "true"))
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 

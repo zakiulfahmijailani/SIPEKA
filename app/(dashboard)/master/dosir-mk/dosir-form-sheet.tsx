@@ -77,7 +77,7 @@ export function DosirFormSheet({ open, onOpenChange, initialData, mks, dosens, t
     resolver: zodResolver(dosirSchema) as any,
     defaultValues: initialData ? {
       ...initialData,
-      is_active: initialData.is_active === "true"
+      is_active: initialData.is_active
     } : {
       mk_id: "",
       dosen_id: "",

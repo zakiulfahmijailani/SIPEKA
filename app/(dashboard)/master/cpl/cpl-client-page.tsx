@@ -25,7 +25,7 @@ export function CplClientPage({ cpls, role }: { cpls: any[], role: string }) {
   const handleEdit = (cpl: any) => {
     setSelectedCpl({
       ...cpl,
-      is_active: cpl.is_active === "true"
+      is_active: cpl.is_active
     })
     setIsSheetOpen(true)
   }
@@ -35,7 +35,7 @@ export function CplClientPage({ cpls, role }: { cpls: any[], role: string }) {
     setIsSheetOpen(true)
   }
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
+  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       const res = await toggleCPLActive(id, currentStatus)
       if (res.success) {
@@ -108,7 +108,7 @@ export function CplClientPage({ cpls, role }: { cpls: any[], role: string }) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {item.is_active === "true" 
+                    {item.is_active 
                       ? <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Aktif</Badge>
                       : <Badge variant="outline" className="text-gray-500">Nonaktif</Badge>
                     }
@@ -128,9 +128,9 @@ export function CplClientPage({ cpls, role }: { cpls: any[], role: string }) {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => handleToggleStatus(item.id, item.is_active)}
-                          title={item.is_active === "true" ? "Nonaktifkan" : "Aktifkan"}
+                          title={item.is_active ? "Nonaktifkan" : "Aktifkan"}
                         >
-                          {item.is_active === "true" 
+                          {item.is_active 
                             ? <PowerOff className="h-4 w-4 text-red-500" />
                             : <Power className="h-4 w-4 text-green-600" />
                           }

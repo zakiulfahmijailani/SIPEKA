@@ -36,7 +36,7 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
       nama_lengkap: data.nama_lengkap,
       nidn: data.nidn || null,
       role: data.role,
-      is_active: data.is_active ? "true" : "false",
+      is_active: data.is_active,
       updated_at: new Date(),
     }
 
@@ -63,14 +63,14 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
   }
 }
 
-export async function toggleUserActive(id: string, currentStatus: string) {
+export async function toggleUserActive(id: string, currentStatus: boolean) {
   try {
     const session = await auth()
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
 
-    const newStatus = currentStatus === "true" ? "false" : "true"
+    const newStatus = !currentStatus
     await db.update(users).set({ is_active: newStatus }).where(eq(users.id, id))
 
     revalidatePath("/master/users")

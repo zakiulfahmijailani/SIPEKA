@@ -171,7 +171,7 @@ export function DosirClientPage({
                 <TableCell><Badge variant="outline" className="font-bold">{item.kelas}</Badge></TableCell>
                 <TableCell>{item.tahunAkademik.kode}</TableCell>
                 <TableCell>
-                  {item.is_active === "true" 
+                  {item.is_active 
                     ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">AKTIF</Badge>
                     : <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-none">NON-AKTIF</Badge>
                   }

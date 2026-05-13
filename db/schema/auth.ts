@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 
 export const userRoleEnum = pgEnum("user_role", [
@@ -12,7 +12,7 @@ export const users = pgTable("users", {
   nama_lengkap: text("nama_lengkap").notNull(),
   nidn: text("nidn"),
   role: userRoleEnum("role").notNull().default("DOSEN"),
-  is_active: text("is_active").notNull().default("true"),
+  is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 })

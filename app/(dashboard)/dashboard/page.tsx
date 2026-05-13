@@ -29,7 +29,7 @@ export default async function DashboardPage() {
 
   // Fetch active academic year
   const activeTa = await db.query.tahunAkademik.findFirst({
-    where: eq(tahunAkademik.is_active, "true")
+    where: eq(tahunAkademik.is_active, true)
   })
 
   // === KAPRODI / SUPER ADMIN KPIs ===
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
     const mkCount = await db.select({ value: count() }).from(mataKuliah)
     totalMk = mkCount[0].value
 
-    const cplCount = await db.select({ value: count() }).from(cpl).where(eq(cpl.is_active, "true"))
+    const cplCount = await db.select({ value: count() }).from(cpl).where(eq(cpl.is_active, true))
     totalCpl = cplCount[0].value
 
     const approvedRpsCount = await db.select({ value: count() }).from(rps).where(eq(rps.status, "APPROVED"))

@@ -63,8 +63,8 @@ export async function setAktifTahunAkademik(id: string) {
 
     // Atomic transaction to set all is_active=false, then selected=true
     await db.transaction(async (tx) => {
-      await tx.update(tahunAkademik).set({ is_active: "false" })
-      await tx.update(tahunAkademik).set({ is_active: "true" }).where(eq(tahunAkademik.id, id))
+      await tx.update(tahunAkademik).set({ is_active: false })
+      await tx.update(tahunAkademik).set({ is_active: true }).where(eq(tahunAkademik.id, id))
     })
 
     revalidatePath("/master/tahun-akademik")

@@ -58,7 +58,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
     resolver: zodResolver(userSchema) as any,
     defaultValues: initialData ? {
       ...initialData,
-      is_active: initialData.is_active === "true",
+      is_active: initialData.is_active,
       password: ""
     } : {
       email: "",

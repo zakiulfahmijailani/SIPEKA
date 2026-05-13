@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum, boolean } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 
 export const is2020StatusEnum = pgEnum("is2020_status", ["REQUIRED", "ELECTIVE"])
@@ -28,7 +28,7 @@ export const profilLulusan = pgTable("profil_lulusan", {
   kode: text("kode").notNull().unique(),
   nama: text("nama").notNull(),
   deskripsi: text("deskripsi"),
-  is_active: text("is_active").notNull().default("true"),
+  is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 })

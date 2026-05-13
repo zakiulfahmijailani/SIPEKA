@@ -34,7 +34,7 @@ export async function saveDosirMk(formData: z.infer<typeof dosirSchema>) {
       dosen_id: data.dosen_id,
       tahun_akademik_id: data.tahun_akademik_id,
       kelas: data.kelas,
-      is_active: data.is_active ? "true" : "false",
+      is_active: data.is_active,
     }
 
     if (data.id) {

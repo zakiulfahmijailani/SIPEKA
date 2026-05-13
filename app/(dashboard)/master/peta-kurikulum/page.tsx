@@ -13,13 +13,13 @@ export default async function PetaKurikulumPage() {
 
   // Fetch active CPLs
   const activeCpls = await db.query.cpl.findMany({
-    where: eq(cpl.is_active, "true"),
+    where: eq(cpl.is_active, true),
     orderBy: [asc(cpl.urutan)],
   })
 
   // Fetch active MKs
   const activeMks = await db.query.mataKuliah.findMany({
-    where: eq(mataKuliah.is_active, "true"),
+    where: eq(mataKuliah.is_active, true),
     orderBy: [asc(mataKuliah.semester_rekomendasi), asc(mataKuliah.kode)],
   })
 

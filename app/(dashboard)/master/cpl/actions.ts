@@ -38,7 +38,7 @@ export async function saveCPL(formData: z.infer<typeof cplSchema>) {
       domain: data.domain,
       urutan: data.urutan,
       rumusan: data.rumusan,
-      is_active: data.is_active ? "true" : "false",
+      is_active: data.is_active,
       // assuming program_id is required, we can hardcode for now or use a default if it's not strictly checked, wait!
       // In db/schema/kurikulum.ts, program_id is not null? Let's check schema.
     }
@@ -62,14 +62,14 @@ export async function saveCPL(formData: z.infer<typeof cplSchema>) {
   }
 }
 
-export async function toggleCPLActive(id: string, currentStatus: string) {
+export async function toggleCPLActive(id: string, currentStatus: boolean) {
   try {
     const session = await auth()
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
 
-    const newStatus = currentStatus === "true" ? "false" : "true"
+    const newStatus = !currentStatus
     
     await db.update(cpl)
       .set({ is_active: newStatus, updated_at: new Date() })

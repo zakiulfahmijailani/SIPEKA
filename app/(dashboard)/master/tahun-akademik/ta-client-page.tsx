@@ -92,14 +92,14 @@ export function TaClientPage({ tas, role }: { tas: any[], role: string }) {
                 <TableCell>{item.semester === 1 ? "1 (Ganjil)" : "2 (Genap)"}</TableCell>
                 <TableCell>{item.tahun_mulai}</TableCell>
                 <TableCell>
-                  {item.is_active === "true" 
+                  {item.is_active 
                     ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">AKTIF</Badge>
                     : <Badge variant="outline" className="text-gray-400">Non-aktif</Badge>
                   }
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    {item.is_active !== "true" && (
+                    {!item.is_active && (
                       <Button 
                         variant="outline" 
                         size="sm" 

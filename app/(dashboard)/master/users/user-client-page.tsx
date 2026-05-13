@@ -45,7 +45,7 @@ export function UserClientPage({ users }: { users: any[] }) {
     setIsResetModalOpen(true)
   }
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
+  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       const res = await toggleUserActive(id, currentStatus)
       if (res.success) {
@@ -138,7 +138,7 @@ export function UserClientPage({ users }: { users: any[] }) {
                 <TableCell>{item.nidn || "-"}</TableCell>
                 <TableCell>{getRoleBadge(item.role)}</TableCell>
                 <TableCell>
-                  {item.is_active === "true" 
+                  {item.is_active 
                     ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">Aktif</Badge>
                     : <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-none">Non-aktif</Badge>
                   }
@@ -152,7 +152,7 @@ export function UserClientPage({ users }: { users: any[] }) {
                       <Edit className="h-4 w-4 text-blue-600" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(item.id, item.is_active)}>
-                      {item.is_active === "true" 
+                      {item.is_active 
                         ? <PowerOff className="h-4 w-4 text-red-500" />
                         : <Power className="h-4 w-4 text-green-600" />
                       }
