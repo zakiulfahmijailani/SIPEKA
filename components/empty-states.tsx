@@ -1,4 +1,4 @@
-import { FileX2, FolderOpen, ClipboardList, BarChart2, BookOpen, Users, PenSquare } from "lucide-react"
+import { FileX2, FolderOpen, ClipboardList, BarChart2, BookOpen, Users, PenSquare, SearchX, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
@@ -8,10 +8,11 @@ interface EmptyStateProps {
   title: string
   description: string
   action?: { label: string; href?: string; onClick?: () => void }
+  secondaryAction?: { label: string; onClick?: () => void }
   className?: string
 }
 
-function EmptyState({ icon: Icon = FolderOpen, title, description, action, className }: EmptyStateProps) {
+function EmptyState({ icon: Icon = FolderOpen, title, description, action, secondaryAction, className }: EmptyStateProps) {
   return (
     <div className={cn("flex flex-col items-center justify-center py-16 px-6 text-center", className)}>
       <div className="h-12 w-12 rounded-xl bg-gray-50 flex items-center justify-center mb-4">
@@ -19,23 +20,33 @@ function EmptyState({ icon: Icon = FolderOpen, title, description, action, class
       </div>
       <h3 className="text-sm font-semibold text-gray-700 mb-1.5">{title}</h3>
       <p className="text-sm text-gray-400 max-w-[30ch] leading-relaxed">{description}</p>
-      {action && (
-        action.href ? (
-          <Link
-            href={action.href}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-6 gap-2")}
-          >
-            {action.label}
-          </Link>
-        ) : (
+      <div className="flex gap-2 mt-6">
+        {action && (
+          action.href ? (
+            <Link
+              href={action.href}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
+            >
+              {action.label}
+            </Link>
+          ) : (
+            <button
+              onClick={action.onClick}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
+            >
+              {action.label}
+            </button>
+          )
+        )}
+        {secondaryAction && (
           <button
-            onClick={action.onClick}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-6 gap-2")}
+            onClick={secondaryAction.onClick}
+            className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-2")}
           >
-            {action.label}
+            {secondaryAction.label}
           </button>
-        )
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -52,13 +63,47 @@ export function RpsDosenEmpty() {
   )
 }
 
-export function MahasiswaEmpty() {
+interface MahasiswaEmptyProps {
+  hasFilter?: boolean
+  searchQuery?: string
+  onAdd?: () => void
+  onImport?: () => void
+  onClearSearch?: () => void
+}
+
+export function MahasiswaEmpty({ hasFilter, searchQuery, onAdd, onImport, onClearSearch }: MahasiswaEmptyProps) {
+  // State: search aktif
+  if (searchQuery) {
+    return (
+      <EmptyState
+        icon={SearchX}
+        title={`Tidak ada hasil untuk "${searchQuery}"`}
+        description="Coba kata kunci lain atau hapus filter pencarian."
+        action={onClearSearch ? { label: "Hapus Pencarian", onClick: onClearSearch } : undefined}
+      />
+    )
+  }
+
+  // State: filter aktif tapi tidak ada hasil
+  if (hasFilter) {
+    return (
+      <EmptyState
+        icon={SearchX}
+        title="Tidak ada mahasiswa"
+        description="Tidak ada mahasiswa yang sesuai dengan filter yang dipilih."
+        action={onClearSearch ? { label: "Reset Filter", onClick: onClearSearch } : undefined}
+      />
+    )
+  }
+
+  // State: benar-benar kosong
   return (
     <EmptyState
       icon={Users}
       title="Belum ada mahasiswa"
-      description="Belum ada mahasiswa yang terdaftar di kelas ini."
-      action={{ label: "Import Mahasiswa", href: "/mahasiswa/import" }}
+      description="Mulai dengan menambahkan mahasiswa satu per satu atau import dari file CSV."
+      action={onImport ? { label: "Import CSV", onClick: onImport } : undefined}
+      secondaryAction={onAdd ? { label: "Tambah Mahasiswa", onClick: onAdd } : undefined}
     />
   )
 }
