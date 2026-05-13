@@ -10,10 +10,7 @@ interface EmptyStateProps {
     label: string
     onClick: () => void
   }
-  secondaryAction?: {
-    label: string
-    onClick: () => void
-  }
+  variant?: "default" | "warning" | "error"
   className?: string
 }
 
@@ -22,69 +19,55 @@ export function EmptyState({
   title,
   description,
   action,
-  secondaryAction,
+  variant = "default",
   className,
 }: EmptyStateProps) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center text-center",
-        "py-16 px-8 rounded-lg",
-        "border border-dashed border-gray-200 bg-gray-50/50",
-        className
-      )}
-    >
-      <div className="mb-4 rounded-full bg-gray-100 p-4">
-        <Icon className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
-      </div>
-      <h3 className="mb-1 text-base font-semibold text-gray-800">{title}</h3>
-      <p className="mb-6 max-w-[320px] text-sm text-muted-foreground leading-relaxed">
-        {description}
-      </p>
-      <div className="flex flex-col sm:flex-row gap-2">
-        {action && (
-          <Button size="sm" onClick={action.onClick}>
-            {action.label}
-          </Button>
-        )}
-        {secondaryAction && (
-          <Button size="sm" variant="outline" onClick={secondaryAction.onClick}>
-            {secondaryAction.label}
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-}
+  const variantStyles = {
+    default: {
+      wrapper: "border-dashed border-2 border-gray-200 bg-gray-50/50",
+      icon: "text-gray-300",
+      title: "text-gray-700",
+      desc: "text-gray-500",
+    },
+    warning: {
+      wrapper: "border border-amber-200 bg-amber-50/60",
+      icon: "text-amber-400",
+      title: "text-amber-800",
+      desc: "text-amber-700",
+    },
+    error: {
+      wrapper: "border border-red-200 bg-red-50/60",
+      icon: "text-red-400",
+      title: "text-red-800",
+      desc: "text-red-600",
+    },
+  }
 
-// Variant khusus untuk hasil pencarian kosong
-export function EmptySearchState({
-  query,
-  onClear,
-  className,
-}: {
-  query: string
-  onClear: () => void
-  className?: string
-}) {
+  const s = variantStyles[variant]
+
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center",
-        "py-12 px-8",
+        "flex flex-col items-center justify-center text-center rounded-xl px-6 py-14",
+        s.wrapper,
         className
       )}
     >
-      <div className="mb-3 text-3xl">🔍</div>
-      <h3 className="mb-1 text-sm font-semibold text-gray-800">
-        Tidak ada hasil untuk &ldquo;{query}&rdquo;
-      </h3>
-      <p className="mb-4 text-xs text-muted-foreground">
-        Coba kata kunci lain atau hapus filter yang aktif.
-      </p>
-      <Button size="sm" variant="ghost" onClick={onClear}>
-        Hapus Pencarian
-      </Button>
+      <div className={cn("mb-4 opacity-80", s.icon)}>
+        <Icon className="h-10 w-10" strokeWidth={1.5} />
+      </div>
+      <h3 className={cn("font-semibold text-sm mb-1", s.title)}>{title}</h3>
+      <p className={cn("text-sm max-w-xs", s.desc)}>{description}</p>
+      {action && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-5 text-xs"
+          onClick={action.onClick}
+        >
+          {action.label}
+        </Button>
+      )}
     </div>
   )
 }

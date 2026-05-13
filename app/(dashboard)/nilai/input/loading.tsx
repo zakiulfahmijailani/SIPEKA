@@ -1,5 +1,5 @@
-import { ListPageSkeleton } from "@/components/skeletons"
+import { InputNilaiSkeleton } from "@/components/skeletons"
 
 export default function NilaiInputLoading() {
-  return <ListPageSkeleton />
+  return <InputNilaiSkeleton />
 }
