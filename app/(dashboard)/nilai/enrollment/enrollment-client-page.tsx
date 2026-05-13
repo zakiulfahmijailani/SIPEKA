@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -11,226 +13,159 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { ChevronDown, ChevronUp, UserPlus, Trash, Upload, Search, GraduationCap } from "lucide-react"
-import { enrollMahasiswa, unenrollMahasiswa, bulkEnrollMahasiswa } from "./actions"
+import { Upload, Users, BookOpen, CheckCircle2, AlertCircle } from "lucide-react"
+import { importEnrollmentCSV } from "./actions"
 import { toast } from "sonner"
-import Papa from "papaparse"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 
-export function EnrollmentClientPage({ 
-  dosirs, 
-  allStudents 
-}: { 
-  dosirs: any[], 
-  allStudents: any[] 
-}) {
-  const [expandedDosir, setExpandedDosir] = useState<string | null>(null)
+export function EnrollmentClientPage({ dosirs }: { dosirs: any[] }) {
   const [isImporting, setIsImporting] = useState<string | null>(null)
 
-  const toggleExpand = (id: string) => {
-    setExpandedDosir(expandedDosir === id ? null : id)
-  }
-
-  const handleEnroll = async (dosirId: string, mahasiswaId: string) => {
-    const res = await enrollMahasiswa(dosirId, mahasiswaId)
-    if (res.success) {
-      toast.success("Mahasiswa berhasil didaftarkan")
-    } else {
-      toast.error(res.error || "Gagal")
+  const handleImportCSV = async (dosirId: string, file: File) => {
+    if (!file.name.endsWith('.csv')) {
+      toast.error('File harus berformat CSV')
+      return
     }
-  }
 
-  const handleUnenroll = async (id: string) => {
-    if (confirm("Hapus pendaftaran mahasiswa ini?")) {
-      const res = await unenrollMahasiswa(id)
-      if (res.success) {
-        toast.success("Pendaftaran dibatalkan")
-      } else {
-        toast.error(res.error || "Gagal")
-      }
-    }
-  }
-
-  const handleImportCSV = (dosirId: string, file: File) => {
     setIsImporting(dosirId)
-    Papa.parse(file, {
-      header: false,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const nims = results.data.map((row: any) => String(row[0]).trim())
-        const res = await bulkEnrollMahasiswa(dosirId, nims)
-        if (res.success) {
-          toast.success(`${res.count} mahasiswa berhasil diproses`)
-        } else {
-          toast.error(res.error || "Gagal import")
-        }
-        setIsImporting(null)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const result = await importEnrollmentCSV(dosirId, formData)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.error || 'Import gagal')
       }
-    })
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat import')
+    } finally {
+      setIsImporting(null)
+    }
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Enrollment Mahasiswa</h1>
-        <p className="text-muted-foreground">Daftarkan mahasiswa ke dalam kelas Mata Kuliah</p>
+        <p className="text-muted-foreground">Import data KRS mahasiswa per kelas dari file CSV</p>
       </div>
 
-      <div className="grid gap-4">
-        {dosirs.map((dosir) => (
-          <Card key={dosir.id} className="overflow-hidden border-gray-200">
-            <CardHeader className="p-4 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => toggleExpand(dosir.id)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                    {dosir.mk.kode.substring(0, 2)}
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {dosir.mk.nama_id}
-                      <Badge variant="outline" className="text-xs font-mono">{dosir.kelas}</Badge>
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Dosen: {dosir.dosen.nama_lengkap} • {dosir.tahunAkademik.kode}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right mr-4">
-                    <p className="text-sm font-semibold">{dosir.enrollments.length}</p>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Mahasiswa</p>
-                  </div>
-                  {expandedDosir === dosir.id ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
-                </div>
-              </div>
-            </CardHeader>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-none shadow-sm bg-blue-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-600 flex items-center gap-2">
+              <BookOpen className="h-4 w-4" /> Total Kelas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900">{dosirs.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-none shadow-sm bg-green-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-600 flex items-center gap-2">
+              <Users className="h-4 w-4" /> Total Mahasiswa
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">
+              {dosirs.reduce((acc, curr) => acc + curr._count.enrollments, 0)}
+            </div>
+          </CardContent>
+        </Card>
 
-            {expandedDosir === dosir.id && (
-              <CardContent className="p-0 border-t">
-                <div className="p-4 bg-gray-50 flex flex-wrap gap-3 items-center justify-between border-b">
-                  <div className="flex gap-2">
-                    <StudentSelector 
-                      students={allStudents} 
-                      onSelect={(studentId) => handleEnroll(dosir.id, studentId)} 
-                    />
-                    
-                    <div className="relative">
-                      <Button variant="outline" size="sm" className="flex items-center gap-2 relative">
-                        <Upload className="h-3 w-3" />
-                        Import CSV NIM
-                        <input 
-                          type="file" 
-                          className="absolute inset-0 opacity-0 cursor-pointer"
+        <Card className="border-none shadow-sm bg-purple-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-600 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" /> Kelas Terisi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-900">
+              {dosirs.filter(d => d._count.enrollments > 0).length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="bg-white rounded-md border shadow-sm">
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead>Mata Kuliah</TableHead>
+              <TableHead>Kelas</TableHead>
+              <TableHead>Tahun Akademik</TableHead>
+              <TableHead className="text-center">Jumlah Mahasiswa</TableHead>
+              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {dosirs.length > 0 ? (
+              dosirs.map((dosir) => (
+                <TableRow key={dosir.id}>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{dosir.mk.nama_id}</span>
+                      <span className="text-xs text-muted-foreground">{dosir.mk.kode}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{dosir.kelas}</Badge>
+                  </TableCell>
+                  <TableCell>{dosir.tahunAkademik.kode}</TableCell>
+                  <TableCell className="text-center font-medium">
+                    {dosir._count.enrollments}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {dosir._count.enrollments > 0 
+                      ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">Terisi</Badge>
+                      : <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 border-none">Kosong</Badge>
+                    }
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="sm" className="flex items-center gap-2 relative overflow-hidden">
+                        <Upload className="h-4 w-4" />
+                        {isImporting === dosir.id ? 'Mengimpor...' : 'Impor CSV NIM'}
+                        <Input
+                          type="file"
                           accept=".csv"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
                           onChange={(e) => e.target.files?.[0] && handleImportCSV(dosir.id, e.target.files[0])}
                           disabled={isImporting === dosir.id}
                         />
                       </Button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="max-h-[400px] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="bg-white sticky top-0 shadow-sm z-10">
-                      <TableRow>
-                        <TableHead className="w-[150px] pl-6">NIM</TableHead>
-                        <TableHead>Nama Mahasiswa</TableHead>
-                        <TableHead className="w-[100px]">Angkatan</TableHead>
-                        <TableHead className="text-right pr-6 w-[80px]">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dosir.enrollments.length > 0 ? (
-                        dosir.enrollments.map((en: any) => (
-                          <TableRow key={en.id} className="bg-white">
-                            <TableCell className="font-mono pl-6">{en.mahasiswa.nim}</TableCell>
-                            <TableCell className="font-medium">{en.mahasiswa.nama_lengkap}</TableCell>
-                            <TableCell>{en.mahasiswa.angkatan}</TableCell>
-                            <TableCell className="text-right pr-6">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => handleUnenroll(en.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground bg-white italic">
-                            Belum ada mahasiswa yang terdaftar di kelas ini.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Belum ada kelas dosir yang tersedia.
+                </TableCell>
+              </TableRow>
             )}
-          </Card>
-        ))}
+          </TableBody>
+        </Table>
       </div>
+
+      <Card className="border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+            <AlertCircle className="h-4 w-4" /> Panduan Format CSV
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-amber-700 space-y-2">
+          <p>File CSV harus memiliki kolom: <code className="bg-white px-1 py-0.5 rounded">nim</code></p>
+          <p>Header wajib ada di baris pertama.</p>
+          <p>Setiap baris akan di-match ke mahasiswa berdasarkan NIM.</p>
+          <p>Jika mahasiswa belum ada di master, data akan di-skip.</p>
+        </CardContent>
+      </Card>
     </div>
-  )
-}
-
-function StudentSelector({ students, onSelect }: { students: any[], onSelect: (id: string) => void }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={<Button variant="outline" size="sm" className="flex items-center gap-2" />}>
-        <UserPlus className="h-3 w-3" />
-        Tambah Mahasiswa
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Cari NIM atau Nama..." />
-          <CommandList>
-            <CommandEmpty>Mahasiswa tidak ditemukan.</CommandEmpty>
-            <CommandGroup>
-              {students.map((student) => (
-                <CommandItem
-                  key={student.id}
-                  value={`${student.nim} ${student.nama_lengkap}`}
-                  onSelect={() => {
-                    onSelect(student.id)
-                    setOpen(false)
-                  }}
-                  className="cursor-pointer"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-xs font-mono">{student.nim}</span>
-                    <span className="text-sm">{student.nama_lengkap}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
   )
 }

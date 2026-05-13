@@ -107,7 +107,7 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsImportOpen(true)} className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
-            Import CSV
+            Impor CSV
           </Button>
           <Button onClick={handleAddNew} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -199,7 +199,7 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(student)} className="flex items-center gap-2">
-                          <Edit className="h-4 w-4" /> Edit
+                          <Edit className="h-4 w-4" /> Ubah
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDelete(student.id)} className="flex items-center gap-2 text-red-600">
                           <Trash className="h-4 w-4" /> Hapus

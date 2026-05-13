@@ -156,7 +156,7 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
                         variant="ghost" 
                         size="icon" 
                         onClick={() => handleEdit(item)}
-                        title="Edit Mata Kuliah"
+                        title="Ubah Mata Kuliah"
                       >
                         <Edit className="h-4 w-4 text-blue-600" />
                       </Button>

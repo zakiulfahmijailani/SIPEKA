@@ -120,7 +120,7 @@ export function CplClientPage({ cpls, role }: { cpls: any[], role: string }) {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => handleEdit(item)}
-                          title="Edit CPL"
+                          title="Ubah CPL"
                         >
                           <Edit className="h-4 w-4 text-blue-600" />
                         </Button>
