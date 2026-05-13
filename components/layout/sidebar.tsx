@@ -51,10 +51,13 @@ export function Sidebar({ session }: SidebarProps) {
     { name: "Dosir MK", href: "/master/dosir-mk", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
     { name: "Tahun Akademik", href: "/master/tahun-akademik", icon: Database, show: isSuperAdmin || isKaprodi },
     { name: "Profil Lulusan", href: "/master/profil-lulusan", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
+    { name: "Data Mahasiswa", href: "/master/mahasiswa", icon: Users, show: isSuperAdmin || isKaprodi },
     
     // DOSEN + KAPRODI + SUPER_ADMIN
     { name: "RPS Saya", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
-    { name: "Input Nilai", href: "/nilai", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
+    { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
+    { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
+    { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
     
     // SUPER_ADMIN only
     { name: "Manajemen User", href: "/master/users", icon: Users, show: isSuperAdmin },

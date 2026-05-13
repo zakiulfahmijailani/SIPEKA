@@ -1,8 +1,12 @@
-import { pgTable, text, timestamp, integer, numeric, unique, boolean } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, numeric, unique, boolean, pgEnum } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 import { mkTrackEnum } from "./kurikulum"
 import { dosirMk } from "./dosir"
 import { komponenPenilaian } from "./rps"
+
+export const mahasiswaStatusEnum = pgEnum("mahasiswa_status", [
+  "AKTIF", "CUTI", "LULUS", "DO"
+])
 
 export const mahasiswa = pgTable("mahasiswa", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
@@ -10,6 +14,8 @@ export const mahasiswa = pgTable("mahasiswa", {
   nama_lengkap: text("nama_lengkap").notNull(),
   angkatan: integer("angkatan").notNull(),
   track: mkTrackEnum("track").notNull().default("UMUM"),
+  status: mahasiswaStatusEnum("status").notNull().default("AKTIF"),
+  email: text("email"),
   is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
