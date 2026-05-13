@@ -98,5 +98,3 @@ export function NotificationBell({ userId }: { userId: string }) {
     </DropdownMenu>
   )
 }
-
-import { cn } from "@/lib/utils"
