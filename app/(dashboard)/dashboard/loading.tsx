@@ -1,5 +1,5 @@
-import { AdminDashboardSkeleton } from "@/components/skeletons"
+import { DashboardSkeleton } from "@/components/skeletons"
 
 export default function DashboardLoading() {
-  return <AdminDashboardSkeleton />
+  return <DashboardSkeleton />
 }
