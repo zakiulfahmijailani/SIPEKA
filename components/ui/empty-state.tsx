@@ -29,22 +29,25 @@ export function EmptyState({
 }: EmptyStateProps) {
   const variantStyles = {
     default: {
-      wrapper: "border-dashed border-2 border-gray-200 bg-gray-50/50",
+      wrapper: "bg-white border border-gray-100",
+      iconBg: "bg-gray-50",
       icon: "text-gray-300",
       title: "text-gray-700",
-      desc: "text-gray-500",
+      desc: "text-gray-400",
     },
     warning: {
-      wrapper: "border border-amber-200 bg-amber-50/60",
+      wrapper: "bg-amber-50/40 border border-amber-100",
+      iconBg: "bg-amber-50",
       icon: "text-amber-400",
       title: "text-amber-800",
-      desc: "text-amber-700",
+      desc: "text-amber-600",
     },
     error: {
-      wrapper: "border border-red-200 bg-red-50/60",
+      wrapper: "bg-red-50/40 border border-red-100",
+      iconBg: "bg-red-50",
       icon: "text-red-400",
-      title: "text-red-800",
-      desc: "text-red-600",
+      title: "text-red-700",
+      desc: "text-red-500",
     },
   }
 
@@ -53,36 +56,48 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center rounded-xl px-6 py-14",
+        "flex flex-col items-center justify-center text-center rounded-2xl px-8 py-16 shadow-sm",
         s.wrapper,
         className
       )}
     >
-      <div className={cn("mb-4 opacity-80", s.icon)}>
-        <Icon className="h-10 w-10" strokeWidth={1.5} />
+      {/* Icon container — clean square, no border, subtle bg */}
+      <div
+        className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center mb-5",
+          s.iconBg
+        )}
+      >
+        <Icon className={cn("h-5 w-5", s.icon)} strokeWidth={1.5} />
       </div>
-      <h3 className={cn("font-semibold text-sm mb-1", s.title)}>{title}</h3>
-      <p className={cn("text-sm max-w-xs", s.desc)}>{description}</p>
+
+      <h3 className={cn("font-semibold text-sm mb-1.5 tracking-tight", s.title)}>
+        {title}
+      </h3>
+      <p className={cn("text-sm leading-relaxed max-w-[28ch]", s.desc)}>
+        {description}
+      </p>
+
       {(action || secondaryAction) && (
-        <div className="flex gap-2 mt-5">
-          {action && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={action.onClick}
-            >
-              {action.label}
-            </Button>
-          )}
+        <div className="flex items-center gap-2 mt-6">
           {secondaryAction && (
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs"
+              className="text-xs text-gray-500 hover:text-gray-700"
               onClick={secondaryAction.onClick}
             >
               {secondaryAction.label}
+            </Button>
+          )}
+          {action && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs font-medium"
+              onClick={action.onClick}
+            >
+              {action.label}
             </Button>
           )}
         </div>
@@ -105,18 +120,18 @@ export function EmptySearchState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center rounded-xl px-6 py-14",
-        "border-dashed border-2 border-gray-200 bg-gray-50/50",
+        "flex flex-col items-center justify-center text-center rounded-2xl px-8 py-16",
+        "bg-white border border-gray-100 shadow-sm",
         className
       )}
     >
-      <div className="mb-4 opacity-80 text-gray-300">
-        <Search className="h-10 w-10" strokeWidth={1.5} />
+      <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mb-5">
+        <Search className="h-5 w-5 text-gray-300" strokeWidth={1.5} />
       </div>
-      <h3 className="font-semibold text-sm mb-1 text-gray-700">
-        Tidak ada hasil
+      <h3 className="font-semibold text-sm mb-1.5 tracking-tight text-gray-700">
+        Tidak ada hasil ditemukan
       </h3>
-      <p className="text-sm max-w-xs text-gray-500">
+      <p className="text-sm leading-relaxed max-w-[28ch] text-gray-400">
         {query
           ? `Tidak ditemukan hasil untuk "${query}". Coba ubah kata kunci pencarian.`
           : "Coba ubah kata kunci pencarian."}
@@ -125,7 +140,7 @@ export function EmptySearchState({
         <Button
           variant="outline"
           size="sm"
-          className="mt-5 text-xs"
+          className="mt-6 text-xs font-medium"
           onClick={onClear}
         >
           Hapus pencarian
