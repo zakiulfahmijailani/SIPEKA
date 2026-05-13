@@ -35,11 +35,11 @@ import { CplAttainmentSkeleton } from "@/components/skeletons"
 
 const STATUS_TARGET = 75
 
-// ─── Color helpers ────────────────────────────────────────────────────────────
+// ─── Pembantu warna ────────────────────────────────────────────────────────────
 function barColor(v: number, target = STATUS_TARGET) {
-  if (v >= target)       return "#16a34a"   // green-600
-  if (v >= target * 0.8) return "#f59e0b"   // amber-400 – near miss
-  return "#ef4444"                           // red-500
+  if (v >= target)       return "#16a34a"
+  if (v >= target * 0.8) return "#f59e0b"
+  return "#ef4444"
 }
 
 function gapColor(gap: number) {
@@ -48,7 +48,7 @@ function gapColor(gap: number) {
   return "#ef4444"
 }
 
-// ─── Custom Radar dot ─────────────────────────────────────────────────────────
+// ─── Dot radar kustom ─────────────────────────────────────────────────────────
 function RadarDot(props: any) {
   const { cx, cy, payload } = props
   const pass = payload?.passRate >= STATUS_TARGET
@@ -59,7 +59,7 @@ function RadarDot(props: any) {
   )
 }
 
-// ─── Mini progress inside table ───────────────────────────────────────────────
+// ─── Mini progres di dalam tabel ───────────────────────────────────────────────
 function MiniBar({ value, target }: { value: number; target: number }) {
   const pct = Math.min(value, 100)
   const color = barColor(value, target)
@@ -75,7 +75,7 @@ function MiniBar({ value, target }: { value: number; target: number }) {
   )
 }
 
-// ─── Drill-down: kontribusi MK ────────────────────────────────────────────────
+// ─── Telusur kontribusi MK ────────────────────────────────────────────────────
 function MkDrillDown({
   cplId,
   mkContribution,
@@ -110,7 +110,6 @@ function MkDrillDown({
         {rows.map(({ mkId, avg, students }) => {
           const pct = Math.min(avg, 100)
           const isPass = avg >= 55
-          // gradient stop based on score
           const gradFrom = isPass ? "#86efac" : "#fca5a5"
           const gradTo   = isPass ? "#16a34a" : "#dc2626"
           return (
@@ -142,17 +141,17 @@ function MkDrillDown({
   )
 }
 
-// ─── Gap analysis data builder ────────────────────────────────────────────────
+// ─── Pembangun data analisis kesenjangan ────────────────────────────────────────
 function buildGapData(tableData: any[]) {
   return tableData.map(r => ({
     kode:   r.kode,
     gap:    parseFloat((r.capaian - r.target).toFixed(1)),
     target: r.target,
     capaian: r.capaian,
-  })).sort((a, b) => a.gap - b.gap)  // worst first
+  })).sort((a, b) => a.gap - b.gap)
 }
 
-// ─── Custom tooltip for gap chart ────────────────────────────────────────────
+// ─── Tooltip kustom untuk grafik kesenjangan ────────────────────────────────────
 function GapTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
@@ -162,13 +161,13 @@ function GapTooltip({ active, payload, label }: any) {
       <p className="text-gray-500">Target: <span className="font-bold text-gray-700">{d.target}%</span></p>
       <p className="text-gray-500">Capaian: <span className="font-bold text-gray-700">{d.capaian}%</span></p>
       <p className={cn("font-bold mt-1", d.gap >= 0 ? "text-green-600" : "text-red-500")}>
-        Gap: {d.gap >= 0 ? "+" : ""}{d.gap}%
+        Kesenjangan: {d.gap >= 0 ? "+" : ""}{d.gap}%
       </p>
     </div>
   )
 }
 
-// ─── KPI tile with trend icon ─────────────────────────────────────────────────
+// ─── Tile IKU dengan ikon tren ─────────────────────────────────────────────────
 function KpiTile({ label, value, suffix = "", sub, trend, color = "gray", decimals }: {
   label: string; value: number; suffix?: string; sub?: string
   trend?: "up" | "down" | "neutral"; color?: string; decimals?: number
@@ -198,7 +197,7 @@ function KpiTile({ label, value, suffix = "", sub, trend, color = "gray", decima
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Komponen utama ───────────────────────────────────────────────────────────
 export default function CplAttainmentClient({ tas }: { tas: any[] }) {
   const [taId, setTaId]           = useState(tas.find(t => t.is_active)?.id || tas[0]?.id)
   const [angkatan, setAngkatan]   = useState<string>("ALL")
@@ -206,7 +205,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const [expandedCpl, setExpandedCpl] = useState<string | null>(null)
-  const [activeChart, setActiveChart] = useState<"radar" | "bar" | "gap">("bar")
+  const [activeChart, setActiveChart] = useState<"bar" | "radar" | "gap">("bar")
 
   const fetchData = useCallback(async () => {
     if (!taId) return
@@ -228,14 +227,14 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
     setIsExporting(true)
     try {
       const workbook = new ExcelJS.Workbook()
-      const summarySheet = workbook.addWorksheet("Ringkasan Attainment")
+      const summarySheet = workbook.addWorksheet("Ringkasan Ketercapaian")
       summarySheet.columns = [
-        { header: "Kode CPL",     key: "kode",     width: 15 },
-        { header: "Rumusan",      key: "rumusan",   width: 50 },
-        { header: "Target (%)",   key: "target",   width: 15 },
-        { header: "Capaian (%)",  key: "capaian",  width: 15 },
-        { header: "Rata-rata Skor", key: "avgScore", width: 15 },
-        { header: "Status",       key: "status",   width: 10 },
+        { header: "Kode CPL",        key: "kode",     width: 15 },
+        { header: "Rumusan",         key: "rumusan",   width: 50 },
+        { header: "Target (%)",      key: "target",   width: 15 },
+        { header: "Capaian (%)",     key: "capaian",  width: 15 },
+        { header: "Rata-rata Nilai", key: "avgScore", width: 15 },
+        { header: "Status",          key: "status",   width: 10 },
       ]
       data.tableData.forEach((row: any) => summarySheet.addRow(row))
       summarySheet.getRow(1).font = { bold: true }
@@ -243,9 +242,9 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
 
       const mkSheet = workbook.addWorksheet("Detail per MK")
       mkSheet.columns = [
-        { header: "ID MK",           key: "mkId",         width: 20 },
-        { header: "CPL",             key: "cplId",        width: 15 },
-        { header: "Rata-rata Skor",  key: "avgScore",     width: 20 },
+        { header: "ID MK",            key: "mkId",         width: 20 },
+        { header: "CPL",              key: "cplId",        width: 15 },
+        { header: "Rata-rata Nilai",  key: "avgScore",     width: 20 },
         { header: "Jumlah Mahasiswa", key: "studentCount", width: 20 },
       ]
       Object.entries(data.mkContribution).forEach(([mkId, cpls]: [string, any]) => {
@@ -261,7 +260,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
       const buffer = await workbook.xlsx.writeBuffer()
       saveAs(
         new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-        `laporan-cpl-attainment-${taId}.xlsx`
+        `laporan-ketercapaian-cpl-${taId}.xlsx`
       )
       toast.success("Excel berhasil diunduh")
     } catch (error) {
@@ -277,7 +276,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
   if (isLoading) return <CplAttainmentSkeleton />
   if (!data)     return <LaporanNoDataEmpty />
 
-  // ── Derived stats ──────────────────────────────────────────────────
+  // ── Statistik turunan ──────────────────────────────────────────────
   const totalCpl   = data.tableData.length
   const tercapai   = data.tableData.filter((r: any) => r.capaian >= r.target).length
   const belum      = totalCpl - tercapai
@@ -296,13 +295,13 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">CPL Attainment Report</h1>
+          <h1 className="text-xl font-bold text-gray-900">Laporan Ketercapaian Capaian Pembelajaran Lulusan</h1>
           <p className="text-sm text-gray-500 mt-0.5">Analisis ketercapaian Capaian Pembelajaran Lulusan (OBE)</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2" onClick={handleExportExcel} disabled={isExporting}>
             {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-            Export Excel
+            Unduh Excel
           </Button>
           <Button size="sm" variant="outline" className="gap-2" onClick={() => window.print()}>
             PDF
@@ -310,7 +309,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
         </div>
       </div>
 
-      {/* ── Filters ── */}
+      {/* ── Filter ── */}
       <div className="flex flex-wrap gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
         <div className="space-y-1">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Tahun Akademik</label>
@@ -331,17 +330,17 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
         </div>
       </div>
 
-      {/* ── KPI Tiles ── */}
+      {/* ── Tile IKU ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KpiTile label="Total CPL"  value={totalCpl}  color="gray" />
-        <KpiTile label="Tercapai"   value={tercapai}   color="green" sub={`dari ${totalCpl} CPL`} trend="up" />
-        <KpiTile label="Near-Miss"  value={nearMiss}   color="amber" sub="dalam 20% dari target" trend="neutral" />
-        <KpiTile label="Rata-rata"  value={avgCapaian} suffix="%" decimals={1}
+        <KpiTile label="Total CPL"       value={totalCpl}  color="gray" />
+        <KpiTile label="Tercapai"        value={tercapai}   color="green" sub={`dari ${totalCpl} CPL`} trend="up" />
+        <KpiTile label="Hampir Tercapai" value={nearMiss}   color="amber" sub="dalam 20% dari target" trend="neutral" />
+        <KpiTile label="Rata-rata"       value={avgCapaian} suffix="%" decimals={1}
           color={avgCapaian >= STATUS_TARGET ? "green" : avgCapaian >= STATUS_TARGET * 0.8 ? "amber" : "red"}
           trend={overallTrend} sub={`target ${STATUS_TARGET}%`} />
       </div>
 
-      {/* ── At-risk alert banner ── */}
+      {/* ── Banner peringatan CPL belum tercapai ── */}
       {belum > 0 && (
         <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-100">
           <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
@@ -356,7 +355,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
         </div>
       )}
 
-      {/* ── Chart tabs ── */}
+      {/* ── Tab grafik ── */}
       <div>
         <div className="flex gap-1 mb-4 p-1 bg-gray-100 rounded-lg w-fit">
           {(["bar", "radar", "gap"] as const).map(tab => (
@@ -370,18 +369,18 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                   : "text-gray-500 hover:text-gray-700"
               )}
             >
-              {tab === "bar"   ? "Pass Rate" : tab === "radar" ? "Radar Profil" : "Gap Analysis"}
+              {tab === "bar" ? "Tingkat Kelulusan CPL" : tab === "radar" ? "Radar Profil" : "Analisis Kesenjangan"}
             </button>
           ))}
         </div>
 
-        {/* ── Bar Chart: Pass Rate per CPL ── */}
+        {/* ── Grafik Batang: Tingkat Kelulusan per CPL ── */}
         {activeChart === "bar" && (
           <Card className="border border-gray-100 shadow-sm">
             <CardHeader className="px-5 pt-5 pb-2">
               <div className="flex items-center gap-2">
                 <BarChart2 className="h-4 w-4 text-gray-400" />
-                <CardTitle className="text-sm font-semibold text-gray-700">Pass Rate per CPL</CardTitle>
+                <CardTitle className="text-sm font-semibold text-gray-700">Tingkat Kelulusan per CPL</CardTitle>
               </div>
               <CardDescription className="text-[11px]">
                 % mahasiswa ≥55 · garis merah = target {STATUS_TARGET}% · warna: 🟢 tercapai · 🟡 mendekati · 🔴 perlu perhatian
@@ -399,8 +398,8 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                     return (
                       <div className="bg-white border border-gray-200 rounded-lg shadow-md p-3 text-xs">
                         <p className="font-semibold mb-1">{label}</p>
-                        <p>Pass Rate: <span className="font-bold">{d?.passRate}%</span></p>
-                        <p>Avg Score: <span className="font-bold">{d?.attainment}</span></p>
+                        <p>Tingkat Kelulusan: <span className="font-bold">{d?.passRate}%</span></p>
+                        <p>Rata-rata Nilai: <span className="font-bold">{d?.attainment}</span></p>
                       </div>
                     )
                   }} />
@@ -412,7 +411,6 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                       <Cell key={entry.subject} fill={barColor(entry.passRate)} fillOpacity={0.85} />
                     ))}
                   </Bar>
-                  {/* Avg score overlay as dot */}
                   <Line dataKey="attainment" stroke="#6366f1" strokeWidth={0} dot={{ r: 3, fill: "#6366f1", strokeWidth: 0 }}
                     tooltipType="none" legendType="none" />
                 </ComposedChart>
@@ -421,7 +419,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
           </Card>
         )}
 
-        {/* ── Radar Chart ── */}
+        {/* ── Grafik Radar ── */}
         {activeChart === "radar" && (
           <Card className="border border-gray-100 shadow-sm">
             <CardHeader className="px-5 pt-5 pb-2">
@@ -437,22 +435,20 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                   <PolarGrid stroke="#e5e7eb" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: "#9ca3af", fontSize: 11 }} />
                   <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                  {/* Target zone fill */}
                   <Radar name="Target" dataKey={() => STATUS_TARGET}
                     stroke="#fca5a5" fill="#fee2e2" fillOpacity={0.25} strokeWidth={1} strokeDasharray="4 3" dot={false} />
-                  {/* Actual attainment */}
-                  <Radar name="Attainment" dataKey="attainment"
+                  <Radar name="Capaian" dataKey="attainment"
                     stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} strokeWidth={2}
                     dot={<RadarDot />} />
                   <Tooltip
                     contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }}
-                    formatter={(val: any, name: any) => [`${val}%`, name === "Target" ? "Target" : "Attainment"]}
+                    formatter={(val: any, name: any) => [`${val}%`, name === "Target" ? "Target" : "Capaian"]}
                   />
                 </RadarChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-5 -mt-2">
                 <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="w-3 h-0.5 bg-blue-500 inline-block" /> Attainment
+                  <span className="w-3 h-0.5 bg-blue-500 inline-block" /> Capaian
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-gray-500">
                   <span className="w-3 h-0.5 bg-red-300 inline-block border-dashed" /> Target {STATUS_TARGET}%
@@ -462,13 +458,13 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
           </Card>
         )}
 
-        {/* ── Gap Analysis Chart ── */}
+        {/* ── Grafik Analisis Kesenjangan ── */}
         {activeChart === "gap" && (
           <Card className="border border-gray-100 shadow-sm">
             <CardHeader className="px-5 pt-5 pb-2">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-gray-400" />
-                <CardTitle className="text-sm font-semibold text-gray-700">Gap Analysis (Capaian − Target)</CardTitle>
+                <CardTitle className="text-sm font-semibold text-gray-700">Analisis Kesenjangan (Capaian − Target)</CardTitle>
               </div>
               <CardDescription className="text-[11px]">
                 Nilai positif = melampaui target · negatif = kekurangan · urut dari terburuk
@@ -497,7 +493,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
         )}
       </div>
 
-      {/* ── Detail Table with inline mini bar ── */}
+      {/* ── Tabel detail per CPL ── */}
       <Card className="border border-gray-100 shadow-sm overflow-hidden">
         <CardHeader className="px-5 pt-5 pb-3 border-b border-gray-100">
           <CardTitle className="text-sm font-semibold text-gray-700">Rekap per CPL</CardTitle>
@@ -544,8 +540,8 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                       {isTercapai
                         ? <Badge className="bg-green-50 text-green-700 border-green-100 gap-1 text-xs"><CheckCircle2 className="h-3 w-3" /> Tercapai</Badge>
                         : isNearMiss
-                          ? <Badge className="bg-amber-50 text-amber-700 border-amber-100 gap-1 text-xs"><Minus className="h-3 w-3" /> Near-miss</Badge>
-                          : <Badge variant="outline" className="text-red-500 border-red-100 gap-1 text-xs"><XCircle className="h-3 w-3" /> Perlu Tindak</Badge>
+                          ? <Badge className="bg-amber-50 text-amber-700 border-amber-100 gap-1 text-xs"><Minus className="h-3 w-3" /> Hampir Tercapai</Badge>
+                          : <Badge variant="outline" className="text-red-500 border-red-100 gap-1 text-xs"><XCircle className="h-3 w-3" /> Perlu Tindakan</Badge>
                       }
                     </TableCell>
                   </TableRow>

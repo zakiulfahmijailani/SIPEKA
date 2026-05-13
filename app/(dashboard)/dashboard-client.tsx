@@ -27,14 +27,14 @@ const GRADE_COLORS: Record<string, string> = {
 }
 
 // ---------------------------------------------------------------------------
-// KPI tile config — each tile has its own accent style
+// Konfigurasi tile Indikator Kinerja Utama
 // ---------------------------------------------------------------------------
 type KpiStyle = {
   icon: React.ElementType
-  accent: string      // text/icon color
-  bg: string          // icon bg
-  ring: string        // card border accent when active
-  hero: boolean       // hero-sized tile (taller)
+  accent: string
+  bg: string
+  ring: string
+  hero: boolean
 }
 
 const KPI_STYLES: Record<string, KpiStyle> = {
@@ -45,7 +45,7 @@ const KPI_STYLES: Record<string, KpiStyle> = {
 }
 
 // ---------------------------------------------------------------------------
-// KPI Tile component
+// Komponen tile IKU
 // ---------------------------------------------------------------------------
 function KpiTile({ k, isHero = false }: { k: any; isHero?: boolean }) {
   const style = KPI_STYLES[k.color] ?? KPI_STYLES.blue
@@ -64,7 +64,6 @@ function KpiTile({ k, isHero = false }: { k: any; isHero?: boolean }) {
         isHero ? "row-span-2" : ""
       )}
     >
-      {/* Subtle top accent line */}
       <div className={cn("h-0.5 w-full", style.bg.replace("bg-", "bg-").replace("50", "200"))} />
 
       <CardHeader className="pb-0 pt-5 px-5">
@@ -113,7 +112,7 @@ function KpiTile({ k, isHero = false }: { k: any; isHero?: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Admin / Kaprodi Dashboard
+// Dashboard Admin / Kaprodi
 // ---------------------------------------------------------------------------
 function AdminDashboard({ stats }: { stats: any }) {
   const pendingKpi = stats.kpi.find((k: any) => k.color === "red")
@@ -122,22 +121,22 @@ function AdminDashboard({ stats }: { stats: any }) {
   return (
     <div className="space-y-5 pb-10">
 
-      {/* ─── Bento Grid Row 1 ─── */}
+      {/* ─── Baris 1: Grid Bento ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" style={{ gridAutoRows: "auto" }}>
 
-        {/* Hero KPI: Total Mahasiswa — row-span-2 on lg */}
+        {/* Tile IKU Hero: Total Mahasiswa */}
         <div className="col-span-1 lg:row-span-2">
           <KpiTile k={stats.kpi[0]} isHero />
         </div>
 
-        {/* 3 smaller KPI tiles */}
+        {/* 3 tile IKU kecil */}
         {stats.kpi.slice(1).map((k: any) => (
           <div key={k.label} className="col-span-1">
             <KpiTile k={k} />
           </div>
         ))}
 
-        {/* Grade Distribution — 2 kolom, tinggi lebih besar */}
+        {/* Distribusi Nilai — 2 kolom */}
         <Card className="col-span-2 border border-gray-100 shadow-sm bg-white lg:row-span-1">
           <CardHeader className="px-5 pt-5 pb-2">
             <div className="flex items-center justify-between">
@@ -176,15 +175,15 @@ function AdminDashboard({ stats }: { stats: any }) {
         </Card>
       </div>
 
-      {/* ─── Bento Grid Row 2: CPL Radar full-width + sidebar ─── */}
+      {/* ─── Baris 2: Radar Ketercapaian CPL + Aktivitas ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* CPL Radar — 2 kolom lebar */}
+        {/* Radar Ketercapaian CPL — 2 kolom lebar */}
         <Card className="lg:col-span-2 border border-gray-100 shadow-sm bg-white">
           <CardHeader className="px-5 pt-5 pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-sm font-semibold text-gray-700">CPL Attainment</CardTitle>
+                <CardTitle className="text-sm font-semibold text-gray-700">Ketercapaian CPL</CardTitle>
                 <CardDescription className="text-[11px] mt-0.5">Rata-rata capaian per kompetensi lulusan</CardDescription>
               </div>
               <Link
@@ -202,7 +201,7 @@ function AdminDashboard({ stats }: { stats: any }) {
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "#9ca3af" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                 <Radar
-                  name="Attainment"
+                  name="Capaian"
                   dataKey="attainment"
                   stroke="#3b82f6"
                   fill="#3b82f6"
@@ -254,11 +253,11 @@ function AdminDashboard({ stats }: { stats: any }) {
         </Card>
       </div>
 
-      {/* ─── Row 3: RPS Pending full width ─── */}
+      {/* ─── Baris 3: RPS Menunggu Persetujuan ─── */}
       <Card className="border border-gray-100 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between px-5 pt-5 pb-3">
           <div>
-            <CardTitle className="text-sm font-semibold text-gray-700">RPS Menunggu Approval</CardTitle>
+            <CardTitle className="text-sm font-semibold text-gray-700">RPS Menunggu Persetujuan</CardTitle>
             <CardDescription className="text-[11px] mt-0.5">
               {hasPendingRps ? "Perlu ditinjau sebelum semester berjalan" : "Semua RPS sudah disetujui ✓"}
             </CardDescription>
@@ -296,7 +295,7 @@ function AdminDashboard({ stats }: { stats: any }) {
                         "shrink-0 ml-2 text-[11px] text-gray-500 hover:text-gray-900 gap-1"
                       )}
                     >
-                      Review <ArrowRight className="h-3 w-3" />
+                      Tinjau <ArrowRight className="h-3 w-3" />
                     </Link>
                   </div>
                 ))
@@ -314,7 +313,7 @@ function AdminDashboard({ stats }: { stats: any }) {
 }
 
 // ---------------------------------------------------------------------------
-// Dosen Dashboard
+// Dashboard Dosen
 // ---------------------------------------------------------------------------
 function DosenDashboard({ stats }: { stats: any }) {
   return (
@@ -348,7 +347,7 @@ function DosenDashboard({ stats }: { stats: any }) {
                   )}>
                     {isApproved
                       ? <><CheckCircle2 className="h-3.5 w-3.5" /> RPS Aktif</>
-                      : <><AlertCircle className="h-3.5 w-3.5" /> {d.statusRps}</>}
+                      : <><AlertCircle className="h-3.5 w-3.5" /> Menunggu Persetujuan</>}
                   </div>
                 </div>
                 <CardTitle className="text-base font-semibold text-gray-800 leading-snug">
@@ -357,7 +356,7 @@ function DosenDashboard({ stats }: { stats: any }) {
               </CardHeader>
 
               <CardContent className="px-5 pb-5 flex flex-col gap-4 flex-1 justify-between">
-                {/* Progress section */}
+                {/* Bagian progres input nilai */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-2">
                     <span className="text-gray-500">Input Nilai</span>
@@ -378,7 +377,7 @@ function DosenDashboard({ stats }: { stats: any }) {
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Tombol aksi */}
                 <div className="flex gap-2">
                   <Link
                     href="/nilai/input"
@@ -410,7 +409,7 @@ function DosenDashboard({ stats }: { stats: any }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main export
+// Ekspor utama
 // ---------------------------------------------------------------------------
 export function DashboardClient({ stats, role }: { stats: any; role: string }) {
   if (role === "SUPER_ADMIN" || role === "KAPRODI") {
