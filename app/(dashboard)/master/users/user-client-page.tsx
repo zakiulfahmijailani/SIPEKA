@@ -145,10 +145,10 @@ export function UserClientPage({ users }: { users: any[] }) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleResetPassword(item)} title="Reset Password">
+                    <Button variant="ghost" size="icon" onClick={() => handleResetPassword(item)} title="Atur Ulang Kata Sandi">
                       <Key className="h-4 w-4 text-amber-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} title="Edit">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} title="Ubah Data">
                       <Edit className="h-4 w-4 text-blue-600" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(item.id, item.is_active)}>

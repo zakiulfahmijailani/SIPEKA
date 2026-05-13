@@ -6,7 +6,7 @@ import { eq, and, asc, avg, count, sql } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Users, BookOpen, GraduationCap, TrendingUp } from "lucide-react"
+import { Users, BookOpen, GraduationCap, TrendingUp, CheckCircle2 } from "lucide-react"
 
 export default async function RekapNilaiPage(props: {
   searchParams: Promise<{ ta?: string; mk?: string; angkatan?: string }>
@@ -210,5 +210,3 @@ export default async function RekapNilaiPage(props: {
     </div>
   )
 }
-
-import { CheckCircle2 } from "lucide-react"
