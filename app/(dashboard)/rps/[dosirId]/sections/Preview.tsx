@@ -41,31 +41,31 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
 
   return (
     <div className="space-y-10 pb-20">
-      {/* Controls */}
+      {/* Kontrol Aksi */}
       <div className="flex flex-wrap gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg no-print">
         <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
           <Printer className="h-4 w-4" /> Cetak PDF
         </Button>
 
         {rps.status === "DRAFT" || rps.status === "REVISION_REQUIRED" ? (
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             disabled={!isValid}
             onClick={() => setShowConfirm({
               status: "SUBMITTED",
-              title: "Submit RPS?",
-              desc: "RPS akan dikirim ke Kaprodi untuk direview."
+              title: "Ajukan RPS?",
+              desc: "RPS akan dikirim ke Kaprodi untuk ditinjau."
             })}
             className="gap-2"
           >
-            <Send className="h-4 w-4" /> Submit ke Kaprodi
+            <Send className="h-4 w-4" /> Ajukan ke Kaprodi
           </Button>
         ) : null}
 
         {currentUser.role !== "DOSEN" && rps.status === "SUBMITTED" ? (
           <>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="destructive"
               onClick={() => setShowConfirm({
                 status: "REVISION_REQUIRED",
@@ -76,29 +76,29 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
             >
               <RotateCcw className="h-4 w-4" /> Kembalikan / Revisi
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="bg-green-600 hover:bg-green-700 gap-2"
               onClick={() => setShowConfirm({
                 status: "APPROVED",
-                title: "Approve RPS?",
+                title: "Setujui RPS?",
                 desc: "RPS akan disahkan dan digunakan untuk perkuliahan."
               })}
             >
-              <CheckCircle2 className="h-4 w-4" /> Approve & Sahkan
+              <CheckCircle2 className="h-4 w-4" /> Setujui & Sahkan
             </Button>
           </>
         ) : null}
 
         {!isValid && (
           <div className="flex items-center gap-2 text-xs text-red-600 font-medium">
-            <AlertTriangle className="h-4 w-4" /> 
+            <AlertTriangle className="h-4 w-4" />
             {totalBobot !== 100 ? `Total bobot ${totalBobot}% (harus 100%)` : "CPMK belum diisi"}
           </div>
         )}
       </div>
 
-      {/* Actual Document Content */}
+      {/* Dokumen RPS */}
       <div className="document-container space-y-8 p-8 border shadow-sm rounded bg-white font-serif text-sm">
         <div className="text-center space-y-1 border-b-2 pb-4">
           <h1 className="text-2xl font-bold uppercase">Rencana Pembelajaran Semester (RPS)</h1>
@@ -150,7 +150,7 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
            </div>
         </section>
 
-        {/* 4. Assessment */}
+        {/* 4. Penilaian */}
         <section className="space-y-2">
            <h3 className="font-bold border-b uppercase">IV. KOMPONEN PENILAIAN</h3>
            <Table className="border">
@@ -183,7 +183,7 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
            </Table>
         </section>
 
-        {/* 5. Meetings */}
+        {/* 5. Pertemuan */}
         <section className="space-y-2">
            <h3 className="font-bold border-b uppercase">V. Rencana Pertemuan</h3>
            <Table className="border text-[10px] leading-tight">
@@ -211,7 +211,7 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
            </Table>
         </section>
 
-        {/* 6. References */}
+        {/* 6. Referensi */}
         <section className="space-y-2">
            <h3 className="font-bold border-b uppercase">VI. REFERENSI</h3>
            <ul className="list-decimal list-inside space-y-1">
@@ -222,18 +222,18 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
         </section>
       </div>
 
-      {/* Confirm Dialog */}
+      {/* Dialog Konfirmasi */}
       <Dialog open={!!showConfirm} onOpenChange={() => setShowConfirm(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{showConfirm?.title}</DialogTitle>
             <DialogDescription>{showConfirm?.desc}</DialogDescription>
           </DialogHeader>
-          
+
           {showConfirm?.status === "REVISION_REQUIRED" && (
             <div className="space-y-2 py-4">
                <Label>Catatan Revisi</Label>
-               <Textarea 
+               <Textarea
                  placeholder="Tuliskan catatan perbaikan untuk dosen..."
                  value={catatan}
                  onChange={(e) => setCatatan(e.target.value)}
@@ -244,7 +244,7 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
 
           <DialogFooter>
              <Button variant="ghost" onClick={() => setShowConfirm(null)}>Batal</Button>
-             <Button 
+             <Button
                variant={showConfirm?.status === "REVISION_REQUIRED" ? "destructive" : "default"}
                onClick={() => {
                  onStatusChange(showConfirm!.status, catatan)

@@ -10,7 +10,7 @@ export function IdentitasSection({ dosir }: { dosir: any }) {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold">Identitas Mata Kuliah</h2>
-        <p className="text-sm text-muted-foreground">Informasi dasar mata kuliah (Auto-fill dari Dosir MK)</p>
+        <p className="text-sm text-muted-foreground">Informasi dasar mata kuliah (Auto-isi dari Penugasan Dosen)</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border rounded-lg bg-gray-50/50">

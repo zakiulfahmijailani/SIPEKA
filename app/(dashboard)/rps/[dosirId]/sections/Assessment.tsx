@@ -10,6 +10,7 @@ import { debounce } from "lodash"
 import { saveKomponens } from "../../actions"
 import { toast } from "sonner"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 
 interface AssessmentSectionProps {
   rpsId: string
@@ -90,7 +91,7 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
         </div>
       </div>
 
-      {/* Progress Weight */}
+      {/* Progres Bobot */}
       <div className="p-4 border rounded-lg bg-gray-50/50 space-y-2">
         <div className="flex justify-between items-center text-sm">
           <span className="font-medium">Total Bobot</span>
@@ -107,7 +108,7 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
         )} />
         {totalBobot !== 100 && (
           <p className="text-[10px] text-red-500 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" /> Total bobot harus 100% untuk dapat submit RPS.
+            <AlertCircle className="h-3 w-3" /> Total bobot harus 100% untuk dapat mengajukan RPS.
           </p>
         )}
       </div>
@@ -120,16 +121,16 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
                  <div className="grid grid-cols-4 gap-4">
                    <div className="col-span-2 space-y-2">
                      <Label className="text-xs uppercase text-gray-500 font-bold">Nama Komponen</Label>
-                     <Input 
-                       placeholder="Contoh: UTS, Tugas 1, Proyek" 
+                     <Input
+                       placeholder="Contoh: UTS, Tugas 1, Proyek"
                        value={k.nama}
                        onChange={(e) => handleChange(idx, "nama", e.target.value)}
                      />
                    </div>
                    <div className="space-y-2">
                      <Label className="text-xs uppercase text-gray-500 font-bold">Bobot (%)</Label>
-                     <Input 
-                       type="number" 
+                     <Input
+                       type="number"
                        value={k.bobot}
                        onChange={(e) => handleChange(idx, "bobot", parseInt(e.target.value) || 0)}
                      />
@@ -146,12 +147,12 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
                    <div className="flex flex-wrap gap-4 pt-1">
                      {cpmks.map((c) => (
                        <div key={c.id} className="flex items-center gap-2">
-                         <Checkbox 
-                           id={`comp-${idx}-cpmk-${c.id}`} 
+                         <Checkbox
+                           id={`comp-${idx}-cpmk-${c.id}`}
                            checked={k.cpmk_ids.includes(c.id)}
                            onCheckedChange={() => toggleCpmk(idx, c.id)}
                          />
-                         <Label 
+                         <Label
                            htmlFor={`comp-${idx}-cpmk-${c.id}`}
                            className="text-xs font-medium cursor-pointer"
                          >
@@ -170,5 +171,3 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
     </div>
   )
 }
-
-import { cn } from "@/lib/utils"
