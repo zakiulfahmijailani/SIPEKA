@@ -1,0 +1,6 @@
+export { MahasiswaEmpty } from "./mahasiswa-empty"
+export { NilaiMataKuliahEmpty, NilaiMahasiswaEmpty, NilaiSearchEmpty } from "./nilai-empty"
+export { RpsEmpty, RpsSearchEmpty, RpsDosenEmpty } from "./rps-empty"
+export { KurikulumEmpty, MataKuliahEmpty } from "./kurikulum-empty"
+export { LaporanEmpty, LaporanNoDataEmpty } from "./laporan-empty"
+export { AuditEmpty, AuditSearchEmpty } from "./audit-empty"

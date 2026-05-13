@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,12 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreVertical, Edit, Trash, Upload, Filter } from "lucide-react"
+import { Plus, Search, MoreVertical, Edit, Trash, Upload } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { MahasiswaFormSheet } from "./mahasiswa-form-sheet"
 import { ImportModal } from "./import-modal"
 import { deleteMahasiswa } from "./actions"
 import { toast } from "sonner"
+import { MahasiswaEmpty } from "@/components/empty-states"
 
 export function MahasiswaClientPage({ students }: { students: any[] }) {
   const router = useRouter()
@@ -35,8 +36,9 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
 
   const currentStatus = searchParams.get("status") || "ALL"
   const currentAngkatan = searchParams.get("angkatan") || "ALL"
+  const currentQ = searchParams.get("q") || ""
+  const hasFilter = currentStatus !== "ALL" || currentAngkatan !== "ALL"
 
-  // Get unique angkatan for filter
   const allAngkatan = Array.from(new Set(students.map(s => s.angkatan))).sort((a, b) => b - a)
 
   const handleEdit = (student: any) => {
@@ -68,6 +70,11 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
     }
     router.push(`?${params.toString()}`)
   }
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm("")
+    router.push("?")
+  }, [router])
 
   const handleDelete = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus data mahasiswa ini?")) {
@@ -111,8 +118,8 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
 
       <div className="flex flex-wrap gap-3 py-2">
         <div className="flex gap-2 flex-1 min-w-[300px]">
-          <Input 
-            placeholder="Cari NIM atau Nama..." 
+          <Input
+            placeholder="Cari NIM atau Nama..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -124,7 +131,7 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
         </div>
 
         <div className="flex gap-2">
-          <select 
+          <select
             className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
             value={currentAngkatan}
             onChange={(e) => handleFilter("angkatan", e.target.value)}
@@ -133,7 +140,7 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
             {allAngkatan.map(a => <option key={a} value={a.toString()}>{a}</option>)}
           </select>
 
-          <select 
+          <select
             className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
             value={currentStatus}
             onChange={(e) => handleFilter("status", e.target.value)}
@@ -148,20 +155,30 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
       </div>
 
       <div className="bg-white rounded-md border">
-        <Table>
-          <TableHeader className="bg-gray-50">
-            <TableRow>
-              <TableHead className="w-[150px]">NIM</TableHead>
-              <TableHead>Nama Mahasiswa</TableHead>
-              <TableHead className="w-[120px]">Angkatan</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-              <TableHead className="w-[120px]">Track</TableHead>
-              <TableHead className="text-right w-[80px]">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.length > 0 ? (
-              students.map((student) => (
+        {students.length === 0 ? (
+          <div className="p-6">
+            <MahasiswaEmpty
+              hasFilter={hasFilter}
+              searchQuery={currentQ}
+              onAdd={handleAddNew}
+              onImport={() => setIsImportOpen(true)}
+              onClearSearch={handleClearSearch}
+            />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="w-[150px]">NIM</TableHead>
+                <TableHead>Nama Mahasiswa</TableHead>
+                <TableHead className="w-[120px]">Angkatan</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
+                <TableHead className="w-[120px]">Track</TableHead>
+                <TableHead className="text-right w-[80px]">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students.map((student) => (
                 <TableRow key={student.id}>
                   <TableCell className="font-mono font-medium">{student.nim}</TableCell>
                   <TableCell>
@@ -191,27 +208,21 @@ export function MahasiswaClientPage({ students }: { students: any[] }) {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Data mahasiswa tidak ditemukan.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      <MahasiswaFormSheet 
-        open={isSheetOpen} 
-        onOpenChange={setIsSheetOpen} 
-        initialData={selectedStudent} 
+      <MahasiswaFormSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        initialData={selectedStudent}
       />
 
-      <ImportModal 
-        open={isImportOpen} 
-        onOpenChange={setIsImportOpen} 
+      <ImportModal
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
       />
     </div>
   )
