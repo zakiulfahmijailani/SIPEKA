@@ -1,3 +1,4 @@
+export { EmptyState } from "./empty-state"
 export { MahasiswaEmpty } from "./mahasiswa-empty"
 export { NilaiMataKuliahEmpty, NilaiMahasiswaEmpty, NilaiSearchEmpty } from "./nilai-empty"
 export { RpsEmpty, RpsSearchEmpty, RpsDosenEmpty } from "./rps-empty"
