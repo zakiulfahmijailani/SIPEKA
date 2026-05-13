@@ -41,10 +41,13 @@ export function Sidebar({ session }: SidebarProps) {
   const navItems = [
     // SEMUA ROLE
     { name: "Dashboard", href: "/dashboard", icon: Home, show: true },
-    { name: "Laporan", href: "/laporan", icon: BarChart2, show: true },
     { name: "Referensi IS2020", href: "/referensi/is2020", icon: BookOpen, show: true },
     
-    // KAPRODI + SUPER_ADMIN
+    // KAPRODI + SUPER_ADMIN (Laporan)
+    { name: "Attainment CPL", href: "/laporan/cpl-attainment", icon: BarChart2, show: isSuperAdmin || isKaprodi },
+    { name: "IS2020 Coverage", href: "/laporan/is2020-coverage", icon: Map, show: isSuperAdmin || isKaprodi },
+
+    // KAPRODI + SUPER_ADMIN (Master)
     { name: "Master CPL", href: "/master/cpl", icon: Database, show: isSuperAdmin || isKaprodi },
     { name: "Mata Kuliah", href: "/master/mata-kuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
     { name: "Peta Kurikulum", href: "/master/peta-kurikulum", icon: Map, show: isSuperAdmin || isKaprodi },

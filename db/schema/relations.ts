@@ -14,6 +14,7 @@ import {
 import { mahasiswa, enrollment, nilai } from "./nilai"
 import { cpmkAttainment, cplAttainment } from "./attainment"
 import { auditLog } from "./audit"
+import { notifications } from "./settings"
 
 // ── Auth relations ──
 export const usersRelations = relations(users, ({ many }) => ({
@@ -21,6 +22,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   dosirMk: many(dosirMk),
   auditLogs: many(auditLog),
+  notifications: many(notifications),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -193,3 +195,8 @@ export const cplAttainmentRelations = relations(cplAttainment, ({ one }) => ({
 export const auditLogRelations = relations(auditLog, ({ one }) => ({
   changedBy: one(users, { fields: [auditLog.changed_by], references: [users.id] }),
 }))
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.user_id], references: [users.id] }),
+}))
+
