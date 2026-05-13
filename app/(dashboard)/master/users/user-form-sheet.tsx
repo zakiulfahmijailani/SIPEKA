@@ -75,7 +75,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
     try {
       const result = await saveUser(data)
       if (result.success) {
-        toast.success(data.id ? "User diperbarui" : "User ditambahkan")
+        toast.success(data.id ? "Pengguna diperbarui" : "Pengguna ditambahkan")
         onOpenChange(false)
         reset()
       } else {
@@ -95,7 +95,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
     }}>
       <SheetContent className="sm:max-w-[500px]">
         <SheetHeader className="mb-6">
-          <SheetTitle>{initialData ? "Ubah Data User" : "Tambah User"}</SheetTitle>
+          <SheetTitle>{initialData ? "Ubah Data Pengguna" : "Tambah Pengguna"}</SheetTitle>
           <SheetDescription>
             Kelola informasi profil dan hak akses pengguna.
           </SheetDescription>
@@ -161,7 +161,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
               Batal
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Menyimpan..." : "Simpan User"}
+              {isLoading ? "Menyimpan..." : "Simpan Pengguna"}
             </Button>
           </div>
         </form>

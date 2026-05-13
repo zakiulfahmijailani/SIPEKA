@@ -49,7 +49,7 @@ export function UserClientPage({ users }: { users: any[] }) {
     try {
       const res = await toggleUserActive(id, currentStatus)
       if (res.success) {
-        toast.success("Status user berhasil diubah")
+        toast.success("Status pengguna berhasil diubah")
       } else {
         toast.error(res.error)
       }
@@ -85,12 +85,12 @@ export function UserClientPage({ users }: { users: any[] }) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manajemen User</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Manajemen Pengguna</h1>
           <p className="text-muted-foreground">Kelola akun dan hak akses pengguna</p>
         </div>
         <Button onClick={handleAddNew} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
-          Tambah User
+          Tambah Pengguna
         </Button>
       </div>
 
