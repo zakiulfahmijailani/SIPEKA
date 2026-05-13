@@ -150,3 +150,7 @@ export function RpsListEmpty() {
 }
 
 export { EmptyState }
+
+// ── Re-exports from sub-modules ──
+export { IS2020NoCurriculumEmpty, IS2020NoMappingEmpty } from "./empty-states/is2020-empty"
+export { LaporanMahasiswaEmpty } from "./empty-states/laporan-mahasiswa-empty"
