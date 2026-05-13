@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   FileDown, Loader2, CheckCircle2, XCircle,
-  Target, BarChart2, ChevronDown, ChevronRight, BookOpen,
+  Target, BarChart2, ChevronRight, BookOpen,
 } from "lucide-react"
 import { calculateCplAttainment } from "./actions"
 import { toast } from "sonner"
@@ -28,6 +28,7 @@ import {
 import { LaporanEmpty, LaporanNoDataEmpty } from "@/components/empty-states"
 import { cn } from "@/lib/utils"
 import { AnimatedNumber } from "@/components/animated-number"
+import { CplAttainmentSkeleton } from "@/components/skeletons"
 
 const STATUS_TARGET = 75
 
@@ -35,7 +36,7 @@ function barColor(passRate: number) {
   return passRate >= STATUS_TARGET ? "#16a34a" : "#ef4444"
 }
 
-// ── Drill-down: kontribusi MK untuk satu CPL ─────────────────────────────────
+// ── Drill-down: kontribusi MK untuk satu CPL ──
 function MkDrillDown({
   cplId,
   mkContribution,
@@ -43,7 +44,6 @@ function MkDrillDown({
   cplId: string
   mkContribution: Record<string, Record<string, { avgScore: number; studentCount: number }>>
 }) {
-  // Build list: { mkId, avgScore } sorted desc
   const rows = Object.entries(mkContribution)
     .filter(([, cpls]) => cpls[cplId])
     .map(([mkId, cpls]) => {
@@ -62,8 +62,6 @@ function MkDrillDown({
     )
   }
 
-  const maxAvg = Math.max(...rows.map(r => r.avg), 1)
-
   return (
     <div className="px-4 py-3 space-y-2 bg-gray-50/70">
       <p className="text-[10px] uppercase font-semibold tracking-wider text-gray-400 mb-2">
@@ -74,28 +72,21 @@ function MkDrillDown({
         const isPass = avg >= 55
         return (
           <div key={mkId} className="flex items-center gap-3">
-            {/* MK label */}
             <span className="font-mono text-[11px] font-semibold text-gray-600 w-[88px] shrink-0 truncate" title={mkId}>
               {mkId}
             </span>
-            {/* Bar */}
             <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
                 className="h-2 rounded-full transition-all duration-700"
-                style={{
-                  width: `${pct}%`,
-                  background: isPass ? "#16a34a" : "#ef4444",
-                }}
+                style={{ width: `${pct}%`, background: isPass ? "#16a34a" : "#ef4444" }}
               />
             </div>
-            {/* Score */}
             <span className={cn(
               "text-xs font-bold tabular-nums w-[42px] text-right shrink-0",
               isPass ? "text-green-700" : "text-red-500"
             )}>
               {avg}
             </span>
-            {/* Mahasiswa badge */}
             <span className="text-[10px] text-gray-400 w-[54px] shrink-0">
               {students} mhs
             </span>
@@ -106,15 +97,13 @@ function MkDrillDown({
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ── Main component ──
 export default function CplAttainmentClient({ tas }: { tas: any[] }) {
   const [taId, setTaId] = useState(tas.find(t => t.is_active)?.id || tas[0]?.id)
   const [angkatan, setAngkatan] = useState<string>("ALL")
   const [data, setData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
-  // Track which CPL row is expanded
   const [expandedCpl, setExpandedCpl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -188,14 +177,8 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
 
   const angkatanList = [2020, 2021, 2022, 2023, 2024]
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24 gap-2 text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        <span className="text-sm">Menghitung data ketercapaian...</span>
-      </div>
-    )
-  }
+  // ── Loading: full-page shimmer skeleton (replaces Loader2 spinner) ──
+  if (isLoading) return <CplAttainmentSkeleton />
 
   if (!data) return <LaporanNoDataEmpty />
 
@@ -229,27 +212,19 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
         <div className="space-y-1">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Tahun Akademik</label>
           <Select value={taId} onValueChange={(val) => setTaId(val || "")}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Pilih TA" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Pilih TA" /></SelectTrigger>
             <SelectContent>
-              {tas.map(t => (
-                <SelectItem key={t.id} value={t.id}>{t.nama} ({t.kode})</SelectItem>
-              ))}
+              {tas.map(t => <SelectItem key={t.id} value={t.id}>{t.nama} ({t.kode})</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Angkatan</label>
           <Select value={angkatan} onValueChange={(val) => setAngkatan(val || "ALL")}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Angkatan" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[130px]"><SelectValue placeholder="Angkatan" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Semua</SelectItem>
-              {angkatanList.map(a => (
-                <SelectItem key={a} value={a.toString()}>{a}</SelectItem>
-              ))}
+              {angkatanList.map(a => <SelectItem key={a} value={a.toString()}>{a}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -300,18 +275,8 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                 <PolarGrid stroke="#e5e7eb" />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: "#9ca3af", fontSize: 11 }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar
-                  name="Attainment"
-                  dataKey="attainment"
-                  stroke="#374151"
-                  fill="#374151"
-                  fillOpacity={0.1}
-                  strokeWidth={1.5}
-                />
-                <Tooltip
-                  contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }}
-                  formatter={(val: any) => [`${val}%`, "Attainment"]}
-                />
+                <Radar name="Attainment" dataKey="attainment" stroke="#374151" fill="#374151" fillOpacity={0.1} strokeWidth={1.5} />
+                <Tooltip contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }} formatter={(val: any) => [`${val}%`, "Attainment"]} />
               </RadarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -331,10 +296,7 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#f3f4f6" />
                 <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="subject" type="category" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={48} />
-                <Tooltip
-                  contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }}
-                  formatter={(val: any) => [`${val}%`, "Pass Rate"]}
-                />
+                <Tooltip contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }} formatter={(val: any) => [`${val}%`, "Pass Rate"]} />
                 <ReferenceLine x={STATUS_TARGET} stroke="#d1d5db" strokeDasharray="4 4" label={{ value: `Target ${STATUS_TARGET}%`, position: "insideTopRight", fontSize: 10, fill: "#9ca3af" }} />
                 <Bar dataKey="passRate" radius={[0, 3, 3, 0]} label={{ position: "right", fontSize: 10, fill: "#9ca3af", formatter: (v: any) => `${v}%` }}>
                   {data.chartData.map((entry: any) => (
@@ -370,25 +332,18 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
             {data.tableData.map((row: any) => {
               const isTercapai = row.capaian >= row.target
               const isExpanded = expandedCpl === row.id
-
               return (
                 <>
                   <TableRow
                     key={row.id}
                     className={cn(
                       "cursor-pointer select-none transition-colors",
-                      isExpanded
-                        ? "bg-gray-50 hover:bg-gray-50"
-                        : "hover:bg-gray-50/60"
+                      isExpanded ? "bg-gray-50 hover:bg-gray-50" : "hover:bg-gray-50/60"
                     )}
                     onClick={() => setExpandedCpl(isExpanded ? null : row.id)}
                   >
-                    {/* Expand chevron */}
                     <TableCell className="pr-0 pl-4 w-8">
-                      <span className={cn(
-                        "inline-flex text-gray-300 transition-transform duration-200",
-                        isExpanded && "rotate-90"
-                      )}>
+                      <span className={cn("inline-flex text-gray-300 transition-transform duration-200", isExpanded && "rotate-90")}>
                         <ChevronRight className="h-4 w-4" />
                       </span>
                     </TableCell>
@@ -396,26 +351,17 @@ export default function CplAttainmentClient({ tas }: { tas: any[] }) {
                     <TableCell className="text-sm text-gray-600 leading-relaxed max-w-[320px]">{row.rumusan}</TableCell>
                     <TableCell className="text-center text-sm tabular-nums text-gray-400">{row.target}%</TableCell>
                     <TableCell className="text-center">
-                      <span className={cn(
-                        "text-lg font-bold tabular-nums",
-                        isTercapai ? "text-green-600" : "text-red-500"
-                      )}>
+                      <span className={cn("text-lg font-bold tabular-nums", isTercapai ? "text-green-600" : "text-red-500")}>
                         {row.capaian}%
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
                       {isTercapai
-                        ? <Badge className="bg-green-50 text-green-700 border-green-100 gap-1 text-xs">
-                            <CheckCircle2 className="h-3 w-3" /> Tercapai
-                          </Badge>
-                        : <Badge variant="outline" className="text-red-500 border-red-100 gap-1 text-xs">
-                            <XCircle className="h-3 w-3" /> Belum
-                          </Badge>
+                        ? <Badge className="bg-green-50 text-green-700 border-green-100 gap-1 text-xs"><CheckCircle2 className="h-3 w-3" /> Tercapai</Badge>
+                        : <Badge variant="outline" className="text-red-500 border-red-100 gap-1 text-xs"><XCircle className="h-3 w-3" /> Belum</Badge>
                       }
                     </TableCell>
                   </TableRow>
-
-                  {/* ── Drill-down row ── */}
                   {isExpanded && (
                     <TableRow key={`${row.id}-drill`} className="bg-gray-50/70 hover:bg-gray-50/70">
                       <TableCell colSpan={6} className="p-0 border-t border-dashed border-gray-200">
