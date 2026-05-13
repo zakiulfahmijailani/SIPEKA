@@ -40,11 +40,11 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "DRAFT": return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" /> DRAFT</Badge>
-      case "SUBMITTED": return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 flex items-center gap-1 border-none"><Clock className="h-3 w-3" /> SUBMITTED</Badge>
-      case "APPROVED": return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 flex items-center gap-1 border-none"><CheckCircle2 className="h-3 w-3" /> APPROVED</Badge>
-      case "REVISION_REQUIRED": return <Badge variant="destructive" className="flex items-center gap-1"><RotateCcw className="h-3 w-3" /> REVISION</Badge>
-      default: return <Badge variant="outline">N/A</Badge>
+      case "DRAFT":             return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Draf</Badge>
+      case "SUBMITTED":         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 flex items-center gap-1 border-none"><Clock className="h-3 w-3" /> Menunggu Persetujuan</Badge>
+      case "APPROVED":          return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 flex items-center gap-1 border-none"><CheckCircle2 className="h-3 w-3" /> Disetujui</Badge>
+      case "REVISION_REQUIRED": return <Badge variant="destructive" className="flex items-center gap-1"><RotateCcw className="h-3 w-3" /> Perlu Revisi</Badge>
+      default:                  return <Badge variant="outline">Tidak Diketahui</Badge>
     }
   }
 
@@ -52,15 +52,15 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">RPS Builder</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Pengelola RPS</h1>
           <p className="text-muted-foreground">Kelola Rencana Pembelajaran Semester untuk mata kuliah Anda</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-3 py-2">
         <div className="flex gap-2 flex-1 min-w-[300px]">
-          <Input 
-            placeholder="Cari Mata Kuliah..." 
+          <Input
+            placeholder="Cari Mata Kuliah..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -72,15 +72,15 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
         </div>
 
         <div className="flex gap-2">
-          <select 
-            className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+          <select
+            className="h-9 w-[180px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
             value={currentStatus}
             onChange={(e) => handleFilter(e.target.value)}
           >
             <option value="ALL">Semua Status</option>
-            <option value="DRAFT">Draft</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="APPROVED">Approved</option>
+            <option value="DRAFT">Draf</option>
+            <option value="SUBMITTED">Menunggu Persetujuan</option>
+            <option value="APPROVED">Disetujui</option>
           </select>
         </div>
       </div>
@@ -92,8 +92,8 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
               <TableHead>Mata Kuliah</TableHead>
               <TableHead>Dosen</TableHead>
               <TableHead className="w-[100px] text-center">Kelas</TableHead>
-              <TableHead className="w-[120px]">TA</TableHead>
-              <TableHead className="w-[150px]">Status RPS</TableHead>
+              <TableHead className="w-[120px]">Tahun Akademik</TableHead>
+              <TableHead className="w-[180px]">Status RPS</TableHead>
               <TableHead className="text-right w-[150px]">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -102,7 +102,7 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
               dosirs.map((dosir) => {
                 const latestRps = dosir.rps?.[0]
                 const status = latestRps?.status || "DRAFT"
-                
+
                 return (
                   <TableRow key={dosir.id}>
                     <TableCell>
@@ -118,7 +118,7 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
                     <TableCell className="text-sm text-muted-foreground">{dosir.tahunAkademik.kode}</TableCell>
                     <TableCell>{getStatusBadge(status)}</TableCell>
                     <TableCell className="text-right">
-                      <Link 
+                      <Link
                         href={`/rps/${dosir.id}`}
                         className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
                       >
