@@ -20,7 +20,7 @@ import { toast } from "sonner"
 interface Student {
   id: string
   nim: string
-  nama: string
+  nama_lengkap: string
   is_active: boolean
   [key: string]: unknown
 }
