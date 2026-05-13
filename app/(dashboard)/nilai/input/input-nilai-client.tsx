@@ -392,7 +392,7 @@ export function InputNilaiClient({
                               NA
                             </TableHead>
                             <TableHead className="w-[80px] text-center text-xs">
-                              GRADE
+                              NILAI HURUF
                             </TableHead>
                             {/* Extra thin column for per-row saved icon */}
                             <TableHead className="w-6" />
