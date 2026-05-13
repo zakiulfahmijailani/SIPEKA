@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { LucideIcon } from "lucide-react"
+import { LucideIcon, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface EmptyStateProps {
@@ -66,6 +66,50 @@ export function EmptyState({
           onClick={action.onClick}
         >
           {action.label}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+interface EmptySearchStateProps {
+  query?: string
+  onClear?: () => void
+  className?: string
+}
+
+export function EmptySearchState({
+  query,
+  onClear,
+  className,
+}: EmptySearchStateProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center text-center rounded-xl px-6 py-14",
+        "border-dashed border-2 border-gray-200 bg-gray-50/50",
+        className
+      )}
+    >
+      <div className="mb-4 opacity-80 text-gray-300">
+        <Search className="h-10 w-10" strokeWidth={1.5} />
+      </div>
+      <h3 className="font-semibold text-sm mb-1 text-gray-700">
+        Tidak ada hasil
+      </h3>
+      <p className="text-sm max-w-xs text-gray-500">
+        {query
+          ? `Tidak ditemukan hasil untuk "${query}". Coba ubah kata kunci pencarian.`
+          : "Coba ubah kata kunci pencarian."}
+      </p>
+      {onClear && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-5 text-xs"
+          onClick={onClear}
+        >
+          Hapus pencarian
         </Button>
       )}
     </div>
