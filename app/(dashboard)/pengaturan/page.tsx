@@ -11,7 +11,12 @@ export default async function PengaturanPage() {
     redirect("/dashboard")
   }
 
-  const settings = await db.query.programSettings.findMany()
+  let settings = []
+  try {
+    settings = await db.query.programSettings.findMany()
+  } catch (e) {
+    console.error("Failed to fetch settings, table might be missing:", e)
+  }
 
   return (
     <div className="space-y-6">

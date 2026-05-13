@@ -15,17 +15,23 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+import { cn } from "@/lib/utils"
+
 export function NotificationBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const router = useRouter()
 
   const fetchNotifications = async () => {
-    const res = await fetch(`/api/notifications?userId=${userId}`)
-    const data = await res.json()
-    if (data.success) {
-      setNotifications(data.data)
-      setUnreadCount(data.data.filter((n: any) => !n.is_read).length)
+    try {
+      const res = await fetch(`/api/notifications?userId=${userId}`)
+      const data = await res.json()
+      if (data.success) {
+        setNotifications(data.data)
+        setUnreadCount(data.data.filter((n: any) => !n.is_read).length)
+      }
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -43,7 +49,7 @@ export function NotificationBell({ userId }: { userId: string }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="relative" />}>
+      <DropdownMenuTrigger className="relative flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 border-2 border-white">
