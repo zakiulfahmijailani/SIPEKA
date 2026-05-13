@@ -1,11 +1,15 @@
 import { LucideIcon } from "lucide-react"
 import Link from "next/link"
 
+type EmptyStateAction =
+  | { label: string; href: string; onClick?: never }
+  | { label: string; onClick: () => void; href?: never }
+
 interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description: string
-  action?: { label: string; href: string }
+  action?: EmptyStateAction
 }
 
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
@@ -17,12 +21,21 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
       <h3 className="font-semibold text-foreground mb-2">{title}</h3>
       <p className="text-sm text-muted-foreground max-w-sm mb-6">{description}</p>
       {action && (
-        <Link
-          href={action.href}
-          className="text-sm text-primary underline-offset-4 hover:underline"
-        >
-          {action.label}
-        </Link>
+        action.href ? (
+          <Link
+            href={action.href}
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            {action.label}
+          </Link>
+        ) : (
+          <button
+            onClick={action.onClick}
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            {action.label}
+          </button>
+        )
       )}
     </div>
   )
