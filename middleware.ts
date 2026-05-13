@@ -1,79 +1,81 @@
 import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
-// Role-based route access configuration
+// ---------------------------------------------------------------------------
+// Role-based route access map
+// More specific paths must come first (sorted by length in getRequiredRoles)
+// ---------------------------------------------------------------------------
 const ROLE_ACCESS: Record<string, string[]> = {
-  // Routes accessible by specific roles
-  "/master/users": ["SUPER_ADMIN"],
-  "/audit": ["SUPER_ADMIN", "KAPRODI"],
-  "/import": ["SUPER_ADMIN", "KAPRODI"],
-
-  // Routes accessible by admin + kaprodi + dosen
-  "/master": ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
-  "/kurikulum": ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
-  "/rps": ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
-  "/nilai": ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
-
-  // Routes accessible by all authenticated users
-  "/dashboard": ["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"],
-  "/laporan": ["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"],
-  "/referensi": ["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"],
+  "/master/users":  ["SUPER_ADMIN"],
+  "/audit":         ["SUPER_ADMIN", "KAPRODI"],
+  "/import":        ["SUPER_ADMIN", "KAPRODI"],
+  "/master":        ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
+  "/kurikulum":     ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
+  "/rps":           ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
+  "/nilai":         ["SUPER_ADMIN", "KAPRODI", "DOSEN"],
+  "/dashboard":     ["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"],
+  "/laporan":       ["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"],
+  "/referensi":     ["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"],
 }
 
 function getRequiredRoles(pathname: string): string[] | null {
-  // Check most specific path first (longer paths first)
-  const sortedPaths = Object.keys(ROLE_ACCESS).sort(
-    (a, b) => b.length - a.length
-  )
+  const sortedPaths = Object.keys(ROLE_ACCESS).sort((a, b) => b.length - a.length)
   for (const path of sortedPaths) {
-    if (pathname.startsWith(path)) {
-      return ROLE_ACCESS[path]
-    }
+    if (pathname.startsWith(path)) return ROLE_ACCESS[path]
   }
-  return null // No specific role requirement found
+  return null
 }
 
+// ---------------------------------------------------------------------------
+// Middleware — wrapping with auth() gives us req.auth (the session)
+// ---------------------------------------------------------------------------
 export default auth((req) => {
-  const { nextUrl, auth: session } = req
-  const { pathname } = nextUrl
+  const { pathname } = req.nextUrl
+  const session = req.auth
   const isLoggedIn = !!session
 
-  // Allow auth API routes
-  const isApiAuth = pathname.startsWith("/api/auth")
-  if (isApiAuth) return NextResponse.next()
-
-  // Allow static assets
-  const isPublicAsset =
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.includes(".")
-  if (isPublicAsset) return NextResponse.next()
-
-  // Auth page handling
-  const isAuthPage = pathname.startsWith("/login")
-  if (!isLoggedIn && !isAuthPage) {
-    return NextResponse.redirect(new URL("/login", nextUrl))
-  }
-  if (isLoggedIn && isAuthPage) {
-    return NextResponse.redirect(new URL("/dashboard", nextUrl))
-  }
-
-  // Role-based access control for authenticated users
-  if (isLoggedIn && session.user) {
-    const userRole = session.user.role
-    const requiredRoles = getRequiredRoles(pathname)
-
-    if (requiredRoles && userRole && !requiredRoles.includes(userRole)) {
-      // User doesn't have the required role → redirect to dashboard with error
-      const url = new URL("/dashboard", nextUrl)
-      url.searchParams.set("error", "unauthorized")
-      return NextResponse.redirect(url)
+  // Auth page: redirect logged-in users away from /login
+  if (pathname.startsWith("/login")) {
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl))
     }
+    return NextResponse.next()
+  }
+
+  // All other pages: require login
+  if (!isLoggedIn) {
+    const loginUrl = new URL("/login", req.nextUrl)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  // Role-based access control
+  const userRole = session.user?.role
+  const requiredRoles = getRequiredRoles(pathname)
+
+  if (requiredRoles && userRole && !requiredRoles.includes(userRole)) {
+    const url = new URL("/dashboard", req.nextUrl)
+    url.searchParams.set("error", "unauthorized")
+    return NextResponse.redirect(url)
   }
 
   return NextResponse.next()
 })
 
+// ---------------------------------------------------------------------------
+// Matcher: exclude static files, _next internals, and API auth routes
+// ---------------------------------------------------------------------------
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths EXCEPT:
+     * - _next/static  (static files)
+     * - _next/image   (image optimization)
+     * - favicon.ico
+     * - api/auth      (NextAuth internal routes)
+     * - files with an extension (images, fonts, etc.)
+     */
+    "/((?!_next/static|_next/image|favicon\\.ico|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|otf|css|js)$).*)",
+  ],
 }
