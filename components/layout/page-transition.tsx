@@ -1,32 +1,37 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
 import { usePathname } from "next/navigation"
-
-const variants = {
-  hidden: { opacity: 0, y: 10 },
-  enter:  { opacity: 1, y: 0 },
-  exit:   { opacity: 0, y: -6 },
-}
+import { useEffect, useRef, useState } from "react"
 
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [displayChildren, setDisplayChildren] = useState(children)
+  const [transitionState, setTransitionState] = useState<"enter" | "exit">("enter")
+  const prevPathname = useRef(pathname)
+
+  useEffect(() => {
+    if (prevPathname.current === pathname) return
+    prevPathname.current = pathname
+
+    // Start exit
+    setTransitionState("exit")
+    const t = setTimeout(() => {
+      setDisplayChildren(children)
+      setTransitionState("enter")
+    }, 120)
+
+    return () => clearTimeout(t)
+  }, [pathname, children])
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        variants={variants}
-        initial="hidden"
-        animate="enter"
-        exit="exit"
-        transition={{
-          duration: 0.18,
-          ease: [0.16, 1, 0.3, 1],
-        }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div
+      style={{
+        opacity: transitionState === "enter" ? 1 : 0,
+        transform: transitionState === "enter" ? "translateY(0)" : "translateY(-6px)",
+        transition: "opacity 180ms cubic-bezier(0.16,1,0.3,1), transform 180ms cubic-bezier(0.16,1,0.3,1)",
+      }}
+    >
+      {displayChildren}
+    </div>
   )
 }
