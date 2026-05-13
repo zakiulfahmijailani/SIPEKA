@@ -28,25 +28,35 @@ export default async function EnrollmentPage() {
   }
 
   // Fetch Dosirs for active TA with enrollments
-  const allDosirs = await db.query.dosirMk.findMany({
-    where: eq(dosirMk.tahun_akademik_id, activeTa.id),
-    with: {
-      mk: true,
-      dosen: true,
-      tahunAkademik: true,
-      enrollments: {
-        with: {
-          mahasiswa: true
+  let allDosirs = []
+  try {
+    allDosirs = await db.query.dosirMk.findMany({
+      where: eq(dosirMk.tahun_akademik_id, activeTa.id),
+      with: {
+        mk: true,
+        dosen: true,
+        tahunAkademik: true,
+        enrollments: {
+          with: {
+            mahasiswa: true
+          }
         }
       }
-    }
-  })
+    })
+  } catch (e) {
+    console.error("Failed to fetch dosirs:", e)
+  }
 
   // Fetch all active students for search
-  const allStudents = await db.query.mahasiswa.findMany({
-    where: eq(mahasiswa.is_active, true),
-    orderBy: [desc(mahasiswa.nim)]
-  })
+  let allStudents = []
+  try {
+    allStudents = await db.query.mahasiswa.findMany({
+      where: eq(mahasiswa.is_active, true),
+      orderBy: [desc(mahasiswa.nim)]
+    })
+  } catch (e) {
+    console.error("Failed to fetch students:", e)
+  }
 
   return (
     <EnrollmentClientPage 

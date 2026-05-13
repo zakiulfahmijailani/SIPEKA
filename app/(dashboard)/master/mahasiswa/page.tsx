@@ -33,10 +33,15 @@ export default async function MahasiswaPage(props: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  const allStudents = await db.query.mahasiswa.findMany({
-    where: whereClause,
-    orderBy: [asc(mahasiswa.angkatan), asc(mahasiswa.nim)],
-  })
+  let allStudents = []
+  try {
+    allStudents = await db.query.mahasiswa.findMany({
+      where: whereClause,
+      orderBy: [asc(mahasiswa.angkatan), asc(mahasiswa.nim)],
+    })
+  } catch (e) {
+    console.error("Failed to fetch students, table might be missing:", e)
+  }
 
   return (
     <MahasiswaClientPage students={allStudents} />

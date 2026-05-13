@@ -34,23 +34,28 @@ export default async function RekapNilaiPage(props: {
   const conditions = [eq(dosirMk.tahun_akademik_id, taId)]
   if (mkId && mkId !== "ALL") conditions.push(eq(dosirMk.mk_id, mkId))
   
-  const enrollData = await db.query.enrollment.findMany({
-    where: sql`${enrollment.dosir_mk_id} IN (SELECT id FROM ${dosirMk} WHERE ${and(...conditions)})`,
-    with: {
-      mahasiswa: true,
-      dosirMk: {
-        with: {
-          mk: true,
-          rps: {
-            with: {
-              komponens: true
+  let enrollData = []
+  try {
+    enrollData = await db.query.enrollment.findMany({
+      where: sql`${enrollment.dosir_mk_id} IN (SELECT id FROM ${dosirMk} WHERE ${and(...conditions)})`,
+      with: {
+        mahasiswa: true,
+        dosirMk: {
+          with: {
+            mk: true,
+            rps: {
+              with: {
+                komponens: true
+              }
             }
           }
-        }
-      },
-      nilais: true
-    }
-  })
+        },
+        nilais: true
+      }
+    })
+  } catch (e) {
+    console.error("Failed to fetch enrollment data for rekap:", e)
+  }
 
   // Calculate stats
   const studentsFiltered = angkatan 

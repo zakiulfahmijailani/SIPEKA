@@ -28,42 +28,43 @@ export default async function InputNilaiPage() {
     ? and(eq(dosirMk.tahun_akademik_id, activeTa.id), eq(dosirMk.dosen_id, session.user.id))
     : eq(dosirMk.tahun_akademik_id, activeTa.id)
 
-  const myDosirs = await db.query.dosirMk.findMany({
-    where: whereCondition,
-    with: {
-      mk: true,
-      dosen: true,
-      tahunAkademik: true,
-      rps: {
-        with: {
-          komponens: true
-        }
-      },
-      enrollments: {
-        with: {
-          mahasiswa: true
+  let myDosirs = []
+  try {
+    myDosirs = await db.query.dosirMk.findMany({
+      where: whereCondition,
+      with: {
+        mk: true,
+        dosen: true,
+        tahunAkademik: true,
+        rps: {
+          with: {
+            komponens: true
+          }
+        },
+        enrollments: {
+          with: {
+            mahasiswa: true
+          }
         }
       }
-    }
-  })
+    })
+  } catch (e) {
+    console.error("Failed to fetch dosirs:", e)
+  }
 
   // Fetch all existing grades for these enrollments to pre-populate
   const enrollmentIds = myDosirs.flatMap(d => d.enrollments.map(e => e.id))
   
   let existingGrades: any[] = []
   if (enrollmentIds.length > 0) {
-    // Note: Drizzle in() operator needs a non-empty array
-    // We'll use a transaction or similar if needed, but for now simple query
-    existingGrades = await db.query.nilai.findMany({
-      // We can filter by enrollmentIds if we want to be precise, or just fetch all
-      // For simplicity and since it's a specific page, we'll fetch what we need
-    })
-    
-    // Actually, filter by enrollmentIds to be efficient
-    const { inArray } = require("drizzle-orm")
-    existingGrades = await db.query.nilai.findMany({
-      where: inArray(nilai.enrollment_id, enrollmentIds)
-    })
+    try {
+      const { inArray } = require("drizzle-orm")
+      existingGrades = await db.query.nilai.findMany({
+        where: inArray(nilai.enrollment_id, enrollmentIds)
+      })
+    } catch (e) {
+      console.error("Failed to fetch existing grades:", e)
+    }
   }
 
   return (
