@@ -16,7 +16,8 @@ import {
   Users, 
   ShieldAlert, 
   LogOut, 
-  Menu
+  Menu,
+  ChevronRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +30,12 @@ interface SidebarProps {
   session: Session
 }
 
+const ROLE_LABEL: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  KAPRODI: "Kaprodi",
+  DOSEN: "Dosen",
+}
+
 export function Sidebar({ session }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -38,73 +45,110 @@ export function Sidebar({ session }: SidebarProps) {
   const isKaprodi = role === "KAPRODI"
   const isDosen = role === "DOSEN"
 
-  const navItems = [
-    // SEMUA ROLE
-    { name: "Dashboard", href: "/dashboard", icon: Home, show: true },
-    { name: "Referensi IS2020", href: "/referensi/is2020", icon: BookOpen, show: true },
-    
-    // KAPRODI + SUPER_ADMIN (Laporan)
-    { name: "Attainment CPL", href: "/laporan/cpl-attainment", icon: BarChart2, show: isSuperAdmin || isKaprodi },
-    { name: "IS2020 Coverage", href: "/laporan/is2020-coverage", icon: Map, show: isSuperAdmin || isKaprodi },
-
-    // KAPRODI + SUPER_ADMIN (Master)
-    { name: "Master CPL", href: "/master/cpl", icon: Database, show: isSuperAdmin || isKaprodi },
-    { name: "Mata Kuliah", href: "/master/mata-kuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
-    { name: "Peta Kurikulum", href: "/master/peta-kurikulum", icon: Map, show: isSuperAdmin || isKaprodi },
-    { name: "Dosir MK", href: "/master/dosir-mk", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
-    { name: "Tahun Akademik", href: "/master/tahun-akademik", icon: Database, show: isSuperAdmin || isKaprodi },
-    { name: "Profil Lulusan", href: "/master/profil-lulusan", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
-    { name: "Data Mahasiswa", href: "/master/mahasiswa", icon: Users, show: isSuperAdmin || isKaprodi },
-    
-    // DOSEN + KAPRODI + SUPER_ADMIN
-    { name: "RPS Saya", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
-    { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
-    { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
-    { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
-    
-    // SUPER_ADMIN only
-    { name: "Manajemen User", href: "/master/users", icon: Users, show: isSuperAdmin },
-    { name: "Audit Log", href: "/audit", icon: ShieldAlert, show: isSuperAdmin },
-  ].filter(item => item.show)
+  // Nav items dikelompokkan per seksi
+  const navGroups = [
+    {
+      label: null,
+      items: [
+        { name: "Dashboard", href: "/dashboard", icon: Home, show: true },
+        { name: "Referensi IS2020", href: "/referensi/is2020", icon: BookOpen, show: true },
+      ],
+    },
+    {
+      label: "Laporan",
+      items: [
+        { name: "Attainment CPL", href: "/laporan/cpl-attainment", icon: BarChart2, show: isSuperAdmin || isKaprodi },
+        { name: "IS2020 Coverage", href: "/laporan/is2020-coverage", icon: Map, show: isSuperAdmin || isKaprodi },
+      ],
+    },
+    {
+      label: "Master Data",
+      items: [
+        { name: "Master CPL", href: "/master/cpl", icon: Database, show: isSuperAdmin || isKaprodi },
+        { name: "Mata Kuliah", href: "/master/mata-kuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
+        { name: "Peta Kurikulum", href: "/master/peta-kurikulum", icon: Map, show: isSuperAdmin || isKaprodi },
+        { name: "Dosir MK", href: "/master/dosir-mk", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
+        { name: "Tahun Akademik", href: "/master/tahun-akademik", icon: Database, show: isSuperAdmin || isKaprodi },
+        { name: "Profil Lulusan", href: "/master/profil-lulusan", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
+        { name: "Data Mahasiswa", href: "/master/mahasiswa", icon: Users, show: isSuperAdmin || isKaprodi },
+      ],
+    },
+    {
+      label: "Perkuliahan",
+      items: [
+        { name: "RPS Saya", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
+        { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
+        { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
+        { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
+      ],
+    },
+    {
+      label: "Sistem",
+      items: [
+        { name: "Manajemen User", href: "/master/users", icon: Users, show: isSuperAdmin },
+        { name: "Audit Log", href: "/audit", icon: ShieldAlert, show: isSuperAdmin },
+      ],
+    },
+  ]
 
   const NavLinks = () => (
-    <nav className="space-y-1">
-      {navItems.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+    <nav className="space-y-4">
+      {navGroups.map((group, i) => {
+        const visible = group.items.filter(item => item.show)
+        if (visible.length === 0) return null
         return (
-          <Link
-            key={item.name}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              isActive 
-                ? "bg-blue-50 text-blue-700" 
-                : "text-gray-700 hover:bg-gray-100"
+          <div key={i}>
+            {group.label && (
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                {group.label}
+              </p>
             )}
-          >
-            <item.icon className={cn("h-5 w-5", isActive ? "text-blue-700" : "text-gray-500")} />
-            {item.name}
-          </Link>
+            <div className="space-y-0.5">
+              {visible.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-gray-100 text-gray-900 font-semibold"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        isActive ? "text-gray-900" : "text-gray-400"
+                      )}
+                    />
+                    <span className="flex-1 truncate">{item.name}</span>
+                    {isActive && <ChevronRight className="h-3 w-3 text-gray-400" />}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         )
       })}
     </nav>
   )
 
   const UserProfile = () => (
-    <div className="flex flex-col gap-1 p-4 border-b border-gray-200">
-      <div className="font-bold text-xl tracking-tight text-blue-900">SIPEKA</div>
-      <div className="text-sm font-medium text-gray-500 mb-4">Sistem Informasi</div>
-      
-      <div className="mt-2 flex flex-col gap-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
-        <span className="text-sm font-semibold truncate" title={session?.user?.name || ""}>
+    <div className="p-4 border-b border-gray-100">
+      <div className="font-bold text-lg tracking-tight text-gray-900">SIPEKA</div>
+      <div className="text-xs text-gray-400 mb-4">Sistem Informasi Penilaian</div>
+      <div className="flex flex-col gap-0.5 p-3 rounded-lg bg-gray-50 border border-gray-100">
+        <span className="text-sm font-semibold text-gray-800 truncate" title={session?.user?.name || ""}>
           {session?.user?.name}
         </span>
-        <span className="text-xs text-gray-500 truncate" title={session?.user?.email || ""}>
+        <span className="text-xs text-gray-400 truncate" title={session?.user?.email || ""}>
           {session?.user?.email}
         </span>
-        <Badge variant="outline" className="mt-1 w-fit bg-white text-xs">
-          {role}
+        <Badge variant="outline" className="mt-1.5 w-fit text-xs text-gray-500 bg-white">
+          {ROLE_LABEL[role as string] ?? role}
         </Badge>
       </div>
     </div>
@@ -114,10 +158,10 @@ export function Sidebar({ session }: SidebarProps) {
     <>
       {/* Mobile Sidebar */}
       <div className="lg:hidden flex items-center justify-between p-4 border-b bg-white">
-        <div className="font-bold text-xl text-blue-900">SIPEKA</div>
+        <div className="font-bold text-lg text-gray-900">SIPEKA</div>
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger render={<Button variant="ghost" size="icon" />}>
-            <Menu className="h-6 w-6" />
+          <SheetTrigger render={<Button variant="ghost" size="icon" aria-label="Buka menu navigasi" />}>
+            <Menu className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col h-full">
             <UserProfile />
@@ -125,13 +169,14 @@ export function Sidebar({ session }: SidebarProps) {
               <NavLinks />
             </div>
             <div className="p-4 border-t mt-auto">
-              <Button 
-                variant="outline" 
-                className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
                 onClick={() => signOut({ callbackUrl: "/login" })}
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                Keluar
               </Button>
             </div>
           </SheetContent>
@@ -139,19 +184,20 @@ export function Sidebar({ session }: SidebarProps) {
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r min-h-screen">
+      <aside className="hidden lg:flex flex-col w-60 bg-white border-r border-gray-100 min-h-screen">
         <UserProfile />
         <div className="flex-1 overflow-y-auto p-4">
           <NavLinks />
         </div>
-        <div className="p-4 border-t mt-auto">
-          <Button 
-            variant="outline" 
-            className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+        <div className="p-4 border-t border-gray-100 mt-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
             onClick={() => signOut({ callbackUrl: "/login" })}
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            Keluar
           </Button>
         </div>
       </aside>
