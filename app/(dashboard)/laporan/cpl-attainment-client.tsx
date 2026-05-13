@@ -169,9 +169,9 @@ function GapTooltip({ active, payload, label }: any) {
 }
 
 // ─── KPI tile with trend icon ─────────────────────────────────────────────────
-function KpiTile({ label, value, suffix = "", sub, trend, color = "gray" }: {
+function KpiTile({ label, value, suffix = "", sub, trend, color = "gray", decimals }: {
   label: string; value: number; suffix?: string; sub?: string
-  trend?: "up" | "down" | "neutral"; color?: string
+  trend?: "up" | "down" | "neutral"; color?: string; decimals?: number
 }) {
   const colorMap: Record<string, string> = {
     green: "text-green-600",
@@ -190,7 +190,7 @@ function KpiTile({ label, value, suffix = "", sub, trend, color = "gray" }: {
           {trend && <TrendIcon className={cn("h-3.5 w-3.5 mt-0.5", trendColor)} />}
         </div>
         <p className={cn("text-2xl font-bold tabular-nums mt-1", colorMap[color])}>
-          <AnimatedNumber value={value} decimals={suffix === "%" ? 1 : 0} suffix={suffix} />
+          <AnimatedNumber value={value} decimals={decimals !== undefined ? decimals : (suffix === "%" ? 1 : 0)} suffix={suffix} />
         </p>
         {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
       </CardContent>
