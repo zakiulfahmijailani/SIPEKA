@@ -330,3 +330,73 @@ export function StatCardSkeleton() {
     </div>
   )
 }
+
+// --------------------------------------
+// Input Nilai Skeleton
+// --------------------------------------
+export function InputNilaiSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <ShimmerBlock className="h-7 w-40" />
+          <ShimmerBlock className="h-4 w-64" />
+        </div>
+        <ShimmerBlock className="h-9 w-32 rounded-lg" />
+      </div>
+
+      {/* 2-col layout */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Sidebar kelas */}
+        <div className="md:col-span-1 border border-gray-100 rounded-xl p-4 space-y-3 h-fit">
+          <ShimmerBlock className="h-4 w-24" />
+          <ShimmerBlock className="h-3 w-40" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-3 border border-gray-100 rounded-lg space-y-2">
+              <ShimmerBlock className="h-4 w-full" />
+              <div className="flex justify-between">
+                <ShimmerBlock className="h-3.5 w-12 rounded-full" />
+                <ShimmerBlock className="h-3.5 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabel nilai */}
+        <div className="md:col-span-3 border border-gray-100 rounded-xl overflow-hidden">
+          {/* Card header */}
+          <div className="bg-gray-50 px-5 py-4 border-b border-gray-100 flex justify-between items-start">
+            <div className="space-y-1.5">
+              <ShimmerBlock className="h-5 w-48" />
+              <ShimmerBlock className="h-3.5 w-64" />
+            </div>
+            <ShimmerBlock className="h-5 w-12 rounded-full" />
+          </div>
+          {/* Table header */}
+          <div className="bg-gray-100/50 px-5 py-3 flex gap-6 border-b border-gray-100">
+            {["w-6", "w-20", "w-36", "w-14", "w-14", "w-14", "w-12", "w-14"].map((w, i) => (
+              <ShimmerBlock key={i} className={`h-3.5 ${w}`} />
+            ))}
+          </div>
+          {/* Rows */}
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="px-5 py-3 flex items-center gap-6 border-b border-gray-50 last:border-0"
+            >
+              <ShimmerBlock className="h-4 w-4" />
+              <ShimmerBlock className="h-4 w-16" />
+              <ShimmerBlock className="h-4 w-36" />
+              {[...Array(3)].map((_, j) => (
+                <ShimmerBlock key={j} className="h-8 w-14 rounded-md" />
+              ))}
+              <ShimmerBlock className="h-4 w-10 ml-auto" />
+              <ShimmerBlock className="h-5 w-10 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
