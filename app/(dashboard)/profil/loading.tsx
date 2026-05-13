@@ -1,5 +1,5 @@
-import { DetailPageSkeleton } from "@/components/skeletons"
+import { ProfilSkeleton } from "@/components/skeletons"
 
-export default function ProfilLoading() {
-  return <DetailPageSkeleton />
+export default function Loading() {
+  return <ProfilSkeleton />
 }

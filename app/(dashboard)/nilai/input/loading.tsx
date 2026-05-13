@@ -1,5 +1,5 @@
-import { InputNilaiSkeleton } from "@/components/skeletons"
+import { NilaiInputSkeleton } from "@/components/skeletons"
 
-export default function NilaiInputLoading() {
-  return <InputNilaiSkeleton />
+export default function Loading() {
+  return <NilaiInputSkeleton />
 }

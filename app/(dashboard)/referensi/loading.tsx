@@ -1,5 +1,5 @@
-import { TableSkeleton } from "@/components/skeletons"
+import { ReferensiSkeleton } from "@/components/skeletons"
 
-export default function ReferensiLoading() {
-  return <TableSkeleton cols={4} rows={7} />
+export default function Loading() {
+  return <ReferensiSkeleton />
 }

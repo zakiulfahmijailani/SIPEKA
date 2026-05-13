@@ -1,5 +1,5 @@
-import { TableSkeleton } from "@/components/skeletons"
+import { MahasiswaListSkeleton } from "@/components/skeletons"
 
-export default function MahasiswaLoading() {
-  return <TableSkeleton cols={5} rows={8} />
+export default function Loading() {
+  return <MahasiswaListSkeleton />
 }

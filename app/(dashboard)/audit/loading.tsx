@@ -1,5 +1,5 @@
-import { TableSkeleton } from "@/components/skeletons"
+import { AuditSkeleton } from "@/components/skeletons"
 
-export default function AuditLoading() {
-  return <TableSkeleton cols={5} rows={8} />
+export default function Loading() {
+  return <AuditSkeleton />
 }

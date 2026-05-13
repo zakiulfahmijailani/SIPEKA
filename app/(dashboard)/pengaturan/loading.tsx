@@ -1,5 +1,5 @@
-import { FormPageSkeleton } from "@/components/skeletons"
+import { PengaturanSkeleton } from "@/components/skeletons"
 
-export default function PengaturanLoading() {
-  return <FormPageSkeleton />
+export default function Loading() {
+  return <PengaturanSkeleton />
 }

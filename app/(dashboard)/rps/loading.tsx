@@ -1,5 +1,5 @@
-import { TableSkeleton } from "@/components/skeletons"
+import { RpsListSkeleton } from "@/components/skeletons"
 
-export default function RpsLoading() {
-  return <TableSkeleton cols={4} rows={7} />
+export default function Loading() {
+  return <RpsListSkeleton />
 }
