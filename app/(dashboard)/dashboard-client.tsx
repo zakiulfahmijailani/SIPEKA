@@ -15,6 +15,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { RpsDosenEmpty } from "@/components/empty-states"
+import { AnimatedNumber } from "@/components/animated-number"
 
 const KPI_ICONS: Record<string, React.ElementType> = {
   blue: Users,
@@ -45,16 +46,17 @@ export function DashboardClient({ stats, role }: { stats: any; role: string }) {
         {/* ── Bento Grid ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 auto-rows-auto">
 
-          {/* KPI 1: Mahasiswa — tall tile */}
           {stats.kpi.map((k: any, i: number) => {
             const Icon = KPI_ICONS[k.color] ?? Target
-            const isTall = i === 0 // Tile pertama sedikit lebih besar
+            const isTall = i === 0
+            const numericValue = typeof k.value === "number" ? k.value : parseFloat(k.value) || 0
+            const isDecimal = !Number.isInteger(numericValue)
             return (
               <Card
                 key={k.label}
                 className={cn(
                   "border border-gray-100 shadow-sm bg-white flex flex-col justify-between",
-                  isTall && "row-span-1" // bisa diubah row-span-2 jika layout 2-col
+                  isTall && "row-span-1"
                 )}
               >
                 <CardHeader className="pb-0 pt-5 px-5">
@@ -68,8 +70,12 @@ export function DashboardClient({ stats, role }: { stats: any; role: string }) {
                   </div>
                 </CardHeader>
                 <CardContent className="px-5 pb-5 pt-2">
-                  <div className="text-3xl font-bold text-gray-900 tabular-nums leading-none">
-                    {k.value}
+                  <div className="text-3xl font-bold text-gray-900 leading-none">
+                    <AnimatedNumber
+                      value={numericValue}
+                      decimals={isDecimal ? 1 : 0}
+                      duration={900}
+                    />
                   </div>
                   {k.badge ? (
                     <Badge variant="destructive" className="mt-2 text-[11px]">
@@ -273,7 +279,9 @@ export function DashboardClient({ stats, role }: { stats: any; role: string }) {
               <div>
                 <div className="flex justify-between text-[11px] text-gray-500 mb-1.5">
                   <span>Progress Input Nilai</span>
-                  <span className="font-semibold tabular-nums text-gray-700">{d.progress}%</span>
+                  <span className="font-semibold tabular-nums text-gray-700">
+                    <AnimatedNumber value={d.progress} decimals={0} suffix="%" duration={700} />
+                  </span>
                 </div>
                 <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
                   <div
