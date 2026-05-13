@@ -33,7 +33,7 @@ export default async function MahasiswaPage(props: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  let allStudents = []
+  let allStudents: Awaited<ReturnType<typeof db.query.mahasiswa.findMany>> = []
   try {
     allStudents = await db.query.mahasiswa.findMany({
       where: whereClause,

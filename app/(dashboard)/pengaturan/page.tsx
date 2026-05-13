@@ -11,7 +11,7 @@ export default async function PengaturanPage() {
     redirect("/dashboard")
   }
 
-  let settings = []
+  let settings: Awaited<ReturnType<typeof db.query.programSettings.findMany>> = []
   try {
     settings = await db.query.programSettings.findMany()
   } catch (e) {

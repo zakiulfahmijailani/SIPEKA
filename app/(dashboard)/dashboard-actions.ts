@@ -31,7 +31,7 @@ export async function getDashboardStats(role: string, userId: string) {
       const totalMk = totalMkRes[0].count
       const pendingRps = pendingRpsRes[0].count
 
-      const recentRps = await db.query.rps.findMany({
+      const recentRps: Awaited<ReturnType<typeof db.query.rps.findMany>> = await db.query.rps.findMany({
         where: eq(rps.status, "SUBMITTED"),
         limit: 5,
         with: {
@@ -44,7 +44,7 @@ export async function getDashboardStats(role: string, userId: string) {
         }
       }).catch(() => [])
 
-      const recentActivity = await db.query.auditLog.findMany({
+      const recentActivity: Awaited<ReturnType<typeof db.query.auditLog.findMany>> = await db.query.auditLog.findMany({
         limit: 5,
         orderBy: [desc(auditLog.created_at)],
         with: {

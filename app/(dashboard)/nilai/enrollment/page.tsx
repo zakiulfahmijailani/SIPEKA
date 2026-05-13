@@ -28,7 +28,7 @@ export default async function EnrollmentPage() {
   }
 
   // Fetch Dosirs for active TA with enrollments
-  let allDosirs = []
+  let allDosirs: Awaited<ReturnType<typeof db.query.dosirMk.findMany>> = []
   try {
     allDosirs = await db.query.dosirMk.findMany({
       where: eq(dosirMk.tahun_akademik_id, activeTa.id),
@@ -48,7 +48,7 @@ export default async function EnrollmentPage() {
   }
 
   // Fetch all active students for search
-  let allStudents = []
+  let allStudents: Awaited<ReturnType<typeof db.query.mahasiswa.findMany>> = []
   try {
     allStudents = await db.query.mahasiswa.findMany({
       where: eq(mahasiswa.is_active, true),

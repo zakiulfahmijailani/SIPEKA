@@ -28,7 +28,7 @@ export default async function InputNilaiPage() {
     ? and(eq(dosirMk.tahun_akademik_id, activeTa.id), eq(dosirMk.dosen_id, session.user.id))
     : eq(dosirMk.tahun_akademik_id, activeTa.id)
 
-  let myDosirs = []
+  let myDosirs: Awaited<ReturnType<typeof db.query.dosirMk.findMany>> = []
   try {
     myDosirs = await db.query.dosirMk.findMany({
       where: whereCondition,
@@ -55,7 +55,7 @@ export default async function InputNilaiPage() {
   // Fetch all existing grades for these enrollments to pre-populate
   const enrollmentIds = myDosirs.flatMap(d => d.enrollments.map(e => e.id))
   
-  let existingGrades: any[] = []
+  let existingGrades: Awaited<ReturnType<typeof db.query.nilai.findMany>> = []
   if (enrollmentIds.length > 0) {
     try {
       const { inArray } = require("drizzle-orm")

@@ -34,7 +34,7 @@ export default async function RekapNilaiPage(props: {
   const conditions = [eq(dosirMk.tahun_akademik_id, taId)]
   if (mkId && mkId !== "ALL") conditions.push(eq(dosirMk.mk_id, mkId))
   
-  let enrollData = []
+  let enrollData: Awaited<ReturnType<typeof db.query.enrollment.findMany>> = []
   try {
     enrollData = await db.query.enrollment.findMany({
       where: sql`${enrollment.dosir_mk_id} IN (SELECT id FROM ${dosirMk} WHERE ${and(...conditions)})`,
