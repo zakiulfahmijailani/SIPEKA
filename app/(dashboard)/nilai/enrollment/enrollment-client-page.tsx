@@ -17,7 +17,20 @@ import { Upload, Users, BookOpen, CheckCircle2, AlertCircle } from "lucide-react
 import { importEnrollmentCSV } from "./actions"
 import { toast } from "sonner"
 
-export function EnrollmentClientPage({ dosirs }: { dosirs: any[] }) {
+interface Student {
+  id: string
+  nim: string
+  nama: string
+  is_active: boolean
+  [key: string]: unknown
+}
+
+interface EnrollmentClientPageProps {
+  dosirs: any[]
+  allStudents: Student[]
+}
+
+export function EnrollmentClientPage({ dosirs, allStudents }: EnrollmentClientPageProps) {
   const [isImporting, setIsImporting] = useState<string | null>(null)
 
   const handleImportCSV = async (dosirId: string, file: File) => {
@@ -71,7 +84,7 @@ export function EnrollmentClientPage({ dosirs }: { dosirs: any[] }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">
-              {dosirs.reduce((acc, curr) => acc + curr._count.enrollments, 0)}
+              {dosirs.reduce((acc, curr) => acc + (curr.enrollments?.length ?? 0), 0)}
             </div>
           </CardContent>
         </Card>
@@ -84,7 +97,7 @@ export function EnrollmentClientPage({ dosirs }: { dosirs: any[] }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">
-              {dosirs.filter(d => d._count.enrollments > 0).length}
+              {dosirs.filter(d => (d.enrollments?.length ?? 0) > 0).length}
             </div>
           </CardContent>
         </Card>
@@ -117,10 +130,10 @@ export function EnrollmentClientPage({ dosirs }: { dosirs: any[] }) {
                   </TableCell>
                   <TableCell>{dosir.tahunAkademik.kode}</TableCell>
                   <TableCell className="text-center font-medium">
-                    {dosir._count.enrollments}
+                    {dosir.enrollments?.length ?? 0}
                   </TableCell>
                   <TableCell className="text-center">
-                    {dosir._count.enrollments > 0 
+                    {(dosir.enrollments?.length ?? 0) > 0
                       ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">Terisi</Badge>
                       : <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 border-none">Kosong</Badge>
                     }
