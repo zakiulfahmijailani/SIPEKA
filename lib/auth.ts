@@ -4,7 +4,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
-import bcrypt from "bcryptjs"
+import * as bcrypt from "bcryptjs"
 import { z } from "zod"
 
 const loginSchema = z.object({
@@ -26,18 +26,45 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("Login attempt:", credentials?.email)
         const parsed = loginSchema.safeParse(credentials)
-        if (!parsed.success) return null
+        if (!parsed.success) {
+          console.log("Validation failed:", parsed.error.issues)
+          return null
+        }
 
         const user = await db.query.users.findFirst({
-          where: eq(users.email, parsed.data.email),
+          where: eq(users.email, parsed.data.email.toLowerCase()),
         })
-        if (!user || !user.password) return null
+        
+        console.log("User found in DB:", user ? { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          is_active: user.is_active,
+          is_active_type: typeof user.is_active,
+          has_password: !!user.password,
+          password_type: typeof user.password
+        } : "NOT FOUND")
+
+        if (!user || !user.password) {
+          console.log("User or password missing")
+          return null
+        }
 
         // Check if user is active
-        if (user.is_active !== "true") return null
+        const isActive = String(user.is_active) === "true" || user.is_active === true
+        if (!isActive) {
+          console.log("User is not active. Value:", user.is_active, "Type:", typeof user.is_active)
+          return null
+        }
+
+        console.log("Password from credentials length:", parsed.data.password.length)
+        console.log("Password from DB length:", user.password.length)
 
         const valid = await bcrypt.compare(parsed.data.password, user.password)
+        console.log("Bcrypt compare result:", valid)
+
         if (!valid) return null
 
         return {
