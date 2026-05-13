@@ -46,7 +46,7 @@ export function Sidebar({ session }: SidebarProps) {
     
     // KAPRODI + SUPER_ADMIN
     { name: "Master CPL", href: "/master/cpl", icon: Database, show: isSuperAdmin || isKaprodi },
-    { name: "Mata Kuliah", href: "/master/matakuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
+    { name: "Mata Kuliah", href: "/master/mata-kuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
     { name: "Peta Kurikulum", href: "/kurikulum/peta", icon: Map, show: isSuperAdmin || isKaprodi },
     { name: "Profil Lulusan", href: "/master/profil-lulusan", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
     
