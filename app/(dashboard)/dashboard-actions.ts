@@ -16,16 +16,20 @@ export async function getDashboardStats(role: string, userId: string) {
 
     if (role === "SUPER_ADMIN" || role === "KAPRODI") {
       const [
-        totalMahasiswa,
-        totalMk,
-        pendingRps,
+        totalMahasiswaRes,
+        totalMkRes,
+        pendingRpsRes,
         cplStats
       ] = await Promise.all([
-        db.select({ count: count() }).from(mahasiswa).then(res => res[0].count),
-        db.select({ count: count() }).from(dosirMk).where(activeTa ? eq(dosirMk.tahun_akademik_id, activeTa.id) : undefined).then(res => res[0].count),
-        db.select({ count: count() }).from(rps).where(eq(rps.status, "SUBMITTED")).then(res => res[0].count),
+        db.select({ count: count() }).from(mahasiswa).catch(() => [{ count: 0 }]),
+        db.select({ count: count() }).from(dosirMk).where(activeTa ? eq(dosirMk.tahun_akademik_id, activeTa.id) : undefined).catch(() => [{ count: 0 }]),
+        db.select({ count: count() }).from(rps).where(eq(rps.status, "SUBMITTED")).catch(() => [{ count: 0 }]),
         calculateCplAttainment({ taIds: activeTa ? [activeTa.id] : [] })
       ])
+
+      const totalMahasiswa = totalMahasiswaRes[0].count
+      const totalMk = totalMkRes[0].count
+      const pendingRps = pendingRpsRes[0].count
 
       const recentRps = await db.query.rps.findMany({
         where: eq(rps.status, "SUBMITTED"),
@@ -38,7 +42,7 @@ export async function getDashboardStats(role: string, userId: string) {
             }
           }
         }
-      })
+      }).catch(() => [])
 
       const recentActivity = await db.query.auditLog.findMany({
         limit: 5,
@@ -46,7 +50,7 @@ export async function getDashboardStats(role: string, userId: string) {
         with: {
           changedBy: true
         }
-      })
+      }).catch(() => [])
 
       // Calculate Grade Distribution (A-E)
       const gradeDistribution = await db.select({
@@ -63,6 +67,12 @@ export async function getDashboardStats(role: string, userId: string) {
       })
       .from(nilai)
       .groupBy(sql`grade`)
+      .catch(() => [])
+
+      const chartData = cplStats.data?.chartData || []
+      const avgAttainment = chartData.length > 0 
+        ? (chartData.reduce((a: any, b: any) => a + b.attainment, 0) / chartData.length).toFixed(1)
+        : "0.0"
 
       return {
         success: true,
@@ -71,11 +81,11 @@ export async function getDashboardStats(role: string, userId: string) {
             { label: "Total Mahasiswa", value: totalMahasiswa, color: "blue" },
             { label: "MK Berjalan", value: totalMk, color: "purple" },
             { label: "RPS Pending", value: pendingRps, color: "red", badge: pendingRps > 0 },
-            { label: "Avg CPL Attainment", value: `${((cplStats.data?.chartData?.reduce((a, b) => a + b.attainment, 0) || 0) / (cplStats.data?.chartData?.length || 1)).toFixed(1)}%`, color: "green" }
+            { label: "Avg CPL Attainment", value: `${avgAttainment}%`, color: "green" }
           ],
           charts: {
             grades: gradeDistribution,
-            cplRadar: cplStats.data?.chartData || []
+            cplRadar: chartData
           },
           recentRps,
           recentActivity
