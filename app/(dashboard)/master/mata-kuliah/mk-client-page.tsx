@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { MkFormSheet } from "./mk-form-sheet"
-import { Plus, Edit } from "lucide-react"
+import { Plus, Edit, Check } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
@@ -149,16 +149,16 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
                   </TableCell>
                   <TableCell className="text-center">
                     {item.has_praktikum ? (
-                      <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700" title={item.keterangan_praktikum || "Termasuk praktikum"}>Ya</Badge>
+                      <Check className="h-4 w-4 mx-auto text-green-600" />
                     ) : (
-                      <span className="text-gray-300">-</span>
+                      <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center">
                     {item.is_pbl ? (
-                      <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700" title={item.keterangan_pbl || "PBL"}>PBL</Badge>
+                      <Check className="h-4 w-4 mx-auto text-purple-600" />
                     ) : (
-                      <span className="text-gray-300">-</span>
+                      <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center">
