@@ -1,12 +1,8 @@
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
 
+// ---------------------------------------------------------------------------
+// Auth check DISABLED — always redirect to dashboard without session check
+// ---------------------------------------------------------------------------
 export default async function HomePage() {
-  const session = await auth()
-
-  if (session) {
-    redirect("/dashboard")
-  } else {
-    redirect("/login")
-  }
+  redirect("/dashboard")
 }
