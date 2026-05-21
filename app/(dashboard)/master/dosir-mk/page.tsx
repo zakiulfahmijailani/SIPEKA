@@ -45,7 +45,7 @@ export default async function DosirMkPage(props: {
     orderBy: [asc(dosirMk.kelas)],
   })
 
-  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama}` }))
+  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama_id}` }))
   const dosensFormatted = allDosens.map(d => ({ id: d.id, label: d.nama_lengkap }))
   const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_selesai} ${t.semester}` }))
 
