@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, unique, boolean } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum, unique, boolean, uuid, varchar, real, index, uniqueIndex } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 import { is2020Area, profilLulusan } from "./reference"
 
@@ -11,6 +11,10 @@ export const mkTrackEnum = pgEnum("mk_track", ["UMUM", "BIS", "DSA"])
 export const tipeAktivitasEnum = pgEnum("tipe_aktivitas", [
   "TEORI", "PRAKTIKUM", "TEORI_PRAKTIKUM", "SEMINAR", "PROYEK"
 ])
+export const ploCategoryEnum = pgEnum("plo_category", [
+  "Sikap", "Keterampilan Umum", "Keterampilan Khusus", "Pengetahuan"
+])
+export const contributionLevelEnum = pgEnum("contribution_level", ["H", "M", "L"])
 
 export const cpl = pgTable("cpl", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
@@ -75,3 +79,48 @@ export const petaKurikulum = pgTable("peta_kurikulum", {
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => [unique().on(t.mk_id, t.cpl_id)])
+
+export const curriculums = pgTable("curriculums", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(),
+  year: varchar("year", { length: 9 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+})
+
+export const plos = pgTable("plos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  curriculumId: uuid("curriculum_id").notNull().references(() => curriculums.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 20 }).notNull(),
+  description: text("description").notNull(),
+  category: ploCategoryEnum("category").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+})
+
+export const courses = pgTable("courses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  curriculumId: uuid("curriculum_id").notNull().references(() => curriculums.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 20 }).notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  creditsTheory: integer("credits_theory").notNull().default(0),
+  creditsPractice: integer("credits_practice").notNull().default(0),
+  semester: integer("semester").notNull(),
+  isMandatory: boolean("is_mandatory").notNull().default(true),
+  prerequisites: text("prerequisites").array().default([]),
+  studyField: varchar("study_field", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+})
+
+export const coursePloMappings = pgTable("course_plo_mappings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  courseId: uuid("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  ploId: uuid("plo_id").notNull().references(() => plos.id, { onDelete: "cascade" }),
+  contributionLevel: contributionLevelEnum("contribution_level"),
+  contributionValue: real("contribution_value"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [
+  uniqueIndex("course_plo_mappings_course_id_plo_id_unique").on(t.courseId, t.ploId),
+  index("course_plo_mappings_course_id_idx").on(t.courseId),
+  index("course_plo_mappings_plo_id_idx").on(t.ploId),
+  index("course_plo_mappings_course_id_plo_id_idx").on(t.courseId, t.ploId),
+])
