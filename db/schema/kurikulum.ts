@@ -53,6 +53,8 @@ export const mataKuliah = pgTable("mata_kuliah", {
   tipe_aktivitas: tipeAktivitasEnum("tipe_aktivitas").notNull().default("TEORI"),
   has_praktikum: boolean("has_praktikum").notNull().default(false),
   keterangan_praktikum: text("keterangan_praktikum"),
+  is_pbl: boolean("is_pbl").notNull().default(false),
+  keterangan_semester: text("keterangan_semester"),
   deskripsi: text("deskripsi"),
   bahasa: text("bahasa").default("Indonesia"),
   is_active: boolean("is_active").notNull().default(true),
