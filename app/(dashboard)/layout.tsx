@@ -1,19 +1,27 @@
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { NotificationBell } from "@/components/layout/notification-bell"
 import { PageTransition } from "@/components/layout/page-transition"
+
+// ---------------------------------------------------------------------------
+// Auth check DISABLED — mock session injected so all components render
+// To re-enable, restore original layout.tsx with: const session = await auth()
+// ---------------------------------------------------------------------------
+const MOCK_SESSION = {
+  user: {
+    id: "guest",
+    name: "Guest",
+    email: "guest@sipeka.local",
+    role: "SUPER_ADMIN",
+  },
+  expires: "2099-01-01T00:00:00.000Z",
+}
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
+  const session = MOCK_SESSION as any
 
   return (
     <div className="flex min-h-screen bg-gray-50 flex-col lg:flex-row">
