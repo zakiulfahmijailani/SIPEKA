@@ -2,66 +2,39 @@
 import { config } from "dotenv"
 config({ path: ".env.local" })
 
+import path from "path"
+import * as XLSX from "xlsx"
 import { db } from "./index"
 import { cpl, mataKuliah, petaKurikulum } from "./schema"
-import { eq, ilike } from "drizzle-orm"
-
-const mappingData = [
-  { 
-    cplKode: "CPL01/S1", 
-    mks: ["Pengantar Bisnis dan Manajemen", "Pengantar Statistik", "Etika Komputer dan Hukum", "Keamanan Sistem Informasi", "Interaksi Manusia dan Komputer"] 
-  },
-  { 
-    cplKode: "CPL02/S2", 
-    mks: ["Pengantar Bisnis dan Manajemen", "Bahasa Inggris 2", "Kepemimpinan Dinamis", "Kewirausahaan yang Efektif", "Manajemen Teknologi Informasi", "Manajemen Proyek Sistem Informasi", "Etika Komputer dan Hukum", "Keamanan Sistem Informasi", "Interaksi Manusia dan Komputer", "Metodologi Penelitian dan Penulisan Ilmiah", "Agama", "Kewirausahaan Berbasis Teknologi"] 
-  },
-  { 
-    cplKode: "CPL03/P1", 
-    mks: ["Pengantar Teknologi Informasi", "Algoritma dan Pemrograman", "Jaringan Komputer", "Struktur Data", "Pengantar Statistik", "Konsep Sistem Informasi", "Statistik", "Aljabar Linier", "Sistem Informasi Manajemen", "Manajemen Pengetahuan", "Manajemen Pengetahuan Lanjut", "Rekayasa Perangkat Lunak", "Pemrograman Berorientasi Objek", "Analisis Perancangan Sistem Informasi", "Sistem Basis Data Lanjut", "Bahasa Indonesia", "Testing dan Implementasi Sistem Informasi", "Arsitektur Sistem Informasi", "Manajemen Proyek Sistem Informasi", "Kecerdasan Bisnis", "Sistem Basis Data Berorientasi Objek", "Pemodelan Data", "Audit Sistem Informasi", "Metodologi Penelitian dan Penulisan Ilmiah", "Tugas Akhir", "Keamanan Sistem Informasi"] 
-  },
-  { 
-    cplKode: "CPL04/P2", 
-    mks: ["Algoritma dan Pemrograman", "Struktur Data", "Konsep Sistem Informasi", "Sistem Operasi", "Manajemen Teknologi Informasi", "Pengalihan LAN dan Nirkabel", "Analisis Perancangan Sistem Informasi", "Sistem Basis Data Lanjut", "Testing dan Implementasi Sistem Informasi", "Pemodelan Data", "Teknologi Berbasis Awan", "Audit Sistem Informasi", "Tata Kelola Sistem Informasi", "Manajemen Risiko Teknologi Informasi dan Perubahan", "Maha Data", "Agama", "Keamanan Sistem Informasi", "Interaksi Manusia dan Komputer", "Etika Komputer dan Hukum", "Tugas Akhir"] 
-  },
-  { 
-    cplKode: "CPL05/KU1", 
-    mks: ["Bahasa Inggris 1", "Algoritma dan Pemrograman", "Bahasa Inggris 2", "Pengantar Statistik", "Kewirausahaan yang Efektif", "Pemrograman Visual", "Statistik", "Aljabar Linier", "Sistem Informasi Manajemen", "Manajemen Teknologi Informasi", "Pemrograman Bergerak", "Manajemen Pengetahuan Lanjut", "Rekayasa Perangkat Lunak", "Pemrograman Berorientasi Objek", "Analisis Perancangan Sistem Informasi", "Informasi dan Proses Bisnis", "Testing dan Implementasi Sistem Informasi", "Arsitektur Sistem Informasi", "Proposal Bisnis Teknologi Informasi", "Kapita Selekta Sistem Informasi", "Metodologi Penelitian dan Penulisan Ilmiah", "Tugas Akhir", "Keamanan Sistem Informasi"] 
-  },
-  { 
-    cplKode: "CPL06/KU2", 
-    mks: ["Bahasa Inggris 1", "Pengantar Teknologi Informasi", "Bahasa Inggris 2", "Kepemimpinan Dinamis", "Kewirausahaan yang Efektif", "Manajemen Teknologi Informasi", "Manajemen Proyek Sistem Informasi", "Testing dan Implementasi Sistem Informasi", "Proposal Bisnis Teknologi Informasi", "Kapita Selekta Sistem Informasi", "Tata Kelola Sistem Informasi", "Agama", "Metodologi Penelitian dan Penulisan Ilmiah", "Interaksi Manusia dan Komputer", "Magang/Internship", "Tugas Akhir"] 
-  },
-  { 
-    cplKode: "CPL07/KU3", 
-    mks: ["Bahasa Inggris 1", "Pengantar Teknologi Informasi", "Sistem Basis Data", "Bahasa Inggris 2", "Konsep Sistem Informasi", "Statistik", "Aljabar Linier", "Sistem Informasi Manajemen", "Sistem Operasi", "Pemrograman Bergerak", "Manajemen Pengetahuan Lanjut", "Arsitektur Sistem Informasi", "Kecerdasan Bisnis", "Teknologi Berbasis Awan", "Kapita Selekta Sistem Informasi", "Tata Kelola Sistem Informasi", "Metodologi Penelitian dan Penulisan Ilmiah", "Keamanan Sistem Informasi", "Interaksi Manusia dan Komputer", "Etika Komputer dan Hukum", "Magang/Internship", "Tugas Akhir"] 
-  },
-  { 
-    cplKode: "CPL08/KK1", 
-    mks: ["Algoritma dan Pemrograman", "Sistem Basis Data", "Struktur Data", "Pengantar Statistik", "Statistik", "Aljabar Linier", "Manajemen Pengetahuan", "Analisis Perancangan Sistem Informasi", "Sistem Basis Data Lanjut", "Testing dan Implementasi Sistem Informasi", "Pemodelan Data", "Sistem Basis Data Berorientasi Objek", "Gudang Data dan Penambangan Data", "Keamanan Sistem Informasi", "Tugas Akhir"] 
-  },
-  { 
-    cplKode: "CPL09/KK2", 
-    mks: ["Sistem Basis Data", "Jaringan Komputer", "Pemrograman Visual", "Sistem Informasi Manajemen", "Sistem Operasi", "Manajemen Pengetahuan", "Manajemen Teknologi Informasi", "Pemrograman Bergerak", "Pengalihan LAN dan Nirkabel", "Manajemen Pengetahuan Lanjut", "Rekayasa Perangkat Lunak", "Pemrograman Berorientasi Objek", "Analisis Perancangan Sistem Informasi", "Informasi dan Proses Bisnis", "Sistem Informasi Enterprise Terpadu", "Sistem Basis Data Lanjut", "Testing dan Implementasi Sistem Informasi", "Arsitektur Sistem Informasi", "Manajemen Proyek Sistem Informasi", "Kecerdasan Bisnis", "Sistem Informasi Akuntansi", "Sistem Basis Data Berorientasi Objek", "Pemodelan Data", "Teknologi Berbasis Awan", "Audit Sistem Informasi", "Tata Kelola Sistem Informasi", "Manajemen Risiko Teknologi Informasi dan Perubahan", "Maha Data", "Gudang Data dan Penambangan Data", "Magang/Internship", "Keamanan Sistem Informasi", "Tugas Akhir"] 
-  },
-  { 
-    cplKode: "CPL10/KK3", 
-    mks: ["Jaringan Komputer", "Pengantar Bisnis dan Manajemen", "Kewirausahaan yang Efektif", "Pemrograman Visual", "Sistem Informasi Manajemen", "Pemrograman Bergerak", "Rekayasa Perangkat Lunak", "Informasi dan Proses Bisnis", "Sistem Informasi Enterprise Terpadu", "Testing dan Implementasi Sistem Informasi", "Kecerdasan Bisnis", "Sistem Informasi Akuntansi", "Ekonomi Informasi", "Proposal Bisnis Teknologi Informasi", "Kapita Selekta Sistem Informasi", "Kewirausahaan Berbasis Teknologi", "Tugas Akhir"] 
-  }
-];
 
 // Helper to normalize strings for better matching
 function normalizeText(text: string) {
   return text.toLowerCase()
     .replace(/sistem informasi/g, "si")
-    .replace(/manajemen resiko ti/g, "manajemen risiko teknologi informasi dan perubahan")
+    .replace(/manajemen resiko/g, "manajemen risiko")
+    .replace(/gudang data & penambangan data/g, "gudang data dan penambangan data")
     .replace(/gudang data dan data mining/g, "gudang data dan penambangan data")
     .replace(/pemograman/g, "pemrograman")
+    .replace(/infomasi/g, "informasi")
     .replace(/metodologi penelitian/g, "metodologi penelitian dan penulisan ilmiah")
     .replace(/[^a-z0-9]/g, ""); // remove spaces and punctuation
 }
 
 async function runSeed() {
-  console.log("Mulai sebaran CPL ke Mata Kuliah...");
+  console.log("Mulai sebaran CPL ke Mata Kuliah dari Excel...");
+
+  const excelPath = path.join(process.cwd(), "public", "Sebaran CPL.xlsx");
+  let workbook;
+  try {
+    workbook = XLSX.readFile(excelPath);
+  } catch (error) {
+    console.error("Gagal membaca file Excel:", error);
+    process.exit(1);
+  }
+
+  const mainSheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[mainSheetName];
+  const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
 
   // 1. Fetch all CPLs
   const allCpl = await db.select().from(cpl);
@@ -71,54 +44,82 @@ async function runSeed() {
 
   // 2. Fetch all MKs
   const allMk = await db.select().from(mataKuliah);
+
+  // Row 1 contains Course Names
+  const courseHeaders = rows[1];
+  const courses: { index: number; name: string; cleanName: string }[] = [];
   
+  for (let i = 1; i < courseHeaders.length; i++) {
+    const rawName = courseHeaders[i];
+    if (rawName) {
+      // Clean name: take the Indonesian part (before the slash '/') and trim footnotes like '1)'
+      const idName = rawName.split('/')[0].trim().replace(/\d+\)$/, "").trim();
+      courses.push({ index: i, name: rawName, cleanName: idName });
+    }
+  }
+
   let inserted = 0;
   let skipped = 0;
   let notFoundMk = new Set<string>();
   let notFoundCpl = new Set<string>();
 
-  // Optional: hapus semua mapping yang ada sebelumnya (reset)
+  // Reset semua mapping
   await db.delete(petaKurikulum);
+  console.log("Menghapus pemetaan CPL sebelumnya...");
 
-  for (const mapData of mappingData) {
-    // Cari CPL - support pencarian by prefix e.g. "CPL01" matching "CPL01/S1"
-    const cplIdStr = mapData.cplKode.split("/")[0]; // "CPL01"
-    const foundCpl = allCpl.find(c => c.kode.includes(cplIdStr) || c.kode === mapData.cplKode);
-    
+  for (let r = 2; r <= 11; r++) {
+    const row = rows[r];
+    if (!row) continue;
+    const cplText = row[0];
+    if (!cplText) continue;
+
+    // Extract CPL Code (e.g., CPL01/S1)
+    const match = cplText.match(/\((CPL\d{2}\/[A-Z0-9]+)\)/);
+    const cplCode = match ? match[1] : cplText;
+    const cplIdStr = cplCode.split("/")[0]; // "CPL01"
+
+    const foundCpl = allCpl.find(c => c.kode.includes(cplIdStr) || c.kode === cplCode);
     if (!foundCpl) {
-      notFoundCpl.add(mapData.cplKode);
+      notFoundCpl.add(cplCode);
       continue;
     }
 
-    for (const mkName of mapData.mks) {
-      const normInput = normalizeText(mkName);
-      const foundMk = allMk.find(mk => normalizeText(mk.nama_id).includes(normInput) || normInput.includes(normalizeText(mk.nama_id)));
-      
-      if (!foundMk) {
-        // Pengecualian khusus: jika namanya Magang/Internship, abaikan karena di seed sebelumnya tidak kita masukkan
-        if (!mkName.includes("Magang")) {
-          notFoundMk.add(mkName);
-        }
-        continue;
-      }
+    for (let c = 1; c < row.length; c++) {
+      const cell = row[c];
+      if (cell === '✓' || cell === true || (typeof cell === 'string' && cell.trim() === '✓')) {
+        const course = courses.find((x) => x.index === c);
+        if (!course) continue;
+        
+        const mkName = course.cleanName;
+        const normInput = normalizeText(mkName);
+        const foundMk = allMk.find(mk => 
+            normalizeText(mk.nama_id).includes(normInput) || 
+            normInput.includes(normalizeText(mk.nama_id))
+        );
 
-      // Insert ke petaKurikulum
-      try {
-        await db.insert(petaKurikulum).values({
-          cpl_id: foundCpl.id,
-          mk_id: foundMk.id,
-          bobot: 1,
-        });
-        inserted++;
-      } catch (err) {
-        // Abaikan error duplicate key
-        skipped++;
+        if (!foundMk) {
+          if (!mkName.toLowerCase().includes("magang")) {
+            notFoundMk.add(mkName);
+          }
+          continue;
+        }
+
+        try {
+          await db.insert(petaKurikulum).values({
+            cpl_id: foundCpl.id,
+            mk_id: foundMk.id,
+            bobot: 1,
+          });
+          inserted++;
+        } catch (err) {
+          skipped++;
+        }
       }
     }
   }
 
   console.log("\n=================================================");
-  console.log("✅ SUMMARY SEEDING CPL");
+  console.log("✅ SUMMARY SEEDING CPL (DARI EXCEL)");
   console.log("=================================================");
   console.log(`Berhasil insert    : ${inserted} baris`);
   console.log(`Skipped (duplicate): ${skipped} baris`);
