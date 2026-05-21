@@ -10,7 +10,7 @@ import { mataKuliah } from "./schema"
 import { eq } from "drizzle-orm"
 
 type MkStatus = "WAJIB" | "PILIHAN"
-type MkTrack = "UMUM" | "BIS" | "DSA"
+type MkTrack = "UMUM" | "BIS" | "DSA" | "ISG" | "DMS"
 type TipeAktivitas = "TEORI" | "PRAKTIKUM" | "TEORI_PRAKTIKUM" | "SEMINAR" | "PROYEK"
 
 interface MkData {
@@ -36,6 +36,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 0,
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF102",
@@ -44,6 +46,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Pengantar Teknologi Informasi)",
   },
   {
     kode: "SIF103",
@@ -52,6 +56,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Algoritma dan Pemrograman)",
   },
   {
     kode: "SIF104",
@@ -60,6 +66,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Sistem Basis Data)",
   },
   {
     kode: "SIF105",
@@ -68,6 +76,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Jaringan Komputer)",
   },
   {
     kode: "SIF106",
@@ -76,6 +86,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
 
   // ── SEMESTER 2 ─────────────────────────────────────────────────────
@@ -86,6 +98,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 0,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF202",
@@ -94,6 +108,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Struktur Data)",
   },
   {
     kode: "SIF203",
@@ -102,6 +118,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF204",
@@ -110,6 +128,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF205",
@@ -118,6 +138,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF206",
@@ -126,6 +148,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Pemrograman Visual)",
   },
   {
     kode: "SIF207",
@@ -134,6 +158,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
 
   // ── SEMESTER 3 ─────────────────────────────────────────────────────
@@ -144,6 +170,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF302",
@@ -152,6 +180,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF303",
@@ -160,6 +190,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Sistem Informasi Manajemen)",
   },
   {
     kode: "SIF304",
@@ -168,6 +200,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Sistem Operasi)",
   },
   {
     kode: "SIF305",
@@ -176,6 +210,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF306",
@@ -184,6 +220,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF307",
@@ -192,6 +230,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Pemrograman Bergerak)",
   },
 
   // ── SEMESTER 4 ─────────────────────────────────────────────────────
@@ -202,6 +242,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Pengalihan LAN dan Nirkabel)",
   },
   {
     kode: "SIF402",
@@ -210,6 +252,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF403",
@@ -218,6 +262,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF404",
@@ -226,6 +272,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Pemrograman Berorientasi Objek)",
   },
   {
     kode: "SIF405",
@@ -234,6 +282,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Analisis Perancangan Sistem Informasi)",
   },
   {
     kode: "SIF406",
@@ -242,6 +292,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF407",
@@ -250,6 +302,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 4,
     status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF408",
@@ -258,6 +312,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 4,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Sistem Basis Data Lanjut)",
   },
 
   // ── SEMESTER 5 ─────────────────────────────────────────────────────
@@ -268,6 +324,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 0,
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF502",
@@ -276,6 +334,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF503",
@@ -284,6 +344,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF504",
@@ -292,6 +354,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF505",
@@ -300,6 +364,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Manajemen Proyek Sistem Informasi)",
   },
   {
     kode: "SIF506",
@@ -307,7 +373,9 @@ const mataKuliahData: MkData[] = [
     nama_en: "Business Intelligence",
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 5,
-    status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
+    status: "PILIHAN", track: "ISG", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF507",
@@ -315,7 +383,9 @@ const mataKuliahData: MkData[] = [
     nama_en: "Accounting Information Systems",
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 5,
-    status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
+    status: "PILIHAN", track: "ISG", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF508",
@@ -323,7 +393,9 @@ const mataKuliahData: MkData[] = [
     nama_en: "Object Oriented Database",
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 5,
-    status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    status: "PILIHAN", track: "DMS", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Sistem Basis Data Berorientasi Objek)",
   },
   {
     kode: "SIF509",
@@ -331,7 +403,9 @@ const mataKuliahData: MkData[] = [
     nama_en: "Data Modelling",
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 5,
-    status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI",
+    status: "PILIHAN", track: "DMS", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
 
   // ── SEMESTER 6 ─────────────────────────────────────────────────────
@@ -342,6 +416,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF602",
@@ -350,6 +426,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "PROYEK",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF603",
@@ -358,6 +436,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF604",
@@ -366,6 +446,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF605",
@@ -374,6 +456,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "SEMINAR",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF606",
@@ -382,6 +466,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF607",
@@ -390,6 +476,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF608",
@@ -398,6 +486,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Maha Data / Big Data)",
   },
   {
     kode: "SIF609",
@@ -406,6 +496,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Termasuk praktikum (Gudang Data dan Penambangan Data)",
   },
 
   // ── SEMESTER 7 ─────────────────────────────────────────────────────
@@ -416,6 +508,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 0,
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF702",
@@ -424,6 +518,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 0,
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF703",
@@ -432,6 +528,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 0, sks_praktik: 20,
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "PRAKTIKUM",
+    has_praktikum: true,
+    keterangan_praktikum: "Kerja Lapangan — dilaksanakan antara Semester 6 & 7 selama 3 bulan",
   },
   {
     kode: "SIF704",
@@ -440,6 +538,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF705",
@@ -448,6 +548,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF706",
@@ -456,6 +558,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
 
   // ── SEMESTER 8 ─────────────────────────────────────────────────────
@@ -466,6 +570,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 3, sks_praktik: 0,
     semester_rekomendasi: 8,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
+    has_praktikum: false,
+    keterangan_praktikum: null,
   },
   {
     kode: "SIF802",
@@ -474,6 +580,8 @@ const mataKuliahData: MkData[] = [
     sks_teori: 0, sks_praktik: 6,
     semester_rekomendasi: 8,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "PROYEK",
+    has_praktikum: true,
+    keterangan_praktikum: null,
   },
 ]
 

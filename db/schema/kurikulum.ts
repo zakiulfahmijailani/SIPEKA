@@ -7,7 +7,7 @@ export const cplDomainEnum = pgEnum("cpl_domain", [
 ])
 
 export const mkStatusEnum = pgEnum("mk_status", ["WAJIB", "PILIHAN"])
-export const mkTrackEnum = pgEnum("mk_track", ["UMUM", "BIS", "DSA"])
+export const mkTrackEnum = pgEnum("mk_track", ["UMUM", "BIS", "DSA", "ISG", "DMS"])
 export const tipeAktivitasEnum = pgEnum("tipe_aktivitas", [
   "TEORI", "PRAKTIKUM", "TEORI_PRAKTIKUM", "SEMINAR", "PROYEK"
 ])
@@ -51,6 +51,8 @@ export const mataKuliah = pgTable("mata_kuliah", {
   status: mkStatusEnum("status").notNull().default("WAJIB"),
   track: mkTrackEnum("track").notNull().default("UMUM"),
   tipe_aktivitas: tipeAktivitasEnum("tipe_aktivitas").notNull().default("TEORI"),
+  has_praktikum: boolean("has_praktikum").notNull().default(false),
+  keterangan_praktikum: text("keterangan_praktikum"),
   deskripsi: text("deskripsi"),
   bahasa: text("bahasa").default("Indonesia"),
   is_active: boolean("is_active").notNull().default(true),
