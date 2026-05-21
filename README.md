@@ -16,6 +16,8 @@
   <a href="https://sipeka-ubakrie.vercel.app/"><strong>🚀 Live Demo → sipeka-ubakrie.vercel.app</strong></a>
 </p>
 
+<!-- SAFE POINT 6 - No Login required -->
+
 ---
 
 ## What Is SIPEKA?
