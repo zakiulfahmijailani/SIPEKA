@@ -13,7 +13,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx db/seed.ts",
     "db:seed-mk": "tsx db/seed-mk.ts",
-    "db:seed-cpl-mapping": "tsx db/seed-cpl-mapping.ts"
+    "db:seed-cpl-mapping": "tsx db/seed-cpl-mapping.ts",
+    "db:seed-cpl-mapping-v2": "tsx db/seed-cpl-mapping-v2.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
