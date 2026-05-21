@@ -18,7 +18,8 @@ import {
   LogOut, 
   Menu,
   ChevronRight,
-  Table2
+  Table2,
+  Sparkles
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -70,6 +71,7 @@ export function Sidebar({ session }: SidebarProps) {
         { name: "Peta Kurikulum", href: "/master/peta-kurikulum", icon: Map, show: isSuperAdmin || isKaprodi },
         { name: "Pemetaan Kurikulum", href: "/kurikulum/pemetaan", icon: Table2, show: isSuperAdmin || isKaprodi },
         { name: "Analitik Kurikulum", href: "/kurikulum/analitik", icon: BarChart2, show: isSuperAdmin || isKaprodi },
+        { name: "Analisis AI", href: "/kurikulum/analisis-ai", icon: Sparkles, badge: "AI", show: isSuperAdmin || isKaprodi },
         { name: "Dosir MK", href: "/master/dosir-mk", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
         { name: "Tahun Akademik", href: "/master/tahun-akademik", icon: Database, show: isSuperAdmin || isKaprodi },
         { name: "Profil Lulusan", href: "/master/profil-lulusan", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
@@ -128,6 +130,11 @@ export function Sidebar({ session }: SidebarProps) {
                       )}
                     />
                     <span className="flex-1 truncate">{item.name}</span>
+                    {(item as any).badge && (
+                      <span className="ml-auto mr-1 rounded-full bg-indigo-100 dark:bg-indigo-900 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-indigo-700 dark:text-indigo-400">
+                        {(item as any).badge}
+                      </span>
+                    )}
                     {isActive && <ChevronRight className="h-3 w-3 text-gray-400" />}
                   </Link>
                 )
