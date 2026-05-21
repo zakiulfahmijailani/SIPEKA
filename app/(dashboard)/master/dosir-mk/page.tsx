@@ -3,13 +3,9 @@ import { dosirMk, mataKuliah, users, tahunAkademik } from "@/db/schema"
 import { DosirClientPage } from "./dosir-client-page"
 import { eq, and, asc, desc } from "drizzle-orm"
 
-const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
-
 export default async function DosirMkPage(props: {
   searchParams: Promise<{ ta?: string; mk?: string; dosen?: string }>
 }) {
-  const session = MOCK_SESSION
-
   const searchParams = await props.searchParams
 
   const allTas = await db.query.tahunAkademik.findMany({
@@ -39,7 +35,7 @@ export default async function DosirMkPage(props: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  const dosirData = await db.query.dosirMk.findMany({
+  const dosirs = await db.query.dosirMk.findMany({
     where: whereClause,
     with: { mk: true, dosen: true, tahunAkademik: true },
     orderBy: [asc(dosirMk.kelas)],
@@ -51,11 +47,11 @@ export default async function DosirMkPage(props: {
 
   return (
     <DosirClientPage
-      dosirData={dosirData as any}
+      dosirs={dosirs as any}
       mks={mksFormatted}
       dosens={dosensFormatted}
       tas={tasFormatted}
-      role={session.user.role}
+      activeTaId={activeTa?.id}
     />
   )
 }
