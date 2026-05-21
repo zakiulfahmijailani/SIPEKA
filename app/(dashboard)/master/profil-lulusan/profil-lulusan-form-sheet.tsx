@@ -25,6 +25,7 @@ const profilLulusanSchema = z.object({
   kode: z.string().min(1, "Kode profil lulusan wajib diisi"),
   nama: z.string().min(3, "Nama profil lulusan minimal 3 karakter"),
   deskripsi: z.string().optional().nullable(),
+  bidang_pekerjaan: z.string().optional().nullable(),
   is_active: z.boolean().default(true),
 })
 
@@ -52,6 +53,7 @@ export function ProfilLulusanFormSheet({ open, onOpenChange, initialData }: Prof
       kode: "",
       nama: "",
       deskripsi: "",
+      bidang_pekerjaan: "",
       is_active: true,
     },
   })
@@ -64,10 +66,11 @@ export function ProfilLulusanFormSheet({ open, onOpenChange, initialData }: Prof
           kode: initialData.kode,
           nama: initialData.nama,
           deskripsi: initialData.deskripsi ?? "",
+          bidang_pekerjaan: (initialData as any).bidang_pekerjaan ?? "",
           is_active: initialData.is_active,
         })
       } else {
-        reset({ kode: "", nama: "", deskripsi: "", is_active: true })
+        reset({ kode: "", nama: "", deskripsi: "", bidang_pekerjaan: "", is_active: true })
       }
     }
   }, [open, initialData, reset])
@@ -119,7 +122,7 @@ export function ProfilLulusanFormSheet({ open, onOpenChange, initialData }: Prof
             <Label htmlFor="nama">Nama Profil Lulusan <span className="text-red-500">*</span></Label>
             <Input
               id="nama"
-              placeholder="Contoh: Pengembang Perangkat Lunak"
+              placeholder="Contoh: Software Engineer"
               {...register("nama")}
             />
             {errors.nama && <p className="text-sm text-red-500">{errors.nama.message}</p>}
@@ -134,6 +137,18 @@ export function ProfilLulusanFormSheet({ open, onOpenChange, initialData }: Prof
               {...register("deskripsi")}
             />
             {errors.deskripsi && <p className="text-sm text-red-500">{errors.deskripsi.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bidang_pekerjaan">Bidang Pekerjaan</Label>
+            <Textarea
+              id="bidang_pekerjaan"
+              placeholder="Contoh: Software Engineer, Project Manager, QA Engineer (pisahkan dengan koma)"
+              className="min-h-[80px]"
+              {...register("bidang_pekerjaan")}
+            />
+            <p className="text-xs text-muted-foreground">Pisahkan setiap bidang pekerjaan dengan tanda koma (,)</p>
+            {errors.bidang_pekerjaan && <p className="text-sm text-red-500">{errors.bidang_pekerjaan.message}</p>}
           </div>
 
           <div className="flex items-center space-x-2 pt-2">

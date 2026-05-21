@@ -12,6 +12,7 @@ const profilLulusanSchema = z.object({
   kode: z.string().min(1, "Kode profil lulusan wajib diisi"),
   nama: z.string().min(3, "Nama profil lulusan minimal 3 karakter"),
   deskripsi: z.string().optional().nullable(),
+  bidang_pekerjaan: z.string().optional().nullable(),
   is_active: z.boolean().default(true),
 })
 
@@ -32,6 +33,7 @@ export async function saveProfilLulusan(formData: z.infer<typeof profilLulusanSc
       kode: data.kode,
       nama: data.nama,
       deskripsi: data.deskripsi ?? null,
+      bidang_pekerjaan: data.bidang_pekerjaan ?? null,
       is_active: data.is_active,
     }
 

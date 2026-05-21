@@ -31,6 +31,7 @@ type ProfilLulusanItem = {
   kode: string
   nama: string
   deskripsi: string | null
+  bidang_pekerjaan: string | null
   is_active: boolean
   created_at: Date
   updated_at: Date
@@ -92,9 +93,10 @@ export function ProfilLulusanClientPage({ data, role }: { data: ProfilLulusanIte
         <Table>
           <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="w-28">Kode</TableHead>
-              <TableHead className="w-56">Nama</TableHead>
+              <TableHead className="w-24">Kode</TableHead>
+              <TableHead className="w-48">Nama</TableHead>
               <TableHead>Deskripsi</TableHead>
+              <TableHead className="w-60">Bidang Pekerjaan</TableHead>
               <TableHead className="w-24">Status</TableHead>
               {canEdit && <TableHead className="text-right w-36">Aksi</TableHead>}
             </TableRow>
@@ -106,8 +108,21 @@ export function ProfilLulusanClientPage({ data, role }: { data: ProfilLulusanIte
                   <TableCell className="font-semibold">{item.kode}</TableCell>
                   <TableCell className="font-medium">{item.nama}</TableCell>
                   <TableCell>
-                    <div className="truncate max-w-md xl:max-w-xl text-muted-foreground text-sm" title={item.deskripsi ?? "-"}>
+                    <div className="truncate max-w-xs text-muted-foreground text-sm" title={item.deskripsi ?? "-"}>
                       {item.deskripsi ?? <span className="italic text-gray-400">-</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-muted-foreground" title={item.bidang_pekerjaan ?? "-"}>
+                      {item.bidang_pekerjaan ? (
+                        <ul className="list-none space-y-0.5">
+                          {item.bidang_pekerjaan.split(",").map((bp, i) => (
+                            <li key={i} className="truncate max-w-[220px]">{bp.trim()}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span className="italic text-gray-400">-</span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -153,7 +168,7 @@ export function ProfilLulusanClientPage({ data, role }: { data: ProfilLulusanIte
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={canEdit ? 5 : 4} className="text-center py-10 text-gray-400">
+                <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-10 text-gray-400">
                   Belum ada data profil lulusan. Klik &ldquo;Tambah Profil Lulusan&rdquo; untuk memulai.
                 </TableCell>
               </TableRow>
