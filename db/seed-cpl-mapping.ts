@@ -86,7 +86,10 @@ async function runSeed() {
 
     for (let c = 1; c < row.length; c++) {
       const cell = row[c];
-      if (cell === '✓' || cell === true || (typeof cell === 'string' && cell.trim() === '✓')) {
+      const cellStr = String(cell).trim().toLowerCase();
+      const isChecked = cell === true || cellStr === '✓' || cellStr === 'v' || cellStr === 'x';
+      
+      if (isChecked) {
         const course = courses.find((x) => x.index === c);
         if (!course) continue;
         
@@ -108,11 +111,13 @@ async function runSeed() {
           await db.insert(petaKurikulum).values({
             cpl_id: foundCpl.id,
             mk_id: foundMk.id,
-            bobot: 1,
+            bobot: "1.00",
           });
           inserted++;
-        } catch (err) {
+          console.log(`[BERHASIL] ${cplCode} -> ${mkName}`);
+        } catch (err: any) {
           skipped++;
+          console.error(`[GAGAL INSERT] ${cplCode} -> ${mkName}:`, err.message);
         }
       }
     }
