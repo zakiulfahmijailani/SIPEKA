@@ -65,10 +65,10 @@ export function MappingTable({ courses, plos }: MappingTableProps) {
           <table className="w-full min-w-max border-collapse text-sm">
             <thead>
               <tr className="bg-muted/80 text-left text-xs uppercase text-muted-foreground">
-                <th className="sticky left-0 top-0 z-30 min-w-28 border-b border-r border-border bg-muted px-3 py-3">
+                <th className="sticky left-0 top-0 z-30 w-28 min-w-[7rem] max-w-[7rem] border-b border-r border-gray-200 bg-gray-100 px-3 py-3 shadow-[1px_0_0_0_#e5e7eb]">
                   Kode MK
                 </th>
-                <th className="sticky top-0 z-20 min-w-72 border-b border-r border-border bg-muted px-3 py-3">
+                <th className="sticky left-[7rem] top-0 z-30 min-w-72 border-b border-r border-gray-200 bg-gray-100 px-3 py-3 shadow-[1px_0_0_0_#e5e7eb]">
                   Mata Kuliah
                 </th>
                 <th className="sticky top-0 z-20 min-w-20 border-b border-r border-border bg-muted px-3 py-3 text-center">
@@ -115,12 +115,12 @@ export function MappingTable({ courses, plos }: MappingTableProps) {
 
                       return (
                         <tr key={course.id} className="bg-card hover:bg-muted/40">
-                          <td className="sticky left-0 z-10 border-b border-r border-border bg-card px-3 py-3 font-medium text-foreground group-hover:bg-muted">
+                          <td className="sticky left-0 z-20 w-28 min-w-[7rem] max-w-[7rem] border-b border-r border-gray-200 bg-white px-3 py-3 font-medium text-gray-900 shadow-[1px_0_0_0_#e5e7eb] group-hover:bg-gray-50">
                             {course.code}
                           </td>
-                          <td className="max-w-80 border-b border-r border-border px-3 py-3">
-                            <div className="font-medium text-foreground">{course.name}</div>
-                            <div className="text-xs text-muted-foreground">
+                          <td className="sticky left-[7rem] z-20 min-w-72 max-w-80 border-b border-r border-gray-200 bg-white px-3 py-3 shadow-[1px_0_0_0_#e5e7eb] group-hover:bg-gray-50">
+                            <div className="font-medium text-gray-900">{course.name}</div>
+                            <div className="text-xs text-gray-500">
                               Teori {course.creditsTheory} · Praktik {course.creditsPractice}
                             </div>
                           </td>
