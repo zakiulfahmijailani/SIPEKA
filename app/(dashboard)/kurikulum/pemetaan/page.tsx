@@ -27,9 +27,11 @@ export default async function PemetaanKurikulumPage() {
       id: mataKuliah.id,
       code: mataKuliah.kode,
       name: mataKuliah.nama_id,
+      nameEn: mataKuliah.nama_en,
       creditsTheory: mataKuliah.sks_teori,
       creditsPractice: mataKuliah.sks_praktik,
       semester: mataKuliah.semester_rekomendasi,
+      track: mataKuliah.track,
     })
     .from(mataKuliah)
     .where(eq(mataKuliah.is_active, true))
