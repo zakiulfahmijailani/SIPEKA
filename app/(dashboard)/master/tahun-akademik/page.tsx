@@ -1,17 +1,12 @@
-import { auth } from "@/lib/auth"
 import { db } from "@/db"
 import { tahunAkademik } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { TaClientPage } from "./ta-client-page"
 import { desc } from "drizzle-orm"
 
+const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
+
 export default async function TahunAkademikPage() {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
-  
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI") {
-    redirect("/dashboard")
-  }
+  const session = MOCK_SESSION
 
   const allTas = await db.query.tahunAkademik.findMany({
     orderBy: [desc(tahunAkademik.tahun_mulai), desc(tahunAkademik.semester)],

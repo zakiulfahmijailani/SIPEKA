@@ -1,19 +1,14 @@
-import { auth } from "@/lib/auth"
 import { db } from "@/db"
 import { mahasiswa } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { MahasiswaClientPage } from "./mahasiswa-client-page"
 import { eq, and, asc, like, or } from "drizzle-orm"
+
+const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
 export default async function MahasiswaPage(props: {
   searchParams: Promise<{ q?: string; status?: string; angkatan?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
-  
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI") {
-    redirect("/dashboard")
-  }
+  const session = MOCK_SESSION
 
   const searchParams = await props.searchParams
   const q = searchParams.q
@@ -23,7 +18,6 @@ export default async function MahasiswaPage(props: {
   const conditions = []
   if (status) conditions.push(eq(mahasiswa.status, status))
   if (angkatan) conditions.push(eq(mahasiswa.angkatan, angkatan))
-  
   if (q) {
     conditions.push(or(
       like(mahasiswa.nim, `%${q}%`),
@@ -37,7 +31,7 @@ export default async function MahasiswaPage(props: {
     where: whereClause,
     orderBy: [asc(mahasiswa.angkatan), asc(mahasiswa.nim)],
   }).catch((e) => {
-    console.error("Failed to fetch students, table might be missing:", e)
+    console.error("Failed to fetch students:", e)
     return []
   })
 

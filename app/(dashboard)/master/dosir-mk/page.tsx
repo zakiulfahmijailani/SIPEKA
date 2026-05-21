@@ -1,27 +1,21 @@
-import { auth } from "@/lib/auth"
 import { db } from "@/db"
 import { dosirMk, mataKuliah, users, tahunAkademik } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { DosirClientPage } from "./dosir-client-page"
 import { eq, and, asc, desc } from "drizzle-orm"
+
+const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
 export default async function DosirMkPage(props: {
   searchParams: Promise<{ ta?: string; mk?: string; dosen?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
-  
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI") {
-    redirect("/dashboard")
-  }
+  const session = MOCK_SESSION
 
   const searchParams = await props.searchParams
 
-  // Fetch reference data for selects/comboboxes
   const allTas = await db.query.tahunAkademik.findMany({
     orderBy: [desc(tahunAkademik.tahun_mulai), desc(tahunAkademik.semester)],
   })
-  
+
   const activeTa = allTas.find(t => t.is_active)
 
   const allMks = await db.query.mataKuliah.findMany({
@@ -34,7 +28,6 @@ export default async function DosirMkPage(props: {
     orderBy: [asc(users.nama_lengkap)],
   })
 
-  // Build filter
   const taFilter = searchParams.ta && searchParams.ta !== "ALL" ? searchParams.ta : (activeTa?.id || undefined)
   const mkFilter = searchParams.mk && searchParams.mk !== "ALL" ? searchParams.mk : undefined
   const dosenFilter = searchParams.dosen && searchParams.dosen !== "ALL" ? searchParams.dosen : undefined
@@ -46,29 +39,23 @@ export default async function DosirMkPage(props: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  // Fetch dosir data
   const dosirData = await db.query.dosirMk.findMany({
     where: whereClause,
-    with: {
-      mk: true,
-      dosen: true,
-      tahunAkademik: true,
-    },
+    with: { mk: true, dosen: true, tahunAkademik: true },
     orderBy: [asc(dosirMk.kelas)],
   })
 
-  // Format labels for client component
-  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama_id}` }))
+  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama}` }))
   const dosensFormatted = allDosens.map(d => ({ id: d.id, label: d.nama_lengkap }))
-  const tasFormatted = allTas.map(t => ({ id: t.id, label: t.kode }))
+  const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_selesai} ${t.semester}` }))
 
   return (
-    <DosirClientPage 
-      dosirs={dosirData} 
+    <DosirClientPage
+      dosirData={dosirData as any}
       mks={mksFormatted}
       dosens={dosensFormatted}
       tas={tasFormatted}
-      activeTaId={activeTa?.id}
+      role={session.user.role}
     />
   )
 }

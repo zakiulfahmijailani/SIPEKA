@@ -1,17 +1,14 @@
-import { auth } from "@/lib/auth"
 import { db } from "@/db"
 import { users } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { UserClientPage } from "./user-client-page"
 import { eq, and, asc } from "drizzle-orm"
+
+const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
 export default async function UsersPage(props: {
   searchParams: Promise<{ role?: string; status?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user || session.user.role !== "SUPER_ADMIN") {
-    redirect("/dashboard")
-  }
+  const session = MOCK_SESSION
 
   const searchParams = await props.searchParams
   const role = searchParams.role && searchParams.role !== "ALL" ? searchParams.role as any : undefined

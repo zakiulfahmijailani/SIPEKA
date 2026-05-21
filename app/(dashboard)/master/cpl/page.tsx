@@ -1,17 +1,13 @@
-import { auth } from "@/lib/auth"
 import { db } from "@/db"
 import { cpl } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { CplClientPage } from "./cpl-client-page"
 import { asc } from "drizzle-orm"
 
-export default async function MasterCPLPage() {
-  const session = await auth()
-  if (!session?.user) {
-    redirect("/login")
-  }
+const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
-  // Fetch all CPLs ordered by urutan
+export default async function MasterCPLPage() {
+  const session = MOCK_SESSION
+
   const allCpls = await db.query.cpl.findMany({
     orderBy: [asc(cpl.urutan)],
   })

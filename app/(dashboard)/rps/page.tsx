@@ -1,67 +1,63 @@
-import { auth } from "@/lib/auth"
 import { db } from "@/db"
-import { dosirMk, rps, tahunAkademik } from "@/db/schema"
-import { redirect } from "next/navigation"
-import { RpsClientPage } from "./rps-client-page"
-import { eq, and, like, or, desc } from "drizzle-orm"
+import { dosirMk, mataKuliah, tahunAkademik, users } from "@/db/schema"
+import { eq, and, asc, desc } from "drizzle-orm"
+
+const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
 export default async function RpsPage(props: {
-  searchParams: Promise<{ q?: string; status?: string; ta?: string }>
+  searchParams: Promise<{ ta?: string; mk?: string; dosen?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
+  const session = MOCK_SESSION
 
   const searchParams = await props.searchParams
-  const q = searchParams.q
-  const status = searchParams.status && searchParams.status !== "ALL" ? searchParams.status : undefined
-  
-  // Get active TA if not filtered
-  const activeTa = await db.query.tahunAkademik.findFirst({
-    where: eq(tahunAkademik.is_active, true)
-  })
-  const taId = searchParams.ta || activeTa?.id
 
-  const conditions = []
-  if (taId) conditions.push(eq(dosirMk.tahun_akademik_id, taId))
-  
-  // Filter by user role (Dosen only sees their own)
-  if (session.user.role === "DOSEN") {
-    conditions.push(eq(dosirMk.dosen_id, session.user.id))
-  }
-
-  // Handle RPS status filtering via a subquery or join if needed
-  // For now, let's fetch all and filter in memory if simple, or use where sql
-  
-  const allDosirs = await db.query.dosirMk.findMany({
-    where: conditions.length > 0 ? and(...conditions) : undefined,
-    with: {
-      mk: true,
-      dosen: true,
-      tahunAkademik: true,
-      rps: {
-        orderBy: [desc(rps.version)],
-        limit: 1
-      }
-    }
-  }).catch((e) => {
-    console.error("Failed to fetch dosirs for RPS:", e)
-    return []
+  const allTas = await db.query.tahunAkademik.findMany({
+    orderBy: [desc(tahunAkademik.tahun_mulai), desc(tahunAkademik.semester)],
   })
 
-  // In-memory filtering for status and search term (q)
-  let filtered = allDosirs
-  if (status) {
-    filtered = filtered.filter(d => (d.rps?.[0]?.status || "DRAFT") === status)
-  }
-  if (q) {
-    const term = q.toLowerCase()
-    filtered = filtered.filter(d => 
-      d.mk.nama_id.toLowerCase().includes(term) || 
-      d.mk.kode.toLowerCase().includes(term)
-    )
-  }
+  const activeTa = allTas.find(t => t.is_active)
+
+  const allMks = await db.query.mataKuliah.findMany({
+    where: eq(mataKuliah.is_active, true),
+    orderBy: [asc(mataKuliah.kode)],
+  })
+
+  const allDosens = await db.query.users.findMany({
+    where: eq(users.role, "DOSEN"),
+    orderBy: [asc(users.nama_lengkap)],
+  })
+
+  const taFilter = searchParams.ta && searchParams.ta !== "ALL" ? searchParams.ta : (activeTa?.id || undefined)
+  const mkFilter = searchParams.mk && searchParams.mk !== "ALL" ? searchParams.mk : undefined
+  const dosenFilter = searchParams.dosen && searchParams.dosen !== "ALL" ? searchParams.dosen : undefined
+
+  const conditions: any[] = []
+  if (taFilter) conditions.push(eq(dosirMk.tahun_akademik_id, taFilter))
+  if (mkFilter) conditions.push(eq(dosirMk.mk_id, mkFilter))
+  if (dosenFilter) conditions.push(eq(dosirMk.dosen_id, dosenFilter))
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+  const dosirData = await db.query.dosirMk.findMany({
+    where: whereClause,
+    with: { mk: true, dosen: true, tahunAkademik: true },
+    orderBy: [asc(dosirMk.kelas)],
+  })
+
+  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama}` }))
+  const dosensFormatted = allDosens.map(d => ({ id: d.id, label: d.nama_lengkap }))
+  const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_selesai} ${t.semester}` }))
+
+  // Dynamic import for RPS client component
+  const { RpsClientPage } = await import("./rps-client-page")
 
   return (
-    <RpsClientPage dosirs={filtered} />
+    <RpsClientPage
+      dosirData={dosirData as any}
+      mks={mksFormatted}
+      dosens={dosensFormatted}
+      tas={tasFormatted}
+      role={session.user.role}
+    />
   )
 }
