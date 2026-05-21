@@ -117,6 +117,8 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
               <TableHead className="w-24 text-center">Semester</TableHead>
               <TableHead className="w-24">Track</TableHead>
               <TableHead className="w-24">Status</TableHead>
+              <TableHead className="w-24 text-center">Prak.</TableHead>
+              <TableHead className="w-24 text-center">PBL</TableHead>
               <TableHead className="w-24 text-center">CPL Terkait</TableHead>
               {canEdit && <TableHead className="text-right w-24">Aksi</TableHead>}
             </TableRow>
@@ -146,6 +148,20 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
+                    {item.has_praktikum ? (
+                      <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700" title={item.keterangan_praktikum || "Termasuk praktikum"}>Ya</Badge>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {item.is_pbl ? (
+                      <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700" title={item.keterangan_pbl || "PBL"}>PBL</Badge>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
                     <Badge variant="secondary" className="cursor-pointer hover:bg-gray-200" title="Klik untuk lihat pemetaan CPL">
                       {item.cplCount || 0} CPL
                     </Badge>
@@ -166,7 +182,7 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={canEdit ? 8 : 7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={canEdit ? 10 : 9} className="text-center py-8 text-gray-500">
                   Tidak ada data Mata Kuliah yang sesuai.
                 </TableCell>
               </TableRow>
