@@ -25,6 +25,7 @@ interface MkData {
   has_praktikum: boolean
   keterangan_praktikum: string | null
   is_pbl: boolean
+  keterangan_pbl: string | null
   keterangan_semester: string | null
 }
 
@@ -41,7 +42,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF102",
@@ -51,7 +52,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF103",
@@ -61,7 +62,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
   {
     kode: "SIF104",
@@ -71,7 +72,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
   {
     kode: "SIF105",
@@ -81,7 +82,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF106",
@@ -91,7 +92,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 1,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
 
   // ── SEMESTER 2 ─────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF202",
@@ -113,7 +114,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF203",
@@ -123,7 +124,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF204",
@@ -133,7 +134,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF205",
@@ -143,7 +144,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
   {
     kode: "SIF206",
@@ -153,7 +154,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
   {
     kode: "SIF207",
@@ -163,7 +164,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 2,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
 
   // ── SEMESTER 3 ─────────────────────────────────────────────────────
@@ -175,7 +176,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF302",
@@ -185,7 +186,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF303",
@@ -195,7 +196,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF304",
@@ -205,7 +206,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF305",
@@ -215,7 +216,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF306",
@@ -225,7 +226,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF307",
@@ -235,7 +236,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 3,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
 
   // ── SEMESTER 4 ─────────────────────────────────────────────────────
@@ -247,7 +248,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF402",
@@ -257,7 +258,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF403",
@@ -267,7 +268,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF404",
@@ -277,7 +278,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
   {
     kode: "SIF405",
@@ -287,7 +288,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
   {
     kode: "SIF406",
@@ -297,7 +298,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF407",
@@ -307,7 +308,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF408",
@@ -317,7 +318,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 4,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
 
   // ── SEMESTER 5 ─────────────────────────────────────────────────────
@@ -329,7 +330,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF502",
@@ -339,7 +340,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF503",
@@ -349,7 +350,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL with Mobile", keterangan_semester: null,
   },
   {
     kode: "SIF504",
@@ -359,7 +360,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF505",
@@ -369,7 +370,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL with Mobile and Testing", keterangan_semester: null,
   },
   {
     kode: "SIF506",
@@ -379,7 +380,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "PILIHAN", track: "ISG", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL with Mobile, Testing, and Manajemen Proyek", keterangan_semester: null,
   },
   {
     kode: "SIF507",
@@ -389,7 +390,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "PILIHAN", track: "ISG", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF508",
@@ -399,7 +400,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "PILIHAN", track: "DMS", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF509",
@@ -409,7 +410,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 5,
     status: "PILIHAN", track: "DMS", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
 
   // ── SEMESTER 6 ─────────────────────────────────────────────────────
@@ -421,7 +422,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF602",
@@ -431,7 +432,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "PROYEK",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF603",
@@ -441,7 +442,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF604",
@@ -451,7 +452,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF605",
@@ -461,7 +462,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "SEMINAR",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF606",
@@ -471,7 +472,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF607",
@@ -481,7 +482,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "BIS", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF608",
@@ -491,7 +492,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF609",
@@ -501,10 +502,10 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: true, keterangan_semester: null,
+    is_pbl: true, keterangan_pbl: "PBL", keterangan_semester: null,
   },
 
-  // ── SEMESTER 7 (tanpa Magang — bukan MK reguler) ──────────────────
+  // ── SEMESTER 7 (Magang TIDAK di-seed — bukan MK reguler) ──────────
   {
     kode: "SIF701",
     nama_id: "Agama",
@@ -513,7 +514,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF702",
@@ -523,7 +524,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF704",
@@ -533,7 +534,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF705",
@@ -543,7 +544,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF706",
@@ -553,7 +554,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 7,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
 
   // ── SEMESTER 8 ─────────────────────────────────────────────────────
@@ -565,7 +566,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 8,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
   {
     kode: "SIF802",
@@ -575,7 +576,7 @@ const mataKuliahData: MkSeedData[] = [
     semester_rekomendasi: 8,
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "PROYEK",
     has_praktikum: false, keterangan_praktikum: null,
-    is_pbl: false, keterangan_semester: null,
+    is_pbl: false, keterangan_pbl: null, keterangan_semester: null,
   },
 ]
 
@@ -619,6 +620,7 @@ async function seedMataKuliah() {
           has_praktikum: mk.has_praktikum,
           keterangan_praktikum: mk.keterangan_praktikum,
           is_pbl: mk.is_pbl,
+          keterangan_pbl: mk.keterangan_pbl,
           keterangan_semester: mk.keterangan_semester,
           updated_at: new Date(),
         })
