@@ -1,6 +1,5 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
@@ -24,18 +23,6 @@ interface MappingTableProps {
     category: string
   }[]
 }
-
-const LEVEL_STYLES = {
-  H: "border-emerald-500/30 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-  M: "border-amber-500/30 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-  L: "border-muted-foreground/20 bg-muted text-muted-foreground",
-} as const
-
-const DOT_STYLES = {
-  H: "bg-emerald-500",
-  M: "bg-amber-500",
-  L: "bg-muted-foreground",
-} as const
 
 export function MappingTable({ courses, plos }: MappingTableProps) {
   if (courses.length === 0 || plos.length === 0) {
@@ -129,21 +116,20 @@ export function MappingTable({ courses, plos }: MappingTableProps) {
                           </td>
                           {plos.map((plo) => {
                             const level = mappingByPlo.get(plo.code) ?? null
+                            const isMapped = level !== null
+
                             return (
                               <td
                                 key={`${course.id}-${plo.id}`}
-                                className="border-b border-r border-border px-3 py-3 text-center"
+                                className={cn(
+                                  "border-b border-r border-border px-3 py-3 text-center transition-colors",
+                                  isMapped ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : ""
+                                )}
                               >
-                                {level ? (
-                                  <Badge
-                                    variant="outline"
-                                    className={cn("gap-1.5 border", LEVEL_STYLES[level])}
-                                  >
-                                    <span className={cn("size-2 rounded-full", DOT_STYLES[level])} />
-                                    {level}
-                                  </Badge>
+                                {isMapped ? (
+                                  <span className="font-bold">✓</span>
                                 ) : (
-                                  <span className="text-muted-foreground">—</span>
+                                  <span className="text-muted-foreground/30">—</span>
                                 )}
                               </td>
                             )
