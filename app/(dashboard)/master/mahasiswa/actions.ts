@@ -5,7 +5,7 @@ import { mahasiswa } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 const mahasiswaSchema = z.object({
   id: z.string().optional(),
@@ -19,7 +19,7 @@ const mahasiswaSchema = z.object({
 
 export async function saveMahasiswa(formData: z.infer<typeof mahasiswaSchema>) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -59,7 +59,7 @@ export async function saveMahasiswa(formData: z.infer<typeof mahasiswaSchema>) {
 
 export async function deleteMahasiswa(id: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -76,7 +76,7 @@ export async function deleteMahasiswa(id: string) {
 
 export async function bulkImportMahasiswa(data: any[]) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }

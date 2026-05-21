@@ -5,7 +5,7 @@ import { dosirMk } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 const dosirSchema = z.object({
   id: z.string().optional(),
@@ -18,7 +18,7 @@ const dosirSchema = z.object({
 
 export async function saveDosirMk(formData: z.infer<typeof dosirSchema>) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -57,7 +57,7 @@ export async function saveDosirMk(formData: z.infer<typeof dosirSchema>) {
 
 export async function deleteDosirMk(id: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }

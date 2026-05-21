@@ -1,18 +1,10 @@
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { getDashboardStats } from "../dashboard-actions"
 import { DashboardClient } from "../dashboard-client"
 
-// ---------------------------------------------------------------------------
-// Auth check DISABLED — mock session injected
-// ---------------------------------------------------------------------------
-const MOCK_SESSION = {
-  user: {
-    id: "guest",
-    name: "Guest",
-    email: "guest@sipeka.local",
-    role: "SUPER_ADMIN",
-  },
-}
 
+
+export const dynamic = "force-dynamic"
 export default async function DashboardPage() {
   const session = MOCK_SESSION
 

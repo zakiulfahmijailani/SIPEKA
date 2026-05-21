@@ -5,7 +5,7 @@ import { profilLulusan } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 const profilLulusanSchema = z.object({
   id: z.string().optional(),
@@ -17,7 +17,7 @@ const profilLulusanSchema = z.object({
 
 export async function saveProfilLulusan(formData: z.infer<typeof profilLulusanSchema>) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Tidak memiliki akses" }
     }
@@ -56,7 +56,7 @@ export async function saveProfilLulusan(formData: z.infer<typeof profilLulusanSc
 
 export async function toggleProfilLulusanActive(id: string, currentStatus: boolean) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Tidak memiliki akses" }
     }
@@ -75,7 +75,7 @@ export async function toggleProfilLulusanActive(id: string, currentStatus: boole
 
 export async function deleteProfilLulusan(id: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Tidak memiliki akses" }
     }

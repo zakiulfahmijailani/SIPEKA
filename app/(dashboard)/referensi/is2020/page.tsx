@@ -1,16 +1,14 @@
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { is2020Realm } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { asc } from "drizzle-orm"
 
+
+export const dynamic = "force-dynamic"
 export default async function ReferensiIS2020Page() {
-  const session = await auth()
-  if (!session?.user) {
-    redirect("/login")
-  }
+  const session = MOCK_SESSION
 
   // Fetch Realms with their Areas
   const realms = await db.query.is2020Realm.findMany({

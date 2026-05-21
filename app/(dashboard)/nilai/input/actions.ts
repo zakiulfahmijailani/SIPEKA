@@ -4,11 +4,11 @@ import { db } from "@/db"
 import { nilai, enrollment, dosirMk } from "@/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 export async function saveGrades(dosirId: string, gradeData: { enrollmentId: string, komponenId: string, value: number }[]) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session?.user) return { success: false, error: "Unauthorized" }
 
     // Check if Dosen is authorized for this dosir

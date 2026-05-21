@@ -1,10 +1,12 @@
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { mataKuliah } from "@/db/schema"
 import { MkClientPage } from "./mk-client-page"
 import { eq, and, asc } from "drizzle-orm"
 
-const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
+
+export const dynamic = "force-dynamic"
 export default async function MasterMKPage(props: {
   searchParams: Promise<{ semester?: string; status?: string; track?: string }>
 }) {

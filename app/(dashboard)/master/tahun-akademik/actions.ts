@@ -5,7 +5,7 @@ import { tahunAkademik } from "@/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 const taSchema = z.object({
   id: z.string().optional(),
@@ -17,7 +17,7 @@ const taSchema = z.object({
 
 export async function saveTahunAkademik(formData: z.infer<typeof taSchema>) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -56,7 +56,7 @@ export async function saveTahunAkademik(formData: z.infer<typeof taSchema>) {
 
 export async function setAktifTahunAkademik(id: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }

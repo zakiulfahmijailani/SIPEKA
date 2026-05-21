@@ -1,13 +1,13 @@
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { dosirMk, tahunAkademik, nilai } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { InputNilaiClient } from "./input-nilai-client"
 import { eq, and } from "drizzle-orm"
 
+
+export const dynamic = "force-dynamic"
 export default async function InputNilaiPage() {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
+  const session = MOCK_SESSION
 
   // Get active TA
   const activeTa = await db.query.tahunAkademik.findFirst({

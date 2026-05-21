@@ -5,7 +5,7 @@ import { cpl } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 const cplSchema = z.object({
   id: z.string().optional(),
@@ -21,7 +21,7 @@ const cplSchema = z.object({
 
 export async function saveCPL(formData: z.infer<typeof cplSchema>) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -64,7 +64,7 @@ export async function saveCPL(formData: z.infer<typeof cplSchema>) {
 
 export async function toggleCPLActive(id: string, currentStatus: boolean) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }

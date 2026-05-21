@@ -9,7 +9,7 @@ import {
 } from "@/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { createNotification } from "@/lib/notifications"
 import { users } from "@/db/schema"
 import { inArray } from "drizzle-orm"
@@ -18,7 +18,7 @@ import { inArray } from "drizzle-orm"
 
 export async function createOrGetRps(dosirMkId: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session?.user) return { success: false, error: "Unauthorized" }
 
     let existing = await db.query.rps.findFirst({
@@ -43,7 +43,7 @@ export async function createOrGetRps(dosirMkId: string) {
 
 export async function updateRpsStatus(id: string, status: any, catatan?: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session?.user) return { success: false, error: "Unauthorized" }
 
     const [current] = await db.select().from(rps).where(eq(rps.id, id))

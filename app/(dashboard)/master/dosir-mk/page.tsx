@@ -3,6 +3,8 @@ import { dosirMk, mataKuliah, users, tahunAkademik } from "@/db/schema"
 import { DosirClientPage } from "./dosir-client-page"
 import { eq, and, asc, desc } from "drizzle-orm"
 
+
+export const dynamic = "force-dynamic"
 export default async function DosirMkPage(props: {
   searchParams: Promise<{ ta?: string; mk?: string; dosen?: string }>
 }) {

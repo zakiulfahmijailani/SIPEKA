@@ -1,18 +1,18 @@
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { dosirMk, tahunAkademik, nilai, enrollment, mahasiswa, mataKuliah } from "@/db/schema"
-import { redirect } from "next/navigation"
 import { eq, and, asc, avg, count, sql } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Users, BookOpen, GraduationCap, TrendingUp, CheckCircle2 } from "lucide-react"
 
+
+export const dynamic = "force-dynamic"
 export default async function RekapNilaiPage(props: {
   searchParams: Promise<{ ta?: string; mk?: string; angkatan?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
+  const session = MOCK_SESSION
 
   const searchParams = await props.searchParams
   

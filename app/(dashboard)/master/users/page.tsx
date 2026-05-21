@@ -1,10 +1,12 @@
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { UserClientPage } from "./user-client-page"
 import { eq, and, asc } from "drizzle-orm"
 
-const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
+
+export const dynamic = "force-dynamic"
 export default async function UsersPage(props: {
   searchParams: Promise<{ role?: string; status?: string }>
 }) {

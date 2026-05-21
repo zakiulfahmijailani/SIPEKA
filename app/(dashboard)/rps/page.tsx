@@ -1,9 +1,11 @@
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { dosirMk, mataKuliah, tahunAkademik, users } from "@/db/schema"
 import { eq, and, asc, desc } from "drizzle-orm"
 
-const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
+
+export const dynamic = "force-dynamic"
 export default async function RpsPage(props: {
   searchParams: Promise<{ ta?: string; mk?: string; dosen?: string }>
 }) {
@@ -38,26 +40,22 @@ export default async function RpsPage(props: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  const dosirData = await db.query.dosirMk.findMany({
+  const dosirs = await db.query.dosirMk.findMany({
     where: whereClause,
     with: { mk: true, dosen: true, tahunAkademik: true },
     orderBy: [asc(dosirMk.kelas)],
   })
 
-  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama}` }))
+  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama_id}` }))
   const dosensFormatted = allDosens.map(d => ({ id: d.id, label: d.nama_lengkap }))
-  const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_selesai} ${t.semester}` }))
+  const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_mulai + 1} ${t.semester}` }))
 
   // Dynamic import for RPS client component
   const { RpsClientPage } = await import("./rps-client-page")
 
   return (
     <RpsClientPage
-      dosirData={dosirData as any}
-      mks={mksFormatted}
-      dosens={dosensFormatted}
-      tas={tasFormatted}
-      role={session.user.role}
+      dosirs={dosirs as any}
     />
   )
 }

@@ -4,11 +4,11 @@ import { db } from "@/db"
 import { enrollment, mahasiswa, dosirMk } from "@/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 
 export async function enrollMahasiswa(dosirMkId: string, mahasiswaId: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -30,7 +30,7 @@ export async function enrollMahasiswa(dosirMkId: string, mahasiswaId: string) {
 
 export async function unenrollMahasiswa(id: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -46,7 +46,7 @@ export async function unenrollMahasiswa(id: string) {
 
 export async function bulkEnrollMahasiswa(dosirMkId: string, nims: string[]) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }
@@ -76,7 +76,7 @@ export async function bulkEnrollMahasiswa(dosirMkId: string, nims: string[]) {
 
 export async function importEnrollmentCSV(dosirMkId: string, formData: FormData) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
     }

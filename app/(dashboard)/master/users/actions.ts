@@ -5,7 +5,7 @@ import { users } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import bcrypt from "bcryptjs"
 
 const userSchema = z.object({
@@ -20,7 +20,7 @@ const userSchema = z.object({
 
 export async function saveUser(formData: z.infer<typeof userSchema>) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
@@ -65,7 +65,7 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
 
 export async function toggleUserActive(id: string, currentStatus: boolean) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
@@ -83,7 +83,7 @@ export async function toggleUserActive(id: string, currentStatus: boolean) {
 
 export async function resetUserPassword(id: string, password: string) {
   try {
-    const session = await auth()
+    const session = MOCK_SESSION
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }

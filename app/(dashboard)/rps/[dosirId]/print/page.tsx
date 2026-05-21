@@ -5,6 +5,8 @@ import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+
+export const dynamic = "force-dynamic"
 export default async function RpsPrintPage(props: {
   params: Promise<{ dosirId: string }>
 }) {

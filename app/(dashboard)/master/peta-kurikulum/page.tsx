@@ -1,10 +1,12 @@
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { cpl, mataKuliah } from "@/db/schema"
 import { MatrixClient } from "./matrix-client"
 import { eq, asc } from "drizzle-orm"
 
-const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.local", role: "SUPER_ADMIN" as const } }
 
+
+export const dynamic = "force-dynamic"
 export default async function PetaKurikulumPage() {
   const session = MOCK_SESSION
 

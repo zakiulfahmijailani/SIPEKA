@@ -1,13 +1,14 @@
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { dosirMk, tahunAkademik, mahasiswa } from "@/db/schema"
 import { redirect } from "next/navigation"
 import { EnrollmentClientPage } from "./enrollment-client-page"
 import { eq, desc } from "drizzle-orm"
 
+
+export const dynamic = "force-dynamic"
 export default async function EnrollmentPage() {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
+  const session = MOCK_SESSION
   
   if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI") {
     redirect("/dashboard")

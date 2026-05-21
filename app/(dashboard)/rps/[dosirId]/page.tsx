@@ -1,15 +1,16 @@
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
 import { dosirMk, rps, petaKurikulum, cpl } from "@/db/schema"
 import { redirect, notFound } from "next/navigation"
 import { RpsEditor } from "./rps-editor"
 import { eq, and, desc } from "drizzle-orm"
 
+
+export const dynamic = "force-dynamic"
 export default async function RpsEditorPage(props: {
   params: Promise<{ dosirId: string }>
 }) {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
+  const session = MOCK_SESSION
 
   const params = await props.params
   const dosirId = params.dosirId

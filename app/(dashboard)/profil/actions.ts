@@ -3,12 +3,12 @@
 import { db } from "@/db"
 import { users, programSettings } from "@/db/schema"
 import { eq } from "drizzle-orm"
-import { auth } from "@/lib/auth"
+import { MOCK_SESSION } from "@/lib/mock-session"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
 
 export async function updateProfile(data: { nama_lengkap: string; email: string; nidn?: string }) {
-  const session = await auth()
+  const session = MOCK_SESSION
   if (!session?.user) return { success: false, error: "Unauthorized" }
 
   try {
@@ -28,7 +28,7 @@ export async function updateProfile(data: { nama_lengkap: string; email: string;
 }
 
 export async function changePassword(data: { current: string; new: string }) {
-  const session = await auth()
+  const session = MOCK_SESSION
   if (!session?.user) return { success: false, error: "Unauthorized" }
 
   try {
@@ -53,7 +53,7 @@ export async function changePassword(data: { current: string; new: string }) {
 }
 
 export async function updateProgramSettings(settings: Record<string, string>) {
-  const session = await auth()
+  const session = MOCK_SESSION
   if (session?.user.role !== "SUPER_ADMIN" && session?.user.role !== "KAPRODI") {
     return { success: false, error: "Unauthorized" }
   }
