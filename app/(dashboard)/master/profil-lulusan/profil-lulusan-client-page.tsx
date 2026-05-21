@@ -108,7 +108,7 @@ export function ProfilLulusanClientPage({ data, role }: { data: ProfilLulusanIte
                   <TableCell className="font-semibold text-center align-top">{item.kode}</TableCell>
                   <TableCell className="font-medium align-top">{item.nama}</TableCell>
                   <TableCell className="align-top">
-                    <div className="line-clamp-2 max-w-xs text-muted-foreground text-sm" title={item.deskripsi ?? "-"}>
+                    <div className="line-clamp-2 whitespace-normal break-words text-muted-foreground text-sm" title={item.deskripsi ?? "-"}>
                       {item.deskripsi ?? <span className="italic text-gray-400">-</span>}
                     </div>
                   </TableCell>
