@@ -28,6 +28,7 @@ export const profilLulusan = pgTable("profil_lulusan", {
   kode: text("kode").notNull().unique(),
   nama: text("nama").notNull(),
   deskripsi: text("deskripsi"),
+  bidang_pekerjaan: text("bidang_pekerjaan"),
   is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
