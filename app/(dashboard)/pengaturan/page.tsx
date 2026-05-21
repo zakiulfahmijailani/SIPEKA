@@ -3,7 +3,7 @@ const MOCK_SESSION = { user: { id: "guest", name: "Guest", email: "guest@sipeka.
 export default async function PengaturanPage() {
   const session = MOCK_SESSION
 
-  const { PengaturanClient } = await import("./pengaturan-client")
+  const PengaturanClient = (await import("./pengaturan-client")).default
 
   return <PengaturanClient user={session.user} />
 }
