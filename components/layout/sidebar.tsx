@@ -70,6 +70,7 @@ export function Sidebar({ session }: SidebarProps) {
         { name: "Mata Kuliah", href: "/master/mata-kuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
         { name: "Peta Kurikulum", href: "/master/peta-kurikulum", icon: Map, show: isSuperAdmin || isKaprodi },
         { name: "Pemetaan Kurikulum", href: "/kurikulum/pemetaan", icon: Table2, show: isSuperAdmin || isKaprodi },
+        { name: "Sebaran CPL", href: "/kurikulum/sebaran-cpl", icon: Map, show: isSuperAdmin || isKaprodi },
         { name: "Analitik Kurikulum", href: "/kurikulum/analitik", icon: BarChart2, show: isSuperAdmin || isKaprodi },
         { name: "Analisis AI", href: "/kurikulum/analisis-ai", icon: Sparkles, badge: "AI", show: isSuperAdmin || isKaprodi },
         { name: "Dosir MK", href: "/master/dosir-mk", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
