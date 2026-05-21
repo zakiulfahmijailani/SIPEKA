@@ -93,8 +93,8 @@ export function ProfilLulusanClientPage({ data, role }: { data: ProfilLulusanIte
         <Table>
           <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="w-24">Kode</TableHead>
-              <TableHead className="w-48">Nama</TableHead>
+              <TableHead className="w-16 text-center">Kode</TableHead>
+              <TableHead className="w-44">Nama</TableHead>
               <TableHead>Deskripsi</TableHead>
               <TableHead className="w-60">Bidang Pekerjaan</TableHead>
               <TableHead className="w-24">Status</TableHead>
@@ -105,34 +105,34 @@ export function ProfilLulusanClientPage({ data, role }: { data: ProfilLulusanIte
             {data.length > 0 ? (
               data.map((item) => (
                 <TableRow key={item.id} className={!item.is_active ? "opacity-60 bg-gray-50" : ""}>
-                  <TableCell className="font-semibold">{item.kode}</TableCell>
-                  <TableCell className="font-medium">{item.nama}</TableCell>
-                  <TableCell>
-                    <div className="truncate max-w-xs text-muted-foreground text-sm" title={item.deskripsi ?? "-"}>
+                  <TableCell className="font-semibold text-center align-top">{item.kode}</TableCell>
+                  <TableCell className="font-medium align-top">{item.nama}</TableCell>
+                  <TableCell className="align-top">
+                    <div className="line-clamp-2 max-w-xs text-muted-foreground text-sm" title={item.deskripsi ?? "-"}>
                       {item.deskripsi ?? <span className="italic text-gray-400">-</span>}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-muted-foreground" title={item.bidang_pekerjaan ?? "-"}>
+                  <TableCell className="align-top">
+                    <div className="flex flex-wrap gap-1.5" title={item.bidang_pekerjaan ?? "-"}>
                       {item.bidang_pekerjaan ? (
-                        <ul className="list-none space-y-0.5">
-                          {item.bidang_pekerjaan.split(",").map((bp, i) => (
-                            <li key={i} className="truncate max-w-[220px]">{bp.trim()}</li>
-                          ))}
-                        </ul>
+                        item.bidang_pekerjaan.split(",").map((bp, i) => (
+                          <span key={i} className="bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-2 py-0.5 text-xs truncate max-w-[200px]">
+                            {bp.trim()}
+                          </span>
+                        ))
                       ) : (
-                        <span className="italic text-gray-400">-</span>
+                        <span className="italic text-gray-400 text-sm">-</span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="align-top">
                     {item.is_active
                       ? <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Aktif</Badge>
                       : <Badge variant="outline" className="text-gray-500">Nonaktif</Badge>
                     }
                   </TableCell>
                   {canEdit && (
-                    <TableCell className="text-right">
+                    <TableCell className="text-right align-top">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
