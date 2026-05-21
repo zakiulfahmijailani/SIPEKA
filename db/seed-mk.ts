@@ -23,6 +23,8 @@ interface MkData {
   status: MkStatus
   track: MkTrack
   tipe_aktivitas: TipeAktivitas
+  has_praktikum: boolean
+  keterangan_praktikum: string | null
 }
 
 // Kode MK dibuat berdasarkan pola SIF (Sistem Informasi) + 3 digit
