@@ -111,7 +111,7 @@ async function runSeed() {
           await db.insert(petaKurikulum).values({
             cpl_id: foundCpl.id,
             mk_id: foundMk.id,
-            bobot: "1.00",
+            bobot: 1.00,
           });
           inserted++;
           console.log(`[BERHASIL] ${cplCode} -> ${mkName}`);
