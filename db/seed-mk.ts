@@ -1,20 +1,19 @@
 // Seed Mata Kuliah
 // Run with: npm run db:seed-mk
-// Source: Matriks_CPL_Lama.xlsx
+// Source: Kurikulum Resmi Prodi Sistem Informasi
 
 import { config } from "dotenv"
 config({ path: ".env.local" })
 
 import { db } from "./index"
 import { mataKuliah } from "./schema"
-import { eq } from "drizzle-orm"
+import { eq, notInArray } from "drizzle-orm"
 
 type MkStatus = "WAJIB" | "PILIHAN"
 type MkTrack = "UMUM" | "BIS" | "ISG" | "DSA" | "DMS"
 type TipeAktivitas = "TEORI" | "PRAKTIKUM" | "TEORI_PRAKTIKUM" | "SEMINAR" | "PROYEK"
 
 interface MkData {
-  kode: string
   nama_id: string
   nama_en: string | null
   sks_teori: number
@@ -29,9 +28,10 @@ interface MkData {
   keterangan_semester: string | null
 }
 
-// Kode MK dibuat berdasarkan pola SIF (Sistem Informasi) + 3 digit
-// Catatan: kode bisa disesuaikan dengan kode resmi prodi
-const mataKuliahData: MkData[] = [
+// Extend MkData with kode for database upsert
+type MkSeedData = MkData & { kode: string }
+
+const mataKuliahData: MkSeedData[] = [
   // ── SEMESTER 1 ─────────────────────────────────────────────────────
   {
     kode: "SIF101",
@@ -490,7 +490,7 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
-    has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
+    has_praktikum: false, keterangan_praktikum: null,
     is_pbl: false, keterangan_semester: null,
   },
   {
@@ -500,11 +500,11 @@ const mataKuliahData: MkData[] = [
     sks_teori: 2, sks_praktik: 1,
     semester_rekomendasi: 6,
     status: "PILIHAN", track: "DSA", tipe_aktivitas: "TEORI_PRAKTIKUM",
-    has_praktikum: true, keterangan_praktikum: "Termasuk praktikum",
+    has_praktikum: false, keterangan_praktikum: null,
     is_pbl: true, keterangan_semester: null,
   },
 
-  // ── SEMESTER 7 ─────────────────────────────────────────────────────
+  // ── SEMESTER 7 (tanpa Magang — bukan MK reguler) ──────────────────
   {
     kode: "SIF701",
     nama_id: "Agama",
@@ -524,16 +524,6 @@ const mataKuliahData: MkData[] = [
     status: "WAJIB", track: "UMUM", tipe_aktivitas: "TEORI",
     has_praktikum: false, keterangan_praktikum: null,
     is_pbl: false, keterangan_semester: null,
-  },
-  {
-    kode: "SIF703",
-    nama_id: "Magang",
-    nama_en: "Internship",
-    sks_teori: 0, sks_praktik: 20,
-    semester_rekomendasi: 7,
-    status: "WAJIB", track: "UMUM", tipe_aktivitas: "PRAKTIKUM",
-    has_praktikum: true, keterangan_praktikum: "Kerja Lapangan",
-    is_pbl: false, keterangan_semester: "Dilaksanakan antara Semester 6 & 7 selama 3 bulan",
   },
   {
     kode: "SIF704",
@@ -591,43 +581,58 @@ const mataKuliahData: MkData[] = [
 
 async function seedMataKuliah() {
   console.log("📚 Seeding mata kuliah...")
+
+  const validNamaIds = mataKuliahData.map((mk) => mk.nama_id)
+
+  // 1. Hapus MK lama yang tidak ada di daftar baru
+  const deleted = await db
+    .delete(mataKuliah)
+    .where(notInArray(mataKuliah.nama_id, validNamaIds))
+    .returning({ kode: mataKuliah.kode, nama_id: mataKuliah.nama_id })
+
+  for (const d of deleted) {
+    console.log(`🗑️  Deleted: [${d.kode}] ${d.nama_id}`)
+  }
+  console.log(`🗑️  Total dihapus: ${deleted.length}`)
+
+  // 2. Upsert berdasarkan nama_id
   let inserted = 0
   let updated = 0
-  let skipped = 0
 
   for (const mk of mataKuliahData) {
     const existing = await db.query.mataKuliah.findFirst({
-      where: eq(mataKuliah.kode, mk.kode),
+      where: eq(mataKuliah.nama_id, mk.nama_id),
     })
 
     if (existing) {
-      // Update existing record with latest data
-      await db.update(mataKuliah).set({
-        nama_id: mk.nama_id,
-        nama_en: mk.nama_en,
-        sks_teori: mk.sks_teori,
-        sks_praktik: mk.sks_praktik,
-        semester_rekomendasi: mk.semester_rekomendasi,
-        status: mk.status,
-        track: mk.track,
-        tipe_aktivitas: mk.tipe_aktivitas,
-        has_praktikum: mk.has_praktikum,
-        keterangan_praktikum: mk.keterangan_praktikum,
-        is_pbl: mk.is_pbl,
-        keterangan_semester: mk.keterangan_semester,
-        updated_at: new Date(),
-      }).where(eq(mataKuliah.kode, mk.kode))
+      await db
+        .update(mataKuliah)
+        .set({
+          kode: mk.kode,
+          nama_en: mk.nama_en,
+          sks_teori: mk.sks_teori,
+          sks_praktik: mk.sks_praktik,
+          semester_rekomendasi: mk.semester_rekomendasi,
+          status: mk.status,
+          track: mk.track,
+          tipe_aktivitas: mk.tipe_aktivitas,
+          has_praktikum: mk.has_praktikum,
+          keterangan_praktikum: mk.keterangan_praktikum,
+          is_pbl: mk.is_pbl,
+          keterangan_semester: mk.keterangan_semester,
+          updated_at: new Date(),
+        })
+        .where(eq(mataKuliah.nama_id, mk.nama_id))
       console.log(`🔄 Updated: [${mk.kode}] ${mk.nama_id}`)
       updated++
-      continue
+    } else {
+      await db.insert(mataKuliah).values(mk)
+      console.log(`✅ Inserted: [${mk.kode}] ${mk.nama_id} (SEM ${mk.semester_rekomendasi})`)
+      inserted++
     }
-
-    await db.insert(mataKuliah).values(mk)
-    console.log(`✅ Inserted: [${mk.kode}] ${mk.nama_id} (SEM ${mk.semester_rekomendasi})`)
-    inserted++
   }
 
-  console.log(`\n📊 Selesai: ${inserted} ditambahkan, ${updated} diperbarui, ${skipped} dilewati.`)
+  console.log(`\n📊 Selesai: ${inserted} ditambahkan, ${updated} diperbarui, ${deleted.length} dihapus.`)
   console.log(`📋 Total: ${mataKuliahData.length} mata kuliah (SEM 1-8)`)
   process.exit(0)
 }
