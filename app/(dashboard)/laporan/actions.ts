@@ -1,12 +1,8 @@
 "use server"
 
 import { db } from "@/db"
-import { 
-  enrollment, nilai, komponenPenilaian, 
-  cpmk, cpl, dosirMk, mataKuliah, rps,
-  mahasiswa, tahunAkademik
-} from "@/db/schema"
-import { eq, and, inArray, sql, avg } from "drizzle-orm"
+import { cpl, dosirMk, enrollment, mataKuliah } from "@/db/schema"
+import { eq, inArray } from "drizzle-orm"
 
 export async function calculateCplAttainment(filters: {
   taIds?: string[];
@@ -14,13 +10,15 @@ export async function calculateCplAttainment(filters: {
 }) {
   try {
     // 1. Fetch relevant enrollments
-    const conditions = []
-    if (filters.taIds && filters.taIds.length > 0) {
-      conditions.push(inArray(dosirMk.tahun_akademik_id, filters.taIds))
-    }
+    const dosirIds = filters.taIds && filters.taIds.length > 0
+      ? db
+          .select({ id: dosirMk.id })
+          .from(dosirMk)
+          .where(inArray(dosirMk.tahun_akademik_id, filters.taIds))
+      : null
     
     const students = await db.query.enrollment.findMany({
-      where: conditions.length > 0 ? sql`${enrollment.dosir_mk_id} IN (SELECT id FROM ${dosirMk} WHERE ${and(...conditions)})` : undefined,
+      where: dosirIds ? inArray(enrollment.dosir_mk_id, dosirIds) : undefined,
       with: {
         mahasiswa: true,
         nilais: true,
@@ -66,16 +64,15 @@ export async function calculateCplAttainment(filters: {
       if (!mkContribution[mkId]) mkContribution[mkId] = {}
 
       // Calculate Nilai per CPMK
-      const cpmkScores: Record<string, number> = {}
       for (const cp of activeRps.cpmks) {
         // Find components measuring this CPMK
         const measuringComponents = activeRps.komponens.filter(k => 
-          k.cpmkMappings.some((m: any) => m.cpmk_id === cp.id)
+          k.cpmkMappings.some((m) => m.cpmk_id === cp.id)
         )
         
         if (measuringComponents.length === 0) continue
 
-        let totalWeight = measuringComponents.reduce((sum, k) => sum + k.bobot, 0)
+        const totalWeight = measuringComponents.reduce((sum, k) => sum + k.bobot, 0)
         let weightedScore = 0
         
         for (const comp of measuringComponents) {
@@ -85,8 +82,6 @@ export async function calculateCplAttainment(filters: {
         }
 
         const finalCpmkScore = weightedScore / totalWeight
-        cpmkScores[cp.id] = finalCpmkScore
-
         // Map to CPL
         const targetCplId = cp.cplMappings?.[0]?.cpl_id
         if (targetCplId) {
@@ -184,8 +179,12 @@ export async function getIs2020Coverage() {
       with: { realm: true }
     })
 
-    const matrix: any[] = allKa.map(ka => {
-      const row: any = { kaId: ka.id, kaName: ka.nama, realm: ka.realm.nama }
+    const matrix = allKa.map(ka => {
+      const row: Record<string, string | boolean> = {
+        kaId: ka.id,
+        kaName: ka.nama,
+        realm: ka.realm.nama,
+      }
       allMk.forEach(mk => {
         const covers = mk.petaKurikulum.some(p => 
           p.cpl.is2020AreaMappings.some(m => m.is2020_area_id === ka.id)
@@ -215,7 +214,7 @@ export async function getIs2020Coverage() {
     })
 
     return { success: true, data: { matrix, realmSummary, allMkCodes: allMk.map(m => m.kode) } }
-  } catch (error) {
+  } catch {
     return { success: false, error: "Gagal memuat laporan IS2020" }
   }
 }
