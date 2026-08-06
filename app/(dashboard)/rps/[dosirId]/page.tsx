@@ -1,6 +1,6 @@
-import { MOCK_SESSION } from "@/lib/mock-session"
+import { getCurrentSession } from "@/lib/current-session"
 import { db } from "@/db"
-import { dosirMk, rps, petaKurikulum, cpl } from "@/db/schema"
+import { dosirMk, rps, petaKurikulum, rpsStatusLog } from "@/db/schema"
 import { redirect, notFound } from "next/navigation"
 import { RpsEditor } from "./rps-editor"
 import { eq, and, desc } from "drizzle-orm"
@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic"
 export default async function RpsEditorPage(props: {
   params: Promise<{ dosirId: string }>
 }) {
-  const session = MOCK_SESSION
+  const session = await getCurrentSession()
+  if (!session?.user) redirect("/login")
 
   const params = await props.params
   const dosirId = params.dosirId
@@ -49,10 +50,16 @@ export default async function RpsEditorPage(props: {
       },
       komponens: {
         with: {
-          cpmkMappings: true
+          cpmkMappings: true,
+          subCpmkMappings: true,
+          rubrikKriterias: true,
         }
       },
-      pertemuans: true,
+      pertemuans: {
+        with: {
+          subCpmkMappings: true,
+        }
+      },
       referensis: true,
       statusLogs: {
         with: {
@@ -80,5 +87,3 @@ export default async function RpsEditorPage(props: {
     />
   )
 }
-
-import { rpsStatusLog } from "@/db/schema"

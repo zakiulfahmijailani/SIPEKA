@@ -12,10 +12,10 @@ import {
   Library, 
   FileCheck, 
   ArrowLeft,
-  Save,
   Send,
   CheckCircle,
-  MessageSquare
+  MessageSquare,
+  Files,
 } from "lucide-react"
 import Link from "next/link"
 import { debounce } from "lodash"
@@ -30,7 +30,7 @@ import { MeetingsSection } from "./sections/Meetings"
 import { ReferencesSection } from "./sections/References"
 import { PreviewSection } from "./sections/Preview"
 
-import { createOrGetRps, updateRpsStatus } from "../actions"
+import { createOrGetRps, updateRpsStatus, type RpsStatus } from "../actions"
 
 interface RpsEditorProps {
   dosir: any
@@ -57,8 +57,8 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
     { id: "IDENTITAS",  label: "Identitas MK",          icon: Book },
     { id: "CPL",        label: "CPL Dibebankan",         icon: Target },
     { id: "CPMK",       label: "CPMK & Sub-CPMK",        icon: Target },
-    { id: "ASSESSMENT", label: "Komponen Penilaian",     icon: ClipboardList },
-    { id: "MEETINGS",   label: "Rencana Pertemuan",      icon: CalendarDays },
+    { id: "MEETINGS",   label: "RPM • 16 Minggu",        icon: CalendarDays },
+    { id: "ASSESSMENT", label: "RTM • Asesmen & Rubrik", icon: ClipboardList },
     { id: "REFERENCES", label: "Referensi",               icon: Library },
     { id: "PREVIEW",    label: "Pratinjau & Ajukan",      icon: FileCheck },
   ]
@@ -74,7 +74,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
     }
   }, [initialRps, dosir.id])
 
-  const handleStatusChange = async (status: string, catatan?: string) => {
+  const handleStatusChange = async (status: RpsStatus, catatan?: string) => {
     if (!rpsData) return
     setIsSaving(true)
     const res = await updateRpsStatus(rpsData.id, status, catatan)
@@ -95,7 +95,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
       case "CPL":        return <CplSection cpls={mappedCpls} />
       case "CPMK":       return <CpmkSection rpsId={rpsData.id} initialCpmks={rpsData.cpmks || []} mappedCpls={mappedCpls} />
       case "ASSESSMENT": return <AssessmentSection rpsId={rpsData.id} initialKomponens={rpsData.komponens || []} cpmks={rpsData.cpmks || []} />
-      case "MEETINGS":   return <MeetingsSection rpsId={rpsData.id} initialMeetings={rpsData.pertemuans || []} />
+      case "MEETINGS":   return <MeetingsSection rpsId={rpsData.id} initialMeetings={rpsData.pertemuans || []} cpmks={rpsData.cpmks || []} />
       case "REFERENCES": return <ReferencesSection rpsId={rpsData.id} initialReferences={rpsData.referensis || []} />
       case "PREVIEW":    return <PreviewSection dosir={dosir} rps={rpsData} mappedCpls={mappedCpls} onStatusChange={handleStatusChange} currentUser={currentUser} />
       default:           return null
@@ -123,6 +123,12 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Link href={`/rpm/${dosir.id}`} target="_blank" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden gap-2 lg:inline-flex")}>
+            <Files className="h-4 w-4" /> RPM
+          </Link>
+          <Link href={`/rtm/${dosir.id}`} target="_blank" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden gap-2 lg:inline-flex")}>
+            <ClipboardList className="h-4 w-4" /> RTM
+          </Link>
           <div className="flex flex-col items-end mr-2">
             <Badge className={cn(
               "text-[10px]",

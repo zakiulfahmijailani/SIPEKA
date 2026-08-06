@@ -1,61 +1,53 @@
-import { MOCK_SESSION } from "@/lib/mock-session"
+import { redirect } from "next/navigation"
+import { and, asc, eq } from "drizzle-orm"
+
 import { db } from "@/db"
-import { dosirMk, mataKuliah, tahunAkademik, users } from "@/db/schema"
-import { eq, and, asc, desc } from "drizzle-orm"
+import { dosirMk, tahunAkademik } from "@/db/schema"
+import { getCurrentSession } from "@/lib/current-session"
 
-
+import { RpsClientPage } from "./rps-client-page"
 
 export const dynamic = "force-dynamic"
-export default async function RpsPage(props: {
-  searchParams: Promise<{ ta?: string; mk?: string; dosen?: string }>
+
+export default async function RpsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string }>
 }) {
-  const session = MOCK_SESSION
+  const session = await getCurrentSession()
+  if (!session?.user) redirect("/login")
 
-  const searchParams = await props.searchParams
-
-  const allTas = await db.query.tahunAkademik.findMany({
-    orderBy: [desc(tahunAkademik.tahun_mulai), desc(tahunAkademik.semester)],
+  const filters = await searchParams
+  const activeTa = await db.query.tahunAkademik.findFirst({
+    where: eq(tahunAkademik.is_active, true),
   })
 
-  const activeTa = allTas.find(t => t.is_active)
-
-  const allMks = await db.query.mataKuliah.findMany({
-    where: eq(mataKuliah.is_active, true),
-    orderBy: [asc(mataKuliah.kode)],
-  })
-
-  const allDosens = await db.query.users.findMany({
-    where: eq(users.role, "DOSEN"),
-    orderBy: [asc(users.nama_lengkap)],
-  })
-
-  const taFilter = searchParams.ta && searchParams.ta !== "ALL" ? searchParams.ta : (activeTa?.id || undefined)
-  const mkFilter = searchParams.mk && searchParams.mk !== "ALL" ? searchParams.mk : undefined
-  const dosenFilter = searchParams.dosen && searchParams.dosen !== "ALL" ? searchParams.dosen : undefined
-
-  const conditions: any[] = []
-  if (taFilter) conditions.push(eq(dosirMk.tahun_akademik_id, taFilter))
-  if (mkFilter) conditions.push(eq(dosirMk.mk_id, mkFilter))
-  if (dosenFilter) conditions.push(eq(dosirMk.dosen_id, dosenFilter))
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-
-  const dosirs = await db.query.dosirMk.findMany({
-    where: whereClause,
-    with: { mk: true, dosen: true, tahunAkademik: true },
+  const assignments = await db.query.dosirMk.findMany({
+    where: and(
+      session.user.role === "DOSEN" ? eq(dosirMk.dosen_id, session.user.id) : undefined,
+      activeTa ? eq(dosirMk.tahun_akademik_id, activeTa.id) : undefined,
+    ),
+    with: {
+      mk: true,
+      dosen: true,
+      tahunAkademik: true,
+      rps: true,
+    },
     orderBy: [asc(dosirMk.kelas)],
   })
 
-  const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama_id}` }))
-  const dosensFormatted = allDosens.map(d => ({ id: d.id, label: d.nama_lengkap }))
-  const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_mulai + 1} ${t.semester}` }))
+  const query = filters.q?.trim().toLowerCase()
+  const status = filters.status && filters.status !== "ALL" ? filters.status : null
+  const dosirs = assignments
+    .map((assignment) => ({
+      ...assignment,
+      rps: [...assignment.rps].sort((a, b) => b.version - a.version),
+    }))
+    .filter((assignment) => {
+      const matchesQuery = !query || `${assignment.mk.kode} ${assignment.mk.nama_id}`.toLowerCase().includes(query)
+      const latestStatus = assignment.rps[0]?.status || "DRAFT"
+      return matchesQuery && (!status || latestStatus === status)
+    })
 
-  // Dynamic import for RPS client component
-  const { RpsClientPage } = await import("./rps-client-page")
-
-  return (
-    <RpsClientPage
-      dosirs={dosirs as any}
-    />
-  )
+  return <RpsClientPage dosirs={dosirs} />
 }

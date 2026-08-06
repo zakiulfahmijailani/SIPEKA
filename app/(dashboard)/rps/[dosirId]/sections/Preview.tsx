@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
-import { CheckCircle2, Send, RotateCcw, AlertTriangle, Printer } from "lucide-react"
+import { CheckCircle2, Send, RotateCcw, AlertTriangle, Printer, CalendarDays, ClipboardList } from "lucide-react"
 import { useMemo, useState } from "react"
+import { calculateRpsReadiness } from "@/lib/rps-readiness"
 import {
   Dialog,
   DialogContent,
@@ -16,24 +17,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import type { RpsStatus } from "../../actions"
 
 interface PreviewSectionProps {
   dosir: any
   rps: any
   mappedCpls: any[]
-  onStatusChange: (status: string, catatan?: string) => void
+  onStatusChange: (status: RpsStatus, catatan?: string) => void
   currentUser: any
 }
 
 export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, currentUser }: PreviewSectionProps) {
-  const [showConfirm, setShowConfirm] = useState<{ status: string; title: string; desc: string } | null>(null)
+  const [showConfirm, setShowConfirm] = useState<{ status: RpsStatus; title: string; desc: string } | null>(null)
   const [catatan, setCatatan] = useState("")
 
   const totalBobot = useMemo(() => {
-    return rps.komponens?.reduce((sum: number, k: any) => sum + (k.bobot || 0), 0) || 0
+    return Number((rps.komponens?.reduce((sum: number, k: any) => sum + Number(k.bobot || 0), 0) || 0).toFixed(2))
   }, [rps.komponens])
 
-  const isValid = totalBobot === 100 && (rps.cpmks?.length || 0) > 0
+  const readiness = useMemo(() => calculateRpsReadiness(rps), [rps])
+  const isValid = readiness.issues.length === 0
 
   const handlePrint = () => {
     window.open(`/rps/${dosir.id}/print`, "_blank")
@@ -44,7 +47,13 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
       {/* Kontrol Aksi */}
       <div className="flex flex-wrap gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg no-print">
         <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-          <Printer className="h-4 w-4" /> Cetak PDF
+          <Printer className="h-4 w-4" /> Cetak RPS
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => window.open(`/rpm/${dosir.id}`, "_blank")} className="gap-2">
+          <CalendarDays className="h-4 w-4" /> Lihat RPM
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => window.open(`/rtm/${dosir.id}`, "_blank")} className="gap-2">
+          <ClipboardList className="h-4 w-4" /> Lihat RTM
         </Button>
 
         {rps.status === "DRAFT" || rps.status === "REVISION_REQUIRED" ? (
@@ -91,9 +100,14 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
         ) : null}
 
         {!isValid && (
-          <div className="flex items-center gap-2 text-xs text-red-600 font-medium">
+          <div className="flex min-w-full items-start gap-2 rounded-md border border-red-100 bg-white/70 p-3 text-xs font-medium text-red-700">
             <AlertTriangle className="h-4 w-4" />
-            {totalBobot !== 100 ? `Total bobot ${totalBobot}% (harus 100%)` : "CPMK belum diisi"}
+            <div>
+              <p>Dokumen belum siap diajukan:</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 font-normal">
+                {readiness.issues.map((issue) => <li key={issue}>{issue}</li>)}
+              </ul>
+            </div>
           </div>
         )}
       </div>

@@ -19,7 +19,10 @@ import {
   Menu,
   ChevronRight,
   Table2,
-  Sparkles
+  Sparkles,
+  CalendarDays,
+  ClipboardList,
+  Upload,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -77,12 +80,15 @@ export function Sidebar({ session }: SidebarProps) {
         { name: "Tahun Akademik", href: "/master/tahun-akademik", icon: Database, show: isSuperAdmin || isKaprodi },
         { name: "Profil Lulusan", href: "/master/profil-lulusan", icon: GraduationCap, show: isSuperAdmin || isKaprodi },
         { name: "Data Mahasiswa", href: "/master/mahasiswa", icon: Users, show: isSuperAdmin || isKaprodi },
+        { name: "Import Workbook", href: "/import", icon: Upload, show: isSuperAdmin || isKaprodi },
       ],
     },
     {
       label: "Perkuliahan",
       items: [
-        { name: "RPS Saya", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
+        { name: isDosen ? "RPS" : "RPS Dosen", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
+        { name: "RPM", href: "/rpm", icon: CalendarDays, show: isDosen },
+        { name: "RTM", href: "/rtm", icon: ClipboardList, show: isDosen },
         { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
         { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
         { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
@@ -150,7 +156,7 @@ export function Sidebar({ session }: SidebarProps) {
   const UserProfile = () => (
     <div className="p-4 border-b border-gray-100">
       <div className="font-bold text-lg tracking-tight text-gray-900">SIPEKA</div>
-      <div className="text-xs text-gray-400 mb-4">Sistem Informasi Penilaian</div>
+      <div className="text-xs text-gray-400 mb-4">{isDosen ? "Portal Dosen" : "Pengelola Kurikulum & Asesmen"}</div>
       <div className="flex flex-col gap-0.5 p-3 rounded-lg bg-gray-50 border border-gray-100">
         <span className="text-sm font-semibold text-gray-800 truncate" title={session?.user?.name || ""}>
           {session?.user?.name}

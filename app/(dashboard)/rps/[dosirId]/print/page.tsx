@@ -1,15 +1,18 @@
 import { db } from "@/db"
 import { dosirMk, rps, petaKurikulum } from "@/db/schema"
 import { eq, desc } from "drizzle-orm"
-import { notFound } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { notFound, redirect } from "next/navigation"
+import { PrintToolbar } from "@/components/rps/print-toolbar"
+import { getCurrentSession } from "@/lib/current-session"
 
 
 export const dynamic = "force-dynamic"
 export default async function RpsPrintPage(props: {
   params: Promise<{ dosirId: string }>
 }) {
+  const session = await getCurrentSession()
+  if (!session?.user) redirect("/login")
+
   const params = await props.params
   const dosirId = params.dosirId
 
@@ -23,6 +26,7 @@ export default async function RpsPrintPage(props: {
   })
 
   if (!dosir) notFound()
+  if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) redirect("/rps")
 
   const rpsData = await db.query.rps.findFirst({
     where: eq(rps.dosir_mk_id, dosirId),
@@ -35,10 +39,16 @@ export default async function RpsPrintPage(props: {
       },
       komponens: {
         with: {
-          cpmkMappings: true
+          cpmkMappings: true,
+          subCpmkMappings: { with: { subCpmk: true } },
+          rubrikKriterias: true,
         }
       },
-      pertemuans: true,
+      pertemuans: {
+        with: {
+          subCpmkMappings: { with: { subCpmk: true } },
+        }
+      },
       referensis: true,
     }
   })
@@ -50,7 +60,7 @@ export default async function RpsPrintPage(props: {
     with: { cpl: true }
   })
 
-  const totalBobot = rpsData.komponens?.reduce((sum: number, k: any) => sum + (k.bobot || 0), 0) || 0
+  const totalBobot = Number((rpsData.komponens?.reduce((sum: number, k: any) => sum + Number(k.bobot || 0), 0) || 0).toFixed(2))
 
   return (
     <div className="bg-white min-h-screen p-8 md:p-12 font-serif text-[12pt] leading-normal print:p-0">
@@ -65,15 +75,7 @@ export default async function RpsPrintPage(props: {
         .header-table td { border: none; padding: 2px; }
       `}} />
 
-      <div className="no-print mb-8 flex justify-between items-center bg-gray-50 p-4 rounded-lg border">
-        <p className="text-sm text-gray-600 font-sans italic">Halaman pratinjau cetak. Gunakan tombol Cetak untuk menyimpan sebagai PDF.</p>
-        <button 
-          onClick={() => window.print()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md font-sans text-sm font-bold hover:bg-blue-700 transition-colors"
-        >
-          Cetak ke PDF
-        </button>
-      </div>
+      <PrintToolbar backHref={`/rps/${dosirId}`} label="RPS" />
 
       <div className="max-w-[21cm] mx-auto border-2 border-black p-8 space-y-8">
         {/* Header Section */}

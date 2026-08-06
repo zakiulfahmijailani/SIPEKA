@@ -12,9 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash, Loader2 } from "lucide-react"
+import { Plus, Trash, Loader2, Layers3 } from "lucide-react"
 import { debounce } from "lodash"
-import { saveCpmks, deleteCpmk } from "../../actions"
+import { saveCpmks, deleteCpmk, deleteSubCpmk } from "../../actions"
 import { toast } from "sonner"
 
 interface CpmkSectionProps {
@@ -27,7 +27,8 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
   const [cpmks, setCpmks] = useState<any[]>(
     initialCpmks.length > 0 ? initialCpmks.map(c => ({
       ...c,
-      cpl_id: c.cplMappings?.[0]?.cpl_id || ""
+      cpl_id: c.cplMappings?.[0]?.cpl_id || "",
+      subCpmks: c.subCpmks || [],
     })) : []
   )
   const [isSaving, setIsSaving] = useState(false)
@@ -50,7 +51,8 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
       kode: `CPMK${cpmks.length + 1}`,
       deskripsi: "",
       cpl_id: mappedCpls[0]?.id || "",
-      urutan: cpmks.length + 1
+      urutan: cpmks.length + 1,
+      subCpmks: [],
     }
     setCpmks([...cpmks, newCpmk])
   }
@@ -68,6 +70,41 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
   const handleChange = (index: number, field: string, value: any) => {
     const updated = [...cpmks]
     updated[index][field] = value
+    setCpmks(updated)
+    debouncedSave(updated)
+  }
+
+  const handleAddSubCpmk = (cpmkIndex: number) => {
+    const updated = [...cpmks]
+    const parent = updated[cpmkIndex]
+    const subItems = parent.subCpmks || []
+    parent.subCpmks = [
+      ...subItems,
+      {
+        kode: `${parent.kode}.${subItems.length + 1}`,
+        deskripsi: "",
+        level_bloom: "C3",
+        urutan: subItems.length + 1,
+      },
+    ]
+    setCpmks(updated)
+  }
+
+  const handleSubChange = (cpmkIndex: number, subIndex: number, field: string, value: string) => {
+    const updated = [...cpmks]
+    updated[cpmkIndex].subCpmks[subIndex][field] = value
+    setCpmks(updated)
+    debouncedSave(updated)
+  }
+
+  const handleDeleteSubCpmk = async (cpmkIndex: number, subIndex: number) => {
+    const target = cpmks[cpmkIndex].subCpmks[subIndex]
+    if (target.id) {
+      const result = await deleteSubCpmk(target.id)
+      if (!result.success) return toast.error(result.error)
+    }
+    const updated = [...cpmks]
+    updated[cpmkIndex].subCpmks = updated[cpmkIndex].subCpmks.filter((_: any, index: number) => index !== subIndex)
     setCpmks(updated)
     debouncedSave(updated)
   }
@@ -130,6 +167,68 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
                 onChange={(e) => handleChange(idx, "deskripsi", e.target.value)}
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-blue-950">
+                    <Layers3 className="h-4 w-4" /> Sub-CPMK
+                  </p>
+                  <p className="text-xs text-blue-700/70">Kemampuan akhir yang diukur pada pertemuan dan penugasan.</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubCpmk(idx)}>
+                  <Plus className="h-3.5 w-3.5" /> Tambah Sub-CPMK
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {(c.subCpmks || []).map((sub: any, subIndex: number) => (
+                  <div key={sub.id || `${sub.kode}-${subIndex}`} className="grid gap-3 rounded-lg border bg-white p-3 md:grid-cols-[130px_110px_1fr_40px]">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-gray-500">Kode</Label>
+                      <Input
+                        value={sub.kode}
+                        onChange={(event) => handleSubChange(idx, subIndex, "kode", event.target.value)}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-gray-500">Level Bloom</Label>
+                      <Select
+                        value={sub.level_bloom || "C3"}
+                        onValueChange={(value) => handleSubChange(idx, subIndex, "level_bloom", value || "C3")}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {["C1", "C2", "C3", "C4", "C5", "C6"].map((level) => (
+                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-gray-500">Rumusan Sub-CPMK</Label>
+                      <Textarea
+                        value={sub.deskripsi}
+                        onChange={(event) => handleSubChange(idx, subIndex, "deskripsi", event.target.value)}
+                        placeholder="Mahasiswa mampu menjelaskan, menerapkan, atau mengevaluasi..."
+                        className="min-h-10"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteSubCpmk(idx, subIndex)}>
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {(c.subCpmks || []).length === 0 && (
+                  <p className="rounded-md border border-dashed border-blue-200 bg-white/60 px-3 py-5 text-center text-xs text-blue-700/70">
+                    Belum ada Sub-CPMK untuk CPMK ini.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         ))}

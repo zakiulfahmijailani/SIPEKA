@@ -15,6 +15,13 @@
       "when": 1779337916475,
       "tag": "0001_reflective_captain_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786027305671,
+      "tag": "0002_panoramic_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

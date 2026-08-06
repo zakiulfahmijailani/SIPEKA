@@ -1,8 +1,8 @@
-import { pgTable, text, timestamp, integer, pgEnum, unique } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum, unique, boolean, real } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 import { dosirMk } from "./dosir"
 import { users } from "./auth"
-import { cpl } from "./kurikulum"
+import { cpl, mataKuliah } from "./kurikulum"
 
 export const rpsStatusEnum = pgEnum("rps_status", [
   "DRAFT", "SUBMITTED", "APPROVED", "REVISION_REQUIRED", "ARCHIVED"
@@ -10,6 +10,44 @@ export const rpsStatusEnum = pgEnum("rps_status", [
 export const bloomLevelEnum = pgEnum("bloom_level", [
   "C1", "C2", "C3", "C4", "C5", "C6"
 ])
+
+export const cpmkTemplate = pgTable("cpmk_template", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  mk_id: text("mk_id").notNull().references(() => mataKuliah.id, { onDelete: "cascade" }),
+  cpl_id: text("cpl_id").references(() => cpl.id),
+  kode: text("kode").notNull(),
+  deskripsi: text("deskripsi").notNull(),
+  urutan: integer("urutan").notNull(),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.mk_id, t.kode)])
+
+export const subCpmkTemplate = pgTable("sub_cpmk_template", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  cpmk_template_id: text("cpmk_template_id").notNull().references(() => cpmkTemplate.id, { onDelete: "cascade" }),
+  kode: text("kode").notNull(),
+  deskripsi: text("deskripsi").notNull(),
+  level_bloom: bloomLevelEnum("level_bloom").notNull().default("C3"),
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.cpmk_template_id, t.kode)])
+
+export const assessmentTemplate = pgTable("assessment_template", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  mk_id: text("mk_id").notNull().references(() => mataKuliah.id, { onDelete: "cascade" }),
+  cpmk_template_id: text("cpmk_template_id").references(() => cpmkTemplate.id, { onDelete: "set null" }),
+  sub_cpmk_template_id: text("sub_cpmk_template_id").references(() => subCpmkTemplate.id, { onDelete: "set null" }),
+  nama: text("nama").notNull(),
+  tipe: text("tipe").notNull(),
+  bobot: real("bobot").notNull(),
+  kriteria_penilaian: text("kriteria_penilaian"),
+  urutan: integer("urutan").notNull(),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.mk_id, t.urutan)])
 
 export const rps = pgTable("rps", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
@@ -67,6 +105,11 @@ export const rpsPertemuan = pgTable("rps_pertemuan", {
   metode: text("metode"),
   media: text("media"),
   estimasi_waktu: text("estimasi_waktu"),
+  indikator: text("indikator"),
+  bentuk_pembelajaran: text("bentuk_pembelajaran"),
+  aktivitas_dosen: text("aktivitas_dosen"),
+  aktivitas_mahasiswa: text("aktivitas_mahasiswa"),
+  kriteria_penilaian: text("kriteria_penilaian"),
   created_at: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [unique().on(t.rps_id, t.minggu_ke)])
 
@@ -81,10 +124,18 @@ export const komponenPenilaian = pgTable("komponen_penilaian", {
   rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
   nama: text("nama").notNull(),
   tipe: text("tipe").notNull(),
-  bobot: integer("bobot").notNull(),
+  bobot: real("bobot").notNull(),
   deskripsi: text("deskripsi"),
+  instruksi: text("instruksi"),
+  bentuk: text("bentuk"),
+  luaran: text("luaran"),
+  kriteria_penilaian: text("kriteria_penilaian"),
+  minggu_pemberian: integer("minggu_pemberian"),
+  minggu_pengumpulan: integer("minggu_pengumpulan"),
+  is_kelompok: boolean("is_kelompok").notNull().default(false),
   urutan: integer("urutan").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
 })
 
 export const komponenCpmk = pgTable("komponen_cpmk", {
@@ -92,6 +143,27 @@ export const komponenCpmk = pgTable("komponen_cpmk", {
   komponen_id: text("komponen_id").notNull().references(() => komponenPenilaian.id, { onDelete: "cascade" }),
   cpmk_id: text("cpmk_id").notNull().references(() => cpmk.id, { onDelete: "cascade" }),
 }, (t) => [unique().on(t.komponen_id, t.cpmk_id)])
+
+export const komponenSubCpmk = pgTable("komponen_sub_cpmk", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  komponen_id: text("komponen_id").notNull().references(() => komponenPenilaian.id, { onDelete: "cascade" }),
+  sub_cpmk_id: text("sub_cpmk_id").notNull().references(() => subCpmk.id, { onDelete: "cascade" }),
+}, (t) => [unique().on(t.komponen_id, t.sub_cpmk_id)])
+
+export const rubrikKriteria = pgTable("rubrik_kriteria", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  komponen_id: text("komponen_id").notNull().references(() => komponenPenilaian.id, { onDelete: "cascade" }),
+  kriteria: text("kriteria").notNull(),
+  bobot: real("bobot").notNull().default(100),
+  sangat_baik: text("sangat_baik"),
+  baik: text("baik"),
+  cukup: text("cukup"),
+  kurang: text("kurang"),
+  sangat_kurang: text("sangat_kurang"),
+  urutan: integer("urutan").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [unique().on(t.komponen_id, t.urutan)])
 
 export const rpsReferensi = pgTable("rps_referensi", {
   id: text("id").primaryKey().$defaultFn(() => createId()),

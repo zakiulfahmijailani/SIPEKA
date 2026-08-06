@@ -7,9 +7,9 @@ import {
 } from "./kurikulum"
 import { tahunAkademik, dosirMk } from "./dosir"
 import {
-  rps, rpsStatusLog, cpmk, cpmkCpl, subCpmk,
+  rps, rpsStatusLog, cpmkTemplate, subCpmkTemplate, assessmentTemplate, cpmk, cpmkCpl, subCpmk,
   rpsPertemuan, pertemuanSubCpmk,
-  komponenPenilaian, komponenCpmk, rpsReferensi,
+  komponenPenilaian, komponenCpmk, komponenSubCpmk, rubrikKriteria, rpsReferensi,
 } from "./rps"
 import { mahasiswa, enrollment, nilai } from "./nilai"
 import { cpmkAttainment, cplAttainment } from "./attainment"
@@ -72,6 +72,24 @@ export const mataKuliahRelations = relations(mataKuliah, ({ many }) => ({
   prasyaratUntuk: many(mkPrasyarat, { relationName: "mk_prasyarat" }),
   is2020AreaMappings: many(mkIs2020Area),
   dosirMk: many(dosirMk),
+  cpmkTemplates: many(cpmkTemplate),
+  assessmentTemplates: many(assessmentTemplate),
+}))
+
+export const cpmkTemplateRelations = relations(cpmkTemplate, ({ one, many }) => ({
+  mk: one(mataKuliah, { fields: [cpmkTemplate.mk_id], references: [mataKuliah.id] }),
+  cpl: one(cpl, { fields: [cpmkTemplate.cpl_id], references: [cpl.id] }),
+  subCpmks: many(subCpmkTemplate),
+}))
+
+export const subCpmkTemplateRelations = relations(subCpmkTemplate, ({ one }) => ({
+  cpmkTemplate: one(cpmkTemplate, { fields: [subCpmkTemplate.cpmk_template_id], references: [cpmkTemplate.id] }),
+}))
+
+export const assessmentTemplateRelations = relations(assessmentTemplate, ({ one }) => ({
+  mk: one(mataKuliah, { fields: [assessmentTemplate.mk_id], references: [mataKuliah.id] }),
+  cpmkTemplate: one(cpmkTemplate, { fields: [assessmentTemplate.cpmk_template_id], references: [cpmkTemplate.id] }),
+  subCpmkTemplate: one(subCpmkTemplate, { fields: [assessmentTemplate.sub_cpmk_template_id], references: [subCpmkTemplate.id] }),
 }))
 
 export const mkPrasyaratRelations = relations(mkPrasyarat, ({ one }) => ({
@@ -134,6 +152,7 @@ export const cpmkCplRelations = relations(cpmkCpl, ({ one }) => ({
 export const subCpmkRelations = relations(subCpmk, ({ one, many }) => ({
   cpmk: one(cpmk, { fields: [subCpmk.cpmk_id], references: [cpmk.id] }),
   pertemuanMappings: many(pertemuanSubCpmk),
+  komponenMappings: many(komponenSubCpmk),
 }))
 
 export const rpsPertemuanRelations = relations(rpsPertemuan, ({ one, many }) => ({
@@ -149,12 +168,23 @@ export const pertemuanSubCpmkRelations = relations(pertemuanSubCpmk, ({ one }) =
 export const komponenPenilaianRelations = relations(komponenPenilaian, ({ one, many }) => ({
   rps: one(rps, { fields: [komponenPenilaian.rps_id], references: [rps.id] }),
   cpmkMappings: many(komponenCpmk),
+  subCpmkMappings: many(komponenSubCpmk),
+  rubrikKriterias: many(rubrikKriteria),
   nilais: many(nilai),
 }))
 
 export const komponenCpmkRelations = relations(komponenCpmk, ({ one }) => ({
   komponen: one(komponenPenilaian, { fields: [komponenCpmk.komponen_id], references: [komponenPenilaian.id] }),
   cpmk: one(cpmk, { fields: [komponenCpmk.cpmk_id], references: [cpmk.id] }),
+}))
+
+export const komponenSubCpmkRelations = relations(komponenSubCpmk, ({ one }) => ({
+  komponen: one(komponenPenilaian, { fields: [komponenSubCpmk.komponen_id], references: [komponenPenilaian.id] }),
+  subCpmk: one(subCpmk, { fields: [komponenSubCpmk.sub_cpmk_id], references: [subCpmk.id] }),
+}))
+
+export const rubrikKriteriaRelations = relations(rubrikKriteria, ({ one }) => ({
+  komponen: one(komponenPenilaian, { fields: [rubrikKriteria.komponen_id], references: [komponenPenilaian.id] }),
 }))
 
 export const rpsReferensiRelations = relations(rpsReferensi, ({ one }) => ({
@@ -199,4 +229,3 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.user_id], references: [users.id] }),
 }))
-

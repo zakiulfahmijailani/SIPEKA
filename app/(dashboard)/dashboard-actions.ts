@@ -7,6 +7,7 @@ import {
 } from "@/db/schema"
 import { eq, and, count, sql, desc } from "drizzle-orm"
 import { calculateCplAttainment } from "./laporan/actions"
+import { calculateRpsReadiness } from "@/lib/rps-readiness"
 
 export async function getDashboardStats(role: string, userId: string) {
   try {
@@ -96,26 +97,66 @@ export async function getDashboardStats(role: string, userId: string) {
         ),
         with: {
           mk: true,
-          rps: true,
+          tahunAkademik: true,
+          rps: {
+            with: {
+              cpmks: { with: { cplMappings: true, subCpmks: true } },
+              pertemuans: { with: { subCpmkMappings: true } },
+              komponens: { with: { cpmkMappings: true, subCpmkMappings: true } },
+              referensis: true,
+            }
+          },
           enrollments: { with: { nilais: true } }
         }
       })
 
       const processedDosirs = myDosirs.map(d => {
+        const latestRps = [...d.rps].sort((a, b) => b.version - a.version)[0] ?? null
+        const readiness = calculateRpsReadiness(latestRps)
         const totalStudents = d.enrollments.length
         const studentsWithGrades = d.enrollments.filter(e => e.nilais.length > 0).length
-        const progress = totalStudents > 0 ? (studentsWithGrades / totalStudents) * 100 : 0
+        const gradeProgress = totalStudents > 0 ? (studentsWithGrades / totalStudents) * 100 : 0
         return {
           id: d.id,
+          kode: d.mk.kode,
           mk: d.mk.nama_id,
           kelas: d.kelas,
+          tahunAkademik: d.tahunAkademik.kode,
           students: totalStudents,
-          statusRps: d.rps?.[0]?.status || "DRAFT",
-          progress: parseFloat(progress.toFixed(1)),
+          rpsId: latestRps?.id ?? null,
+          statusRps: latestRps?.status || "DRAFT",
+          progress: readiness.progress,
+          gradeProgress: parseFloat(gradeProgress.toFixed(1)),
+          totalBobot: readiness.totalBobot,
+          issues: readiness.issues,
+          sections: readiness.sections,
         }
       })
 
-      return { success: true, data: { myDosirs: processedDosirs } }
+      const summary = {
+        active: processedDosirs.length,
+        revision: processedDosirs.filter(item => item.statusRps === "REVISION_REQUIRED").length,
+        submitted: processedDosirs.filter(item => item.statusRps === "SUBMITTED").length,
+        approved: processedDosirs.filter(item => item.statusRps === "APPROVED").length,
+      }
+      const priorities = processedDosirs
+        .filter(item => item.statusRps === "REVISION_REQUIRED" || item.issues.length > 0)
+        .sort((a, b) => {
+          if (a.statusRps === "REVISION_REQUIRED" && b.statusRps !== "REVISION_REQUIRED") return -1
+          if (b.statusRps === "REVISION_REQUIRED" && a.statusRps !== "REVISION_REQUIRED") return 1
+          return a.progress - b.progress
+        })
+        .slice(0, 3)
+
+      return {
+        success: true,
+        data: {
+          myDosirs: processedDosirs,
+          summary,
+          priorities,
+          academicTerm: activeTa?.nama || activeTa?.kode || "Semester aktif",
+        },
+      }
     }
 
     return { success: false, error: "Role tidak dikenali" }

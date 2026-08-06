@@ -11,6 +11,7 @@ import {
   Users, BookOpen, Clock, Target, ArrowRight, CheckCircle2,
   AlertCircle, FileText, PenSquare, TrendingUp, History,
   GraduationCap, AlertTriangle,
+  CalendarDays, ClipboardList, BellRing, Database, Layers3, Send,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -316,9 +317,61 @@ function AdminDashboard({ stats }: { stats: any }) {
 // Dashboard Dosen
 // ---------------------------------------------------------------------------
 function DosenDashboard({ stats }: { stats: any }) {
+  const summaryCards = [
+    { label: "RPS Aktif", value: stats.summary?.active || 0, icon: FileText, color: "text-blue-700", bg: "bg-blue-50" },
+    { label: "Perlu Revisi", value: stats.summary?.revision || 0, icon: AlertTriangle, color: "text-amber-700", bg: "bg-amber-50" },
+    { label: "Menunggu Persetujuan", value: stats.summary?.submitted || 0, icon: Clock, color: "text-violet-700", bg: "bg-violet-50" },
+    { label: "Disetujui", value: stats.summary?.approved || 0, icon: CheckCircle2, color: "text-emerald-700", bg: "bg-emerald-50" },
+  ]
+  const attentionCount = stats.myDosirs.filter((item: any) => item.issues.length > 0 || item.statusRps === "REVISION_REQUIRED").length
+
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="space-y-5 pb-10">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-blue-950">Dashboard Dosen</h1>
+            <Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">{stats.academicTerm}</Badge>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">Kelola dokumen pembelajaran dari satu sumber data.</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <BellRing className="h-4 w-4" />
+          <strong>{attentionCount}</strong> dokumen perlu perhatian Anda
+        </div>
+      </div>
+
+      <Card className="border-blue-100 bg-white shadow-sm">
+        <CardContent className="flex items-center justify-between gap-4 px-6 py-5">
+          <div>
+            <p className="text-lg font-semibold text-blue-950">Selamat datang kembali</p>
+            <p className="text-sm text-gray-500">Lanjutkan dokumen mata kuliah yang sedang Anda ampu.</p>
+          </div>
+          <div className="hidden rounded-full bg-blue-50 p-3 text-blue-700 sm:block"><GraduationCap className="h-6 w-6" /></div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {summaryCards.map((card) => (
+          <Card key={card.label} className="border-gray-100 shadow-sm">
+            <CardContent className="flex items-center gap-4 p-5">
+              <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", card.bg, card.color)}><card.icon className="h-5 w-5" /></div>
+              <div>
+                <p className="text-xs text-gray-500">{card.label}</p>
+                <p className={cn("mt-0.5 text-2xl font-bold tabular-nums", card.color)}><AnimatedNumber value={card.value} duration={600} /></p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+        <Card className="border-gray-100 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-blue-950">Mata Kuliah Saya</CardTitle>
+            <CardDescription>Progres RPS sekaligus sumber otomatis untuk RPM dan RTM.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
         {stats.myDosirs.map((d: any) => {
           const progress = parseFloat(d.progress) || 0
           const isApproved = d.statusRps === "APPROVED"
@@ -329,82 +382,112 @@ function DosenDashboard({ stats }: { stats: any }) {
                               "bg-gray-200"
 
           return (
-            <Card
+            <div
               key={d.id}
-              className="border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all flex flex-col"
+              className="rounded-xl border border-gray-100 bg-white p-4 transition-all hover:border-blue-100 hover:shadow-sm"
             >
-              <CardHeader className="px-5 pt-5 pb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge
-                    variant="outline"
-                    className="text-[11px] text-gray-500 font-normal border-gray-200"
-                  >
-                    Kelas {d.kelas}
-                  </Badge>
-                  <div className={cn(
-                    "flex items-center gap-1 text-[11px] font-medium",
-                    isApproved ? "text-emerald-600" : "text-amber-500"
-                  )}>
-                    {isApproved
-                      ? <><CheckCircle2 className="h-3.5 w-3.5" /> RPS Aktif</>
-                      : <><AlertCircle className="h-3.5 w-3.5" /> Menunggu Persetujuan</>}
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><BookOpen className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-blue-700">{d.kode} · Kelas {d.kelas}</p>
+                    <p className="truncate font-semibold text-gray-900">{d.mk}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                      <SectionCheck done={d.sections.cpmk && d.sections.subCpmk} label="CPL & CPMK" />
+                      <SectionCheck done={d.sections.meetings} label="Rencana Mingguan" />
+                      <SectionCheck done={d.sections.assessments} label="Asesmen" />
+                    </div>
                   </div>
                 </div>
-                <CardTitle className="text-base font-semibold text-gray-800 leading-snug">
-                  {d.mk}
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="px-5 pb-5 flex flex-col gap-4 flex-1 justify-between">
-                {/* Bagian progres input nilai */}
-                <div>
-                  <div className="flex justify-between text-[11px] mb-2">
-                    <span className="text-gray-500">Input Nilai</span>
-                    <span className="font-semibold tabular-nums text-gray-700">
-                      <AnimatedNumber value={progress} decimals={0} suffix="%" duration={700} />
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={cn("h-full rounded-full transition-all duration-700", progressColor)}
-                      style={{ width: `${Math.min(progress, 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-gray-300 mt-1">
-                    <span>0%</span>
-                    <span>{d.students} mahasiswa</span>
-                    <span>100%</span>
+                <div className="w-full md:w-44">
+                  <div className="mb-2 flex justify-between text-xs"><span className="text-gray-500">RPS</span><strong>{progress}%</strong></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className={cn("h-full rounded-full", progressColor)} style={{ width: `${Math.min(progress, 100)}%` }} /></div>
+                  <div className={cn("mt-2 flex items-center gap-1 text-[11px]", isApproved ? "text-emerald-600" : d.statusRps === "REVISION_REQUIRED" ? "text-red-600" : "text-amber-600")}>
+                    {isApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                    {isApproved ? "Disetujui" : d.statusRps === "REVISION_REQUIRED" ? "Perlu revisi" : d.statusRps === "SUBMITTED" ? "Menunggu persetujuan" : "Draf"}
                   </div>
                 </div>
-
-                {/* Tombol aksi */}
-                <div className="flex gap-2">
-                  <Link
-                    href="/nilai/input"
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "sm" }),
-                      "flex-1 gap-1.5 text-xs"
-                    )}
-                  >
-                    <PenSquare className="h-3.5 w-3.5" /> Input Nilai
-                  </Link>
+                <div className="flex shrink-0 gap-2">
                   <Link
                     href={`/rps/${d.id}`}
                     className={cn(
                       buttonVariants({ variant: "default", size: "sm" }),
-                      "flex-1 gap-1.5 text-xs"
+                      "gap-1.5 text-xs"
                     )}
                   >
-                    <FileText className="h-3.5 w-3.5" /> Edit RPS
+                    <FileText className="h-3.5 w-3.5" /> {progress > 0 ? "Lanjutkan" : "Mulai RPS"}
                   </Link>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )
         })}
+            {stats.myDosirs.length === 0 && <RpsDosenEmpty />}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-5">
+          <Card className="border-gray-100 shadow-sm">
+            <CardHeader className="pb-3"><CardTitle className="text-base text-blue-950">Prioritas Saya</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {stats.priorities?.length > 0 ? stats.priorities.map((item: any) => (
+                <div key={item.id} className="rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+                  <p className="text-sm font-semibold text-gray-900">{item.kode} · {item.mk}</p>
+                  <p className="mt-1 text-xs text-gray-600">{item.statusRps === "REVISION_REQUIRED" ? "Catatan Kaprodi tersedia" : item.issues[0]}</p>
+                  <Link href={`/rps/${item.id}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">Lanjutkan RPS <ArrowRight className="h-3 w-3" /></Link>
+                </div>
+              )) : (
+                <div className="py-5 text-center text-sm text-gray-500"><CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-500" />Semua dokumen terkendali.</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-100 shadow-sm">
+            <CardHeader className="pb-3"><CardTitle className="text-base text-blue-950">Dokumen Otomatis</CardTitle><CardDescription>Terbentuk dari satu sumber data RPS.</CardDescription></CardHeader>
+            <CardContent className="grid grid-cols-3 gap-2">
+              <DocumentTile href="/rps" label="RPS" icon={FileText} color="text-blue-700 bg-blue-50" />
+              <DocumentTile href="/rpm" label="RPM" icon={CalendarDays} color="text-teal-700 bg-teal-50" />
+              <DocumentTile href="/rtm" label="RTM" icon={ClipboardList} color="text-violet-700 bg-violet-50" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      {stats.myDosirs.length === 0 && <RpsDosenEmpty />}
+
+      <Card className="border-gray-100 shadow-sm">
+        <CardHeader className="pb-2"><CardTitle className="text-base text-blue-950">Alur Penyelesaian</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-5 gap-2 py-5">
+          {[
+            [Database, "Data MK"],
+            [Target, "CPMK"],
+            [CalendarDays, "16 Minggu"],
+            [ClipboardList, "Asesmen"],
+            [Send, "Ajukan"],
+          ].map(([Icon, label], index) => {
+            const StepIcon = Icon as React.ElementType
+            return (
+              <div key={String(label)} className="relative flex flex-col items-center text-center">
+                {index < 4 && <div className="absolute left-[58%] top-5 hidden h-px w-[84%] border-t border-dashed border-blue-200 sm:block" />}
+                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-700"><StepIcon className="h-4 w-4" /></div>
+                <p className="mt-2 text-xs font-medium text-gray-700">{String(label)}</p>
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
     </div>
+  )
+}
+
+function SectionCheck({ done, label }: { done: boolean; label: string }) {
+  return <span className="flex items-center gap-1">{done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertCircle className="h-3.5 w-3.5 text-amber-500" />}{label}</span>
+}
+
+function DocumentTile({ href, label, icon: Icon, color }: { href: string; label: string; icon: React.ElementType; color: string }) {
+  return (
+    <Link href={href} className="rounded-lg border p-3 text-center transition-colors hover:bg-gray-50">
+      <div className={cn("mx-auto flex h-9 w-9 items-center justify-center rounded-lg", color)}><Icon className="h-4 w-4" /></div>
+      <p className="mt-2 text-xs font-bold text-gray-800">{label}</p>
+    </Link>
   )
 }
 

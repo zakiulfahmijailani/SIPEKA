@@ -1,60 +1,297 @@
 "use server"
 
 import { db } from "@/db"
-import { 
-  rps, cpmk, cpmkCpl, subCpmk, 
-  komponenPenilaian, komponenCpmk, 
-  rpsPertemuan, rpsReferensi,
-  rpsStatusLog, dosirMk
+import {
+  cpmk,
+  cpmkCpl,
+  cpmkTemplate,
+  assessmentTemplate,
+  dosirMk,
+  komponenCpmk,
+  komponenPenilaian,
+  komponenSubCpmk,
+  pertemuanSubCpmk,
+  rps,
+  rpsPertemuan,
+  rpsReferensi,
+  rpsStatusLog,
+  rubrikKriteria,
+  subCpmk,
+  users,
 } from "@/db/schema"
-import { eq, and, sql } from "drizzle-orm"
+import { and, asc, eq, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { MOCK_SESSION } from "@/lib/mock-session"
+import { getCurrentSession } from "@/lib/current-session"
 import { createNotification } from "@/lib/notifications"
-import { users } from "@/db/schema"
-import { inArray } from "drizzle-orm"
+import { calculateRpsReadiness } from "@/lib/rps-readiness"
 
-// --- RPS Core Actions ---
+export type RpsStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REVISION_REQUIRED" | "ARCHIVED"
+type BloomLevel = "C1" | "C2" | "C3" | "C4" | "C5" | "C6"
+
+type SubCpmkInput = {
+  id?: string
+  kode: string
+  deskripsi: string
+  level_bloom?: BloomLevel
+  urutan: number
+}
+
+type CpmkInput = {
+  id?: string
+  kode: string
+  deskripsi: string
+  cpl_id?: string
+  urutan: number
+  subCpmks?: SubCpmkInput[]
+}
+
+type RubrikInput = {
+  kriteria: string
+  bobot?: number
+  sangat_baik?: string
+  baik?: string
+  cukup?: string
+  kurang?: string
+  sangat_kurang?: string
+  urutan: number
+}
+
+type KomponenInput = {
+  id?: string
+  nama: string
+  tipe?: string
+  bobot: number
+  deskripsi?: string
+  instruksi?: string
+  bentuk?: string
+  luaran?: string
+  kriteria_penilaian?: string
+  minggu_pemberian?: number | null
+  minggu_pengumpulan?: number | null
+  is_kelompok?: boolean
+  urutan: number
+  cpmk_ids?: string[]
+  sub_cpmk_ids?: string[]
+  rubrik_kriterias?: RubrikInput[]
+}
+
+type MeetingInput = {
+  minggu_ke: number
+  materi: string
+  metode?: string
+  media?: string
+  estimasi_waktu?: string
+  indikator?: string
+  bentuk_pembelajaran?: string
+  aktivitas_dosen?: string
+  aktivitas_mahasiswa?: string
+  kriteria_penilaian?: string
+  sub_cpmk_ids?: string[]
+}
+
+async function resolveActorId() {
+  const session = await getCurrentSession()
+  if (!session?.user) throw new Error("Unauthorized")
+  const sessionId = session.user.id
+  const current = await db.query.users.findFirst({ where: eq(users.id, sessionId) })
+  if (current) return current.id
+
+  const fallback = await db.query.users.findFirst({
+    where: inArray(users.role, ["SUPER_ADMIN", "KAPRODI", "DOSEN"]),
+    orderBy: [asc(users.created_at)],
+  })
+  if (!fallback) throw new Error("Belum ada pengguna aktif untuk mencatat perubahan")
+  return fallback.id
+}
+
+async function assertCanEditRps(rpsId: string) {
+  const session = await getCurrentSession()
+  if (!session?.user) throw new Error("Unauthorized")
+  if (session.user.role !== "DOSEN") return session
+
+  const target = await db.query.rps.findFirst({
+    where: eq(rps.id, rpsId),
+    with: { dosirMk: true },
+  })
+  if (!target || target.dosirMk.dosen_id !== session.user.id) throw new Error("Forbidden")
+  if (!['DRAFT', 'REVISION_REQUIRED'].includes(target.status)) {
+    throw new Error("RPS yang sudah diajukan atau disetujui tidak dapat diubah")
+  }
+  return session
+}
+
+async function copyCourseTemplateToRps(rpsId: string, mkId: string) {
+  const templates = await db.query.cpmkTemplate.findMany({
+    where: and(eq(cpmkTemplate.mk_id, mkId), eq(cpmkTemplate.is_active, true)),
+    orderBy: [asc(cpmkTemplate.urutan)],
+    with: { subCpmks: true },
+  })
+
+  for (const template of templates) {
+    const [createdCpmk] = await db
+      .insert(cpmk)
+      .values({
+        rps_id: rpsId,
+        kode: template.kode,
+        deskripsi: template.deskripsi,
+        urutan: template.urutan,
+      })
+      .onConflictDoUpdate({
+        target: [cpmk.rps_id, cpmk.kode],
+        set: { deskripsi: template.deskripsi, urutan: template.urutan },
+      })
+      .returning()
+
+    if (template.cpl_id) {
+      await db
+        .insert(cpmkCpl)
+        .values({ cpmk_id: createdCpmk.id, cpl_id: template.cpl_id })
+        .onConflictDoNothing()
+    }
+
+    if (template.subCpmks.length > 0) {
+      await db.insert(subCpmk).values(
+        template.subCpmks.map((item) => ({
+          cpmk_id: createdCpmk.id,
+          kode: item.kode,
+          deskripsi: item.deskripsi,
+          level_bloom: item.level_bloom,
+          urutan: item.urutan,
+        })),
+      ).onConflictDoNothing()
+    }
+  }
+
+  const assessmentTemplates = await db.query.assessmentTemplate.findMany({
+    where: and(eq(assessmentTemplate.mk_id, mkId), eq(assessmentTemplate.is_active, true)),
+    orderBy: [asc(assessmentTemplate.urutan)],
+    with: { cpmkTemplate: true, subCpmkTemplate: true },
+  })
+  if (assessmentTemplates.length === 0) return
+
+  const copiedCpmks = await db.query.cpmk.findMany({
+    where: eq(cpmk.rps_id, rpsId),
+    with: { subCpmks: true },
+  })
+  const copiedCpmkByCode = new Map(copiedCpmks.map((item) => [item.kode, item]))
+  const copiedSubCpmkByCode = new Map(copiedCpmks.flatMap((item) => item.subCpmks.map((sub) => [sub.kode, sub] as const)))
+
+  for (const template of assessmentTemplates) {
+    const [component] = await db.insert(komponenPenilaian).values({
+      rps_id: rpsId,
+      nama: template.nama,
+      tipe: template.tipe,
+      bobot: template.bobot,
+      kriteria_penilaian: template.kriteria_penilaian,
+      urutan: template.urutan,
+    }).returning()
+
+    const copiedCpmk = template.cpmkTemplate ? copiedCpmkByCode.get(template.cpmkTemplate.kode) : null
+    if (copiedCpmk) {
+      await db.insert(komponenCpmk).values({ komponen_id: component.id, cpmk_id: copiedCpmk.id })
+    }
+    const copiedSubCpmk = template.subCpmkTemplate ? copiedSubCpmkByCode.get(template.subCpmkTemplate.kode) : null
+    if (copiedSubCpmk) {
+      await db.insert(komponenSubCpmk).values({ komponen_id: component.id, sub_cpmk_id: copiedSubCpmk.id })
+    }
+
+    await db.insert(rubrikKriteria).values({
+      komponen_id: component.id,
+      kriteria: template.kriteria_penilaian || "Kualitas pencapaian tugas",
+      bobot: 100,
+      sangat_baik: "Sangat baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+      baik: "Baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+      cukup: "Cukup menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+      kurang: "Kurang menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+      sangat_kurang: "Sangat kurang menunjukkan pencapaian pada aspek yang dinilai.",
+      urutan: 1,
+    })
+  }
+}
 
 export async function createOrGetRps(dosirMkId: string) {
   try {
-    const session = MOCK_SESSION
+    const session = await getCurrentSession()
     if (!session?.user) return { success: false, error: "Unauthorized" }
-
-    let existing = await db.query.rps.findFirst({
+    const existing = await db.query.rps.findFirst({
       where: eq(rps.dosir_mk_id, dosirMkId),
-      orderBy: (rps, { desc }) => [desc(rps.version)]
+      orderBy: (table, { desc }) => [desc(table.version)],
     })
+    if (existing) return { success: true, data: existing }
 
-    if (!existing) {
-      const [newRps] = await db.insert(rps).values({
-        dosir_mk_id: dosirMkId,
-        status: "DRAFT",
-        version: 1,
-      }).returning()
-      existing = newRps
+    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId) })
+    if (!dosir) return { success: false, error: "Penugasan mata kuliah tidak ditemukan" }
+    if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
+      return { success: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
     }
 
-    return { success: true, data: existing }
+    const [created] = await db.insert(rps).values({
+      dosir_mk_id: dosirMkId,
+      status: "DRAFT",
+      version: 1,
+    }).returning()
+
+    await copyCourseTemplateToRps(created.id, dosir.mk_id)
+    const hydrated = await db.query.rps.findFirst({
+      where: eq(rps.id, created.id),
+      with: {
+        cpmks: { with: { cplMappings: { with: { cpl: true } }, subCpmks: true } },
+        komponens: { with: { cpmkMappings: true, subCpmkMappings: true, rubrikKriterias: true } },
+        pertemuans: { with: { subCpmkMappings: true } },
+        referensis: true,
+        statusLogs: true,
+      },
+    })
+    revalidatePath(`/rps/${dosirMkId}`)
+    return { success: true, data: hydrated ?? created }
   } catch (error) {
+    console.error(error)
     return { success: false, error: "Gagal memuat RPS" }
   }
 }
 
-export async function updateRpsStatus(id: string, status: any, catatan?: string) {
+export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: string) {
   try {
-    const session = MOCK_SESSION
+    const session = await getCurrentSession()
     if (!session?.user) return { success: false, error: "Unauthorized" }
+    const current = await db.query.rps.findFirst({
+      where: eq(rps.id, id),
+      with: {
+        dosirMk: true,
+        cpmks: { with: { cplMappings: true, subCpmks: true } },
+        pertemuans: { with: { subCpmkMappings: true } },
+        komponens: { with: { cpmkMappings: true, subCpmkMappings: true } },
+        referensis: true,
+      },
+    })
+    if (!current) return { success: false, error: "RPS tidak ditemukan" }
 
-    const [current] = await db.select().from(rps).where(eq(rps.id, id))
-    
+    if (session.user.role === "DOSEN" && current.dosirMk.dosen_id !== session.user.id) {
+      return { success: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
+    }
+    if (session.user.role === "DOSEN") {
+      const maySubmit = ["DRAFT", "REVISION_REQUIRED"].includes(current.status) && status === "SUBMITTED"
+      const mayWithdraw = current.status === "SUBMITTED" && status === "DRAFT"
+      if (!maySubmit && !mayWithdraw) {
+        return { success: false, error: "Perubahan status RPS tidak diizinkan" }
+      }
+    }
+
+    if (status === "SUBMITTED") {
+      const readiness = calculateRpsReadiness(current)
+      if (readiness.issues.length > 0) {
+        return { success: false, error: readiness.issues[0] }
+      }
+    }
+
+    const actorId = await resolveActorId()
     await db.transaction(async (tx) => {
       await tx.update(rps).set({
         status,
         catatan_reviewer: catatan || null,
         submitted_at: status === "SUBMITTED" ? new Date() : current.submitted_at,
         approved_at: status === "APPROVED" ? new Date() : current.approved_at,
-        approved_by: status === "APPROVED" ? session.user.id : current.approved_by,
+        approved_by: status === "APPROVED" ? actorId : current.approved_by,
         updated_at: new Date(),
       }).where(eq(rps.id, id))
 
@@ -62,85 +299,86 @@ export async function updateRpsStatus(id: string, status: any, catatan?: string)
         rps_id: id,
         status_from: current.status,
         status_to: status,
-        changed_by: session.user.id,
+        changed_by: actorId,
         catatan: catatan || null,
       })
 
-      // Send Notifications
       const fullRps = await tx.query.rps.findFirst({
         where: eq(rps.id, id),
-        with: { dosirMk: { with: { mk: true } } }
+        with: { dosirMk: { with: { mk: true } } },
       })
+      if (!fullRps) return
 
       if (status === "SUBMITTED") {
-        // Notify Kaprodi & Super Admin
         const reviewers = await tx.query.users.findMany({
-          where: inArray(users.role, ["KAPRODI", "SUPER_ADMIN"])
+          where: inArray(users.role, ["KAPRODI", "SUPER_ADMIN"]),
         })
         for (const reviewer of reviewers) {
           await createNotification({
             user_id: reviewer.id,
-            message: `RPS ${fullRps?.dosirMk.mk.nama_id} menunggu approval.`,
-            link: `/rps/${fullRps?.dosir_mk_id}`
+            message: `RPS ${fullRps.dosirMk.mk.nama_id} menunggu persetujuan.`,
+            link: `/rps/${fullRps.dosir_mk_id}`,
           })
         }
       } else if (status === "APPROVED" || status === "REVISION_REQUIRED") {
-        // Notify Dosen
         await createNotification({
-          user_id: fullRps!.dosirMk.dosen_id,
-          message: status === "APPROVED" 
-            ? `RPS ${fullRps?.dosirMk.mk.nama_id} telah disetujui.` 
-            : `RPS ${fullRps?.dosirMk.mk.nama_id} memerlukan revisi: ${catatan}`,
-          link: `/rps/${fullRps?.dosir_mk_id}`
+          user_id: fullRps.dosirMk.dosen_id,
+          message: status === "APPROVED"
+            ? `RPS ${fullRps.dosirMk.mk.nama_id} telah disetujui.`
+            : `RPS ${fullRps.dosirMk.mk.nama_id} memerlukan revisi: ${catatan ?? ""}`,
+          link: `/rps/${fullRps.dosir_mk_id}`,
         })
       }
     })
 
+    revalidatePath("/dashboard")
     revalidatePath("/rps")
     return { success: true }
   } catch (error) {
-    return { success: false, error: "Gagal merubah status RPS" }
+    console.error(error)
+    return { success: false, error: "Gagal mengubah status RPS" }
   }
 }
 
-// --- Section 3: CPMK Actions ---
-
-export async function saveCpmks(rpsId: string, data: any[]) {
+export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
   try {
+    await assertCanEditRps(rpsId)
     await db.transaction(async (tx) => {
-      // For simplicity in auto-save, we'll clear and re-insert or use upsert
-      // But clearing might break foreign keys if children exist. 
-      // Better to upsert individual ones or handle carefully.
-      // For this implementation, we'll use a more robust approach:
-      
       for (const item of data) {
-        const cpmkId = item.id || undefined
-        const dbData = {
+        const [saved] = await tx.insert(cpmk).values({
           rps_id: rpsId,
           kode: item.kode,
           deskripsi: item.deskripsi,
           urutan: item.urutan,
-        }
+        }).onConflictDoUpdate({
+          target: [cpmk.rps_id, cpmk.kode],
+          set: { deskripsi: item.deskripsi, urutan: item.urutan },
+        }).returning()
 
-        let id: string
-        if (cpmkId) {
-          await tx.update(cpmk).set(dbData).where(eq(cpmk.id, cpmkId))
-          id = cpmkId
-        } else {
-          const [inserted] = await tx.insert(cpmk).values(dbData).returning()
-          id = inserted.id
-        }
-
-        // Handle CPL mapping (one CPL per CPMK as per user request)
-        await tx.delete(cpmkCpl).where(eq(cpmkCpl.cpmk_id, id))
+        await tx.delete(cpmkCpl).where(eq(cpmkCpl.cpmk_id, saved.id))
         if (item.cpl_id) {
-          await tx.insert(cpmkCpl).values({
-            cpmk_id: id,
-            cpl_id: item.cpl_id
+          await tx.insert(cpmkCpl).values({ cpmk_id: saved.id, cpl_id: item.cpl_id })
+        }
+
+        for (const sub of item.subCpmks ?? []) {
+          await tx.insert(subCpmk).values({
+            cpmk_id: saved.id,
+            kode: sub.kode,
+            deskripsi: sub.deskripsi,
+            level_bloom: sub.level_bloom ?? "C3",
+            urutan: sub.urutan,
+          }).onConflictDoUpdate({
+            target: [subCpmk.cpmk_id, subCpmk.kode],
+            set: {
+              deskripsi: sub.deskripsi,
+              level_bloom: sub.level_bloom ?? "C3",
+              urutan: sub.urutan,
+            },
           })
         }
       }
     })
+    revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
     console.error(error)
@@ -150,65 +388,145 @@ export async function saveCpmks(rpsId: string, data: any[]) {
 
 export async function deleteCpmk(id: string) {
   try {
+    const target = await db.query.cpmk.findFirst({ where: eq(cpmk.id, id) })
+    if (!target) return { success: false, error: "CPMK tidak ditemukan" }
+    await assertCanEditRps(target.rps_id)
     await db.delete(cpmk).where(eq(cpmk.id, id))
     return { success: true }
   } catch (error) {
+    console.error(error)
     return { success: false, error: "Gagal menghapus CPMK" }
   }
 }
 
-// --- Section 4: Assessment Actions ---
-
-export async function saveKomponens(rpsId: string, data: any[]) {
+export async function deleteSubCpmk(id: string) {
   try {
+    const target = await db.query.subCpmk.findFirst({
+      where: eq(subCpmk.id, id),
+      with: { cpmk: true },
+    })
+    if (!target) return { success: false, error: "Sub-CPMK tidak ditemukan" }
+    await assertCanEditRps(target.cpmk.rps_id)
+    await db.delete(subCpmk).where(eq(subCpmk.id, id))
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: "Gagal menghapus Sub-CPMK" }
+  }
+}
+
+export async function saveKomponens(rpsId: string, data: KomponenInput[]) {
+  try {
+    await assertCanEditRps(rpsId)
     await db.transaction(async (tx) => {
       for (const item of data) {
-        const compId = item.id || undefined
-        const dbData = {
+        let componentId = item.id
+        const values = {
           rps_id: rpsId,
           nama: item.nama,
           tipe: item.tipe || "TUGAS",
-          bobot: item.bobot,
+          bobot: Number(item.bobot) || 0,
+          deskripsi: item.deskripsi || null,
+          instruksi: item.instruksi || null,
+          bentuk: item.bentuk || null,
+          luaran: item.luaran || null,
+          kriteria_penilaian: item.kriteria_penilaian || null,
+          minggu_pemberian: item.minggu_pemberian || null,
+          minggu_pengumpulan: item.minggu_pengumpulan || null,
+          is_kelompok: Boolean(item.is_kelompok),
           urutan: item.urutan,
+          updated_at: new Date(),
         }
 
-        let id: string
-        if (compId) {
-          await tx.update(komponenPenilaian).set(dbData).where(eq(komponenPenilaian.id, compId))
-          id = compId
+        if (!componentId) {
+          const existing = await tx.query.komponenPenilaian.findFirst({
+            where: and(
+              eq(komponenPenilaian.rps_id, rpsId),
+              eq(komponenPenilaian.urutan, item.urutan),
+            ),
+          })
+          componentId = existing?.id
+        }
+
+        if (componentId) {
+          await tx.update(komponenPenilaian).set(values).where(eq(komponenPenilaian.id, componentId))
         } else {
-          const [inserted] = await tx.insert(komponenPenilaian).values(dbData).returning()
-          id = inserted.id
+          const [created] = await tx.insert(komponenPenilaian).values(values).returning()
+          componentId = created.id
         }
 
-        // Handle CPMK mapping (multi-select)
-        await tx.delete(komponenCpmk).where(eq(komponenCpmk.komponen_id, id))
-        if (item.cpmk_ids && item.cpmk_ids.length > 0) {
+        await tx.delete(komponenCpmk).where(eq(komponenCpmk.komponen_id, componentId))
+        if (item.cpmk_ids?.length) {
           await tx.insert(komponenCpmk).values(
-            item.cpmk_ids.map((cid: string) => ({ komponen_id: id, cpmk_id: cid }))
+            item.cpmk_ids.map((cpmkId) => ({ komponen_id: componentId!, cpmk_id: cpmkId })),
+          )
+        }
+
+        await tx.delete(komponenSubCpmk).where(eq(komponenSubCpmk.komponen_id, componentId))
+        if (item.sub_cpmk_ids?.length) {
+          await tx.insert(komponenSubCpmk).values(
+            item.sub_cpmk_ids.map((subCpmkId) => ({ komponen_id: componentId!, sub_cpmk_id: subCpmkId })),
+          )
+        }
+
+        await tx.delete(rubrikKriteria).where(eq(rubrikKriteria.komponen_id, componentId))
+        if (item.rubrik_kriterias?.length) {
+          await tx.insert(rubrikKriteria).values(
+            item.rubrik_kriterias.map((rubrik, index) => ({
+              komponen_id: componentId!,
+              kriteria: rubrik.kriteria,
+              bobot: Number(rubrik.bobot) || 0,
+              sangat_baik: rubrik.sangat_baik || null,
+              baik: rubrik.baik || null,
+              cukup: rubrik.cukup || null,
+              kurang: rubrik.kurang || null,
+              sangat_kurang: rubrik.sangat_kurang || null,
+              urutan: rubrik.urutan || index + 1,
+            })),
           )
         }
       }
     })
+    revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
+    console.error(error)
     return { success: false, error: "Gagal menyimpan komponen penilaian" }
   }
 }
 
-// --- Section 5: Meetings Actions ---
-
-export async function saveMeetings(rpsId: string, data: any[]) {
+export async function deleteKomponen(id: string) {
   try {
+    const target = await db.query.komponenPenilaian.findFirst({
+      where: eq(komponenPenilaian.id, id),
+    })
+    if (!target) return { success: false, error: "Komponen penilaian tidak ditemukan" }
+    await assertCanEditRps(target.rps_id)
+    await db.delete(komponenPenilaian).where(eq(komponenPenilaian.id, id))
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: "Gagal menghapus komponen penilaian" }
+  }
+}
+
+export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
+  try {
+    await assertCanEditRps(rpsId)
     await db.transaction(async (tx) => {
       for (const item of data) {
-        await tx.insert(rpsPertemuan).values({
+        const [meeting] = await tx.insert(rpsPertemuan).values({
           rps_id: rpsId,
           minggu_ke: item.minggu_ke,
           materi: item.materi,
           metode: item.metode,
           media: item.media,
           estimasi_waktu: item.estimasi_waktu,
+          indikator: item.indikator,
+          bentuk_pembelajaran: item.bentuk_pembelajaran,
+          aktivitas_dosen: item.aktivitas_dosen,
+          aktivitas_mahasiswa: item.aktivitas_mahasiswa,
+          kriteria_penilaian: item.kriteria_penilaian,
         }).onConflictDoUpdate({
           target: [rpsPertemuan.rps_id, rpsPertemuan.minggu_ke],
           set: {
@@ -216,34 +534,51 @@ export async function saveMeetings(rpsId: string, data: any[]) {
             metode: item.metode,
             media: item.media,
             estimasi_waktu: item.estimasi_waktu,
-          }
-        })
+            indikator: item.indikator,
+            bentuk_pembelajaran: item.bentuk_pembelajaran,
+            aktivitas_dosen: item.aktivitas_dosen,
+            aktivitas_mahasiswa: item.aktivitas_mahasiswa,
+            kriteria_penilaian: item.kriteria_penilaian,
+          },
+        }).returning()
+
+        await tx.delete(pertemuanSubCpmk).where(eq(pertemuanSubCpmk.pertemuan_id, meeting.id))
+        if (item.sub_cpmk_ids?.length) {
+          await tx.insert(pertemuanSubCpmk).values(
+            item.sub_cpmk_ids.map((subCpmkId) => ({
+              pertemuan_id: meeting.id,
+              sub_cpmk_id: subCpmkId,
+            })),
+          )
+        }
       }
     })
+    revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
+    console.error(error)
     return { success: false, error: "Gagal menyimpan rencana pertemuan" }
   }
 }
 
-// --- Section 6: References Actions ---
-
-export async function saveReferences(rpsId: string, data: any[]) {
+export async function saveReferences(rpsId: string, data: Array<{ jenis: string; teks: string }>) {
   try {
+    await assertCanEditRps(rpsId)
     await db.transaction(async (tx) => {
-      // Clear all and re-insert for simple references
       await tx.delete(rpsReferensi).where(eq(rpsReferensi.rps_id, rpsId))
       if (data.length > 0) {
-        await tx.insert(rpsReferensi).values(data.map((r, i) => ({
+        await tx.insert(rpsReferensi).values(data.map((item, index) => ({
           rps_id: rpsId,
-          jenis: r.jenis,
-          teks: r.teks,
-          urutan: i + 1
+          jenis: item.jenis,
+          teks: item.teks,
+          urutan: index + 1,
         })))
       }
     })
+    revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
+    console.error(error)
     return { success: false, error: "Gagal menyimpan referensi" }
   }
 }
