@@ -13,24 +13,49 @@ import {
 } from "@/components/ui/table"
 import { UserFormSheet } from "./user-form-sheet"
 import { ResetPasswordModal } from "./reset-password-modal"
-import { Plus, Edit, Key, Power, PowerOff } from "lucide-react"
+import { Plus, Edit, Key, Power, PowerOff, LogIn, Loader2, ShieldCheck } from "lucide-react"
 import { toggleUserActive } from "./actions"
+import { startDosenImpersonation } from "@/app/actions/impersonation"
 import { toast } from "sonner"
 import { useRouter, useSearchParams } from "next/navigation"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-export function UserClientPage({ users }: { users: any[] }) {
+type ManagedUser = {
+  id: string
+  email: string
+  nama_lengkap: string
+  nidn: string | null
+  role: "SUPER_ADMIN" | "KAPRODI" | "DOSEN" | "VIEWER"
+  is_active: boolean
+  created_at: Date
+  updated_at: Date
+}
+
+export function UserClientPage({ users }: { users: ManagedUser[] }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<any | null>(null)
+  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null)
   
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
   const [userToReset, setUserToReset] = useState<{id: string, name: string} | null>(null)
+  const [userToImpersonate, setUserToImpersonate] = useState<ManagedUser | null>(null)
+  const [isImpersonating, setIsImpersonating] = useState(false)
 
   const currentRole = searchParams.get("role") || "ALL"
   const currentStatus = searchParams.get("status") || "ALL"
 
-  const handleEdit = (user: any) => {
+  const handleEdit = (user: ManagedUser) => {
     setSelectedUser(user)
     setIsSheetOpen(true)
   }
@@ -40,7 +65,7 @@ export function UserClientPage({ users }: { users: any[] }) {
     setIsSheetOpen(true)
   }
 
-  const handleResetPassword = (user: any) => {
+  const handleResetPassword = (user: ManagedUser) => {
     setUserToReset({ id: user.id, name: user.nama_lengkap })
     setIsResetModalOpen(true)
   }
@@ -53,8 +78,25 @@ export function UserClientPage({ users }: { users: any[] }) {
       } else {
         toast.error(res.error)
       }
-    } catch (e) {
+    } catch {
       toast.error("Terjadi kesalahan sistem")
+    }
+  }
+
+  const handleImpersonate = async () => {
+    if (!userToImpersonate) return
+    setIsImpersonating(true)
+    try {
+      const result = await startDosenImpersonation(userToImpersonate.id)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      window.location.assign("/dashboard")
+    } catch {
+      toast.error("Gagal masuk sebagai dosen")
+    } finally {
+      setIsImpersonating(false)
     }
   }
 
@@ -68,7 +110,7 @@ export function UserClientPage({ users }: { users: any[] }) {
     router.push(`?${params.toString()}`)
   }
 
-  const getRoleBadge = (role: string) => {
+  const getRoleBadge = (role: ManagedUser["role"]) => {
     switch (role) {
       case "SUPER_ADMIN":
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-none">SUPER ADMIN</Badge>
@@ -145,6 +187,18 @@ export function UserClientPage({ users }: { users: any[] }) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    {item.role === "DOSEN" && item.is_active && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-blue-700"
+                        onClick={() => setUserToImpersonate(item)}
+                        title={`Masuk sebagai ${item.nama_lengkap}`}
+                      >
+                        <LogIn className="h-4 w-4" />
+                        Masuk
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => handleResetPassword(item)} title="Atur Ulang Kata Sandi">
                       <Key className="h-4 w-4 text-amber-600" />
                     </Button>
@@ -177,6 +231,33 @@ export function UserClientPage({ users }: { users: any[] }) {
         userId={userToReset?.id || null}
         userName={userToReset?.name || null}
       />
+
+      <AlertDialog
+        open={Boolean(userToImpersonate)}
+        onOpenChange={(open) => {
+          if (!open && !isImpersonating) setUserToImpersonate(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-blue-50 text-blue-700">
+              <ShieldCheck />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Masuk sebagai dosen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan melihat SIPEKA dan menjalankan tindakan dengan hak akses {userToImpersonate?.nama_lengkap}.
+              Mode ini dapat dihentikan kapan saja dan akan dicatat pada audit log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isImpersonating}>Batal</AlertDialogCancel>
+            <AlertDialogAction disabled={isImpersonating} onClick={handleImpersonate}>
+              {isImpersonating ? <Loader2 className="animate-spin" /> : <LogIn />}
+              Masuk sebagai Dosen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

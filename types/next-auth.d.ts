@@ -7,6 +7,12 @@ declare module "next-auth" {
       id: string
       role: string
     } & DefaultSession["user"]
+    impersonator?: {
+      id: string
+      name?: string | null
+      email?: string | null
+      role: "SUPER_ADMIN"
+    }
   }
 
   interface User extends DefaultUser {

@@ -23,6 +23,8 @@ import {
   CalendarDays,
   ClipboardList,
   Upload,
+  ArrowLeft,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,9 +32,25 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { signOut } from "next-auth/react"
 import { Session } from "next-auth"
 import { useState } from "react"
+import { useTransition } from "react"
+import { stopDosenImpersonation } from "@/app/actions/impersonation"
+import type { LucideIcon } from "lucide-react"
 
 interface SidebarProps {
   session: Session
+}
+
+type NavItem = {
+  name: string
+  href: string
+  icon: LucideIcon
+  show: boolean
+  badge?: string
+}
+
+type NavGroup = {
+  label: string | null
+  items: NavItem[]
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -44,14 +62,23 @@ const ROLE_LABEL: Record<string, string> = {
 export function Sidebar({ session }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [isReturning, startReturn] = useTransition()
   const role = session?.user?.role
 
   const isSuperAdmin = role === "SUPER_ADMIN"
   const isKaprodi = role === "KAPRODI"
   const isDosen = role === "DOSEN"
+  const isImpersonating = Boolean(session.impersonator)
+
+  const returnToAdministrator = () => {
+    startReturn(async () => {
+      await stopDosenImpersonation()
+      window.location.assign("/master/users")
+    })
+  }
 
   // Nav items dikelompokkan per seksi
-  const navGroups = [
+  const navGroups: NavGroup[] = [
     {
       label: null,
       items: [
@@ -103,7 +130,7 @@ export function Sidebar({ session }: SidebarProps) {
     },
   ]
 
-  const NavLinks = () => (
+  const renderNavLinks = () => (
     <nav className="space-y-4">
       {navGroups.map((group, i) => {
         const visible = group.items.filter(item => item.show)
@@ -137,9 +164,9 @@ export function Sidebar({ session }: SidebarProps) {
                       )}
                     />
                     <span className="flex-1 truncate">{item.name}</span>
-                    {(item as any).badge && (
+                    {item.badge && (
                       <span className="ml-auto mr-1 rounded-full bg-indigo-100 dark:bg-indigo-900 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-indigo-700 dark:text-indigo-400">
-                        {(item as any).badge}
+                        {item.badge}
                       </span>
                     )}
                     {isActive && <ChevronRight className="h-3 w-3 text-gray-400" />}
@@ -153,7 +180,7 @@ export function Sidebar({ session }: SidebarProps) {
     </nav>
   )
 
-  const UserProfile = () => (
+  const renderUserProfile = () => (
     <div className="p-4 border-b border-gray-100">
       <div className="font-bold text-lg tracking-tight text-gray-900">SIPEKA</div>
       <div className="text-xs text-gray-400 mb-4">{isDosen ? "Portal Dosen" : "Pengelola Kurikulum & Asesmen"}</div>
@@ -167,6 +194,9 @@ export function Sidebar({ session }: SidebarProps) {
         <Badge variant="outline" className="mt-1.5 w-fit text-xs text-gray-500 bg-white">
           {ROLE_LABEL[role as string] ?? role}
         </Badge>
+        {isImpersonating && (
+          <span className="mt-1 text-[10px] font-medium text-amber-700">Diakses oleh Super Admin</span>
+        )}
       </div>
     </div>
   )
@@ -181,20 +211,33 @@ export function Sidebar({ session }: SidebarProps) {
             <Menu className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col h-full">
-            <UserProfile />
+            {renderUserProfile()}
             <div className="flex-1 overflow-y-auto p-4">
-              <NavLinks />
+              {renderNavLinks()}
             </div>
             <div className="p-4 border-t mt-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
-                onClick={() => signOut({ callbackUrl: "/login" })}
-              >
-                <LogOut className="h-4 w-4" />
-                Keluar
-              </Button>
+              {isImpersonating ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 border-amber-300 bg-amber-50 text-amber-900"
+                  disabled={isReturning}
+                  onClick={returnToAdministrator}
+                >
+                  {isReturning ? <Loader2 className="animate-spin" /> : <ArrowLeft />}
+                  Kembali ke Admin
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Keluar
+                </Button>
+              )}
             </div>
           </SheetContent>
         </Sheet>
@@ -202,20 +245,33 @@ export function Sidebar({ session }: SidebarProps) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-60 bg-white border-r border-gray-100 min-h-screen">
-        <UserProfile />
+        {renderUserProfile()}
         <div className="flex-1 overflow-y-auto p-4">
-          <NavLinks />
+          {renderNavLinks()}
         </div>
         <div className="p-4 border-t border-gray-100 mt-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-          >
-            <LogOut className="h-4 w-4" />
-            Keluar
-          </Button>
+          {isImpersonating ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2 border-amber-300 bg-amber-50 text-amber-900"
+              disabled={isReturning}
+              onClick={returnToAdministrator}
+            >
+              {isReturning ? <Loader2 className="animate-spin" /> : <ArrowLeft />}
+              Kembali ke Admin
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              <LogOut className="h-4 w-4" />
+              Keluar
+            </Button>
+          )}
         </div>
       </aside>
     </>

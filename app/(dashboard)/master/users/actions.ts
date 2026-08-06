@@ -2,10 +2,10 @@
 
 import { db } from "@/db"
 import { users } from "@/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { MOCK_SESSION } from "@/lib/mock-session"
+import { getCurrentSession } from "@/lib/current-session"
 import bcrypt from "bcryptjs"
 
 const userSchema = z.object({
@@ -20,7 +20,7 @@ const userSchema = z.object({
 
 export async function saveUser(formData: z.infer<typeof userSchema>) {
   try {
-    const session = MOCK_SESSION
+    const session = await getCurrentSession()
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
@@ -31,7 +31,7 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
     }
 
     const data = parsed.data
-    const dbData: any = {
+    const dbData = {
       email: data.email,
       nama_lengkap: data.nama_lengkap,
       nidn: data.nidn || null,
@@ -48,15 +48,17 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
       if (!data.password) {
         return { success: false, error: "Password wajib diisi untuk user baru" }
       }
-      dbData.password = await bcrypt.hash(data.password, 12)
-      await db.insert(users).values(dbData)
+      await db.insert(users).values({
+        ...dbData,
+        password: await bcrypt.hash(data.password, 12),
+      })
     }
 
     revalidatePath("/master/users")
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving user:", error)
-    if (error.code === "23505") {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
       return { success: false, error: "Email sudah digunakan" }
     }
     return { success: false, error: "Terjadi kesalahan sistem" }
@@ -65,7 +67,7 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
 
 export async function toggleUserActive(id: string, currentStatus: boolean) {
   try {
-    const session = MOCK_SESSION
+    const session = await getCurrentSession()
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
@@ -83,7 +85,7 @@ export async function toggleUserActive(id: string, currentStatus: boolean) {
 
 export async function resetUserPassword(id: string, password: string) {
   try {
-    const session = MOCK_SESSION
+    const session = await getCurrentSession()
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
