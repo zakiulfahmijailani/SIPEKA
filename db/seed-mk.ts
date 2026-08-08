@@ -8,6 +8,7 @@ config({ path: ".env.local" })
 import { db } from "./index"
 import { mataKuliah } from "./schema"
 import { eq, notInArray } from "drizzle-orm"
+import { CURRICULUM_2026_MATA_KULIAH } from "./curriculum-2026"
 
 type MkStatus = "WAJIB" | "PILIHAN"
 type MkTrack = "UMUM" | "BIS" | "ISG" | "DSA" | "DMS"
@@ -580,10 +581,14 @@ const mataKuliahData: MkSeedData[] = [
   },
 ]
 
+// Gunakan kurikulum 2026/2027 sebagai sumber data aktif. Array lama di atas
+// dipertahankan sebagai arsip konteks perubahan agar sejarah seed tetap terbaca.
+const activeMataKuliahData: MkSeedData[] = CURRICULUM_2026_MATA_KULIAH
+
 async function seedMataKuliah() {
   console.log("📚 Seeding mata kuliah...")
 
-  const validNamaIds = mataKuliahData.map((mk) => mk.nama_id)
+  const validNamaIds = activeMataKuliahData.map((mk) => mk.nama_id)
 
   // 1. Hapus MK lama yang tidak ada di daftar baru
   const deleted = await db
@@ -600,7 +605,7 @@ async function seedMataKuliah() {
   let inserted = 0
   let updated = 0
 
-  for (const mk of mataKuliahData) {
+  for (const mk of activeMataKuliahData) {
     const existing = await db.query.mataKuliah.findFirst({
       where: eq(mataKuliah.nama_id, mk.nama_id),
     })
@@ -635,7 +640,7 @@ async function seedMataKuliah() {
   }
 
   console.log(`\n📊 Selesai: ${inserted} ditambahkan, ${updated} diperbarui, ${deleted.length} dihapus.`)
-  console.log(`📋 Total: ${mataKuliahData.length} mata kuliah (SEM 1-8)`)
+  console.log(`📋 Total: ${activeMataKuliahData.length} mata kuliah (SEM 1-8)`)
   process.exit(0)
 }
 

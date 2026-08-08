@@ -176,6 +176,18 @@ const CPL_MK_MAPPING: Record<string, string[]> = {
   ],
 }
 
+// Kompatibilitas kode dari mapping CPL lama ke kode kurikulum 2026/2027.
+// Mapping CPL tetap berbasis mata kuliah yang sama; hanya kode resminya yang berubah.
+const COURSE_CODE_2026: Record<string, string> = {
+  SIF101: "UNI104", SIF102: "SIF101", SIF103: "SIF107", SIF104: "SIF108", SIF105: "SIF109",
+  SIF201: "UNI204", SIF203: "SIF210", SIF204: "SIF212", SIF205: "SIF213", SIF206: "SIF214", SIF207: "SIF215",
+  SIF301: "FTK161", SIF302: "FTK121", SIF303: "SIF307", SIF304: "SIF311", SIF305: "SIF317", SIF306: "SIF318", SIF307: "SIF319",
+  SIF401: "SIF404", SIF402: "SIF405", SIF403: "SIF407", SIF404: "SIF408", SIF405: "SIF409", SIF406: "SIF410",
+  SIF407: "SIF901", SIF408: "SIF902", SIF501: "UNI101", SIF502: "FTK221", SIF506: "SIF903", SIF509: "SIF906",
+  SIF601: "SIF604", SIF602: "SIF611", SIF603: "SIF608", SIF604: "SIF609", SIF605: "SIF610", SIF606: "SIF907", SIF607: "SIF908",
+  SIF608: "SIF909", SIF609: "SIF910", SIF701: "UNI102", SIF702: "UNI106", SIF703: "FTK151", SIF704: "SIF702", SIF705: "SIF703", SIF706: "SIF703",
+}
+
 async function runSeed() {
   console.log("🚀 Mulai seed CPL-MK Mapping (Hardcoded v2)...\n")
 
@@ -214,7 +226,8 @@ async function runSeed() {
     }
 
     for (const kodeMk of kodeMkList) {
-      const foundMk = mkByKode.get(kodeMk)
+      const resolvedKodeMk = COURSE_CODE_2026[kodeMk] ?? kodeMk
+      const foundMk = mkByKode.get(resolvedKodeMk)
       if (!foundMk) {
         skippedMk.add(kodeMk)
         continue
@@ -227,7 +240,7 @@ async function runSeed() {
           bobot: 1.00,
         })
         inserted++
-        console.log(`  ✅ ${kodeCpl} → [${kodeMk}] ${foundMk.nama_id}`)
+        console.log(`  ✅ ${kodeCpl} → [${resolvedKodeMk}] ${foundMk.nama_id}`)
       } catch (err: any) {
         console.error(`  ❌ GAGAL ${kodeCpl} → ${kodeMk}: ${err.message}`)
       }

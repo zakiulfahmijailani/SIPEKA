@@ -20,12 +20,12 @@ export default function PengaturanClient({ initialSettings }: { initialSettings:
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState<Record<string, string>>(() => {
     const s: Record<string, string> = {
-      univ_name: "Universitas XYZ",
-      fakultas_name: "Fakultas Teknologi Informasi",
-      prodi_name: "Sistem Informasi",
+      nama_universitas: "Universitas Bakrie",
+      nama_fakultas: "Fakultas Teknik dan Ilmu Komputer",
+      nama_prodi: "Sistem Informasi",
       jenjang: "S1",
-      akreditasi: "Unggul",
-      kurikulum_year: "2023",
+      akreditasi: "Baik Sekali",
+      tahun_kurikulum: "2026/2027",
       target_attainment: "75",
       logo_url: ""
     }
@@ -59,24 +59,24 @@ export default function PengaturanClient({ initialSettings }: { initialSettings:
               <div className="space-y-2">
                 <Label>Nama Universitas</Label>
                 <Input 
-                  value={settings.univ_name}
-                  onChange={e => setSettings({...settings, univ_name: e.target.value})}
+                  value={settings.nama_universitas}
+                  onChange={e => setSettings({...settings, nama_universitas: e.target.value})}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label>Nama Fakultas</Label>
                 <Input 
-                  value={settings.fakultas_name}
-                  onChange={e => setSettings({...settings, fakultas_name: e.target.value})}
+                  value={settings.nama_fakultas}
+                  onChange={e => setSettings({...settings, nama_fakultas: e.target.value})}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label>Nama Program Studi</Label>
                 <Input 
-                  value={settings.prodi_name}
-                  onChange={e => setSettings({...settings, prodi_name: e.target.value})}
+                  value={settings.nama_prodi}
+                  onChange={e => setSettings({...settings, nama_prodi: e.target.value})}
                   required
                 />
               </div>
@@ -120,8 +120,8 @@ export default function PengaturanClient({ initialSettings }: { initialSettings:
               <div className="space-y-2">
                 <Label>Tahun Kurikulum</Label>
                 <Input 
-                  value={settings.kurikulum_year}
-                  onChange={e => setSettings({...settings, kurikulum_year: e.target.value})}
+                  value={settings.tahun_kurikulum}
+                  onChange={e => setSettings({...settings, tahun_kurikulum: e.target.value})}
                   required
                 />
               </div>
