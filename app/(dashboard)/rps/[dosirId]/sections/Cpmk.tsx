@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Plus, Trash2, Loader2, Layers3, Target } from "lucide-react"
 import { debounce } from "lodash"
 import { saveCpmks, deleteCpmk, deleteSubCpmk } from "../../actions"
@@ -235,18 +228,16 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Bloom</Label>
-                      <Select
+                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Level Bloom</Label>
+                      <select
                         value={sub.level_bloom || "C3"}
-                        onValueChange={(value) => handleSubChange(idx, subIndex, "level_bloom", value || "C3")}
+                        onChange={(event) => handleSubChange(idx, subIndex, "level_bloom", event.target.value || "C3")}
+                        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none transition-colors focus:border-blue-500 focus:ring-3 focus:ring-blue-100"
                       >
-                        <SelectTrigger className="h-10 w-full border-slate-200 bg-white"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["C1", "C2", "C3", "C4", "C5", "C6"].map((level) => (
-                            <SelectItem key={level} value={level}>{level}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {["C1", "C2", "C3", "C4", "C5", "C6"].map((level) => (
+                          <option key={level} value={level}>{level}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Rumusan Sub-CPMK</Label>
