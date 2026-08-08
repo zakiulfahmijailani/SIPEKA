@@ -172,24 +172,30 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
                </div>
                <div className="min-w-0 space-y-2">
                  <Label className="text-xs font-semibold uppercase tracking-wide text-slate-500">CPL Terkait</Label>
-                 <Select 
-                   value={c.cpl_id} 
-                   onValueChange={(val) => handleChange(idx, "cpl_id", val || "")}
-                 >
-                   <SelectTrigger className="h-10 w-full border-slate-200 bg-white text-left font-medium">
-                     <SelectValue placeholder="Pilih CPL" />
-                   </SelectTrigger>
-                   <SelectContent className="min-w-[min(30rem,calc(100vw-2rem))] p-1.5">
-                     {mappedCpls.map(m => (
-                       <SelectItem key={m.id} value={m.id} className="py-2.5 text-sm font-medium">{m.kode}</SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-                 {mappedCpls.find((m) => m.id === c.cpl_id)?.rumusan && (
-                   <p className="line-clamp-2 text-xs leading-5 text-slate-500">
-                     {mappedCpls.find((m) => m.id === c.cpl_id)?.rumusan}
-                   </p>
-                 )}
+                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                   {mappedCpls.map((mappedCpl) => {
+                     const isSelected = mappedCpl.id === c.cpl_id
+                     return (
+                       <button
+                         key={mappedCpl.id}
+                         type="button"
+                         onClick={() => handleChange(idx, "cpl_id", mappedCpl.id)}
+                         className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
+                           isSelected
+                             ? "border-blue-600 bg-blue-50 shadow-sm shadow-blue-100"
+                             : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
+                         }`}
+                       >
+                         <span className={`block text-xs font-bold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
+                           {mappedCpl.kode}
+                         </span>
+                         <span className="mt-0.5 line-clamp-2 block text-[11px] leading-4 text-slate-500">
+                           {mappedCpl.rumusan}
+                         </span>
+                       </button>
+                     )
+                   })}
+                 </div>
                </div>
             </div>
 
