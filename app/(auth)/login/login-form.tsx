@@ -6,14 +6,14 @@ import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-export function LoginForm() {
+export function LoginForm({ callbackUrl = "/dashboard" }: { callbackUrl?: string }) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState("")
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     setError("")
-    await signIn("google", { callbackUrl: "/dashboard" })
+    await signIn("google", { callbackUrl })
   }
 
   return (
