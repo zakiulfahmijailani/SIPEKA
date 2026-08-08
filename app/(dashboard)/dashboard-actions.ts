@@ -9,11 +9,11 @@ import { eq, and, count, sql, desc } from "drizzle-orm"
 import { calculateCplAttainment } from "./laporan/actions"
 import { calculateRpsReadiness } from "@/lib/rps-readiness"
 
-export async function getDashboardStats(role: string, userId: string) {
+export async function getDashboardStats(role: string, userId: string, selectedTaId?: string) {
   try {
-    const activeTa = await db.query.tahunAkademik.findFirst({
-      where: eq(tahunAkademik.is_active, true)
-    })
+    const activeTa = selectedTaId
+      ? await db.query.tahunAkademik.findFirst({ where: eq(tahunAkademik.id, selectedTaId) })
+      : await db.query.tahunAkademik.findFirst({ where: eq(tahunAkademik.is_active, true) })
 
     if (role === "SUPER_ADMIN" || role === "KAPRODI") {
       const [
@@ -155,6 +155,8 @@ export async function getDashboardStats(role: string, userId: string) {
           summary,
           priorities,
           academicTerm: activeTa?.nama || activeTa?.kode || "Semester aktif",
+          selectedYear: activeTa ? `${activeTa.tahun_mulai}/${activeTa.tahun_mulai + 1}` : "",
+          selectedSemester: activeTa?.semester ?? 1,
         },
       }
     }

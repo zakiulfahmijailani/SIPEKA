@@ -14,6 +14,7 @@ import {
   CalendarDays, ClipboardList, BellRing, Database, Layers3, Send,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { RpsDosenEmpty } from "@/components/empty-states"
@@ -316,7 +317,22 @@ function AdminDashboard({ stats }: { stats: any }) {
 // ---------------------------------------------------------------------------
 // Dashboard Dosen
 // ---------------------------------------------------------------------------
-function DosenDashboard({ stats }: { stats: any }) {
+function DosenDashboard({ stats, academicTerms }: { stats: any; academicTerms: any[] }) {
+  const router = useRouter()
+  const selectedYear = stats.selectedYear || academicTerms[0]?.year || ""
+  const selectedSemester = String(stats.selectedSemester || academicTerms[0]?.semester || 1)
+  const availableYears = [...new Set(academicTerms.map((term) => term.year))]
+  const availableSemesters = academicTerms
+    .filter((term) => term.year === selectedYear)
+    .sort((a, b) => a.semester - b.semester)
+
+  const changePeriod = (year: string, semester: string) => {
+    const params = new URLSearchParams()
+    params.set("tahun", year)
+    params.set("semester", semester)
+    router.push(`/dashboard?${params.toString()}`)
+  }
+
   const summaryCards = [
     { label: "RPS Aktif", value: stats.summary?.active || 0, icon: FileText, color: "text-blue-700", bg: "bg-blue-50" },
     { label: "Perlu Revisi", value: stats.summary?.revision || 0, icon: AlertTriangle, color: "text-amber-700", bg: "bg-amber-50" },
@@ -327,7 +343,7 @@ function DosenDashboard({ stats }: { stats: any }) {
 
   return (
     <div className="space-y-5 pb-10">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-blue-950">Dashboard Dosen</h1>
@@ -335,9 +351,37 @@ function DosenDashboard({ stats }: { stats: any }) {
           </div>
           <p className="mt-1 text-sm text-gray-500">Kelola dokumen pembelajaran dari satu sumber data.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <BellRing className="h-4 w-4" />
-          <strong>{attentionCount}</strong> dokumen perlu perhatian Anda
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex gap-2 rounded-2xl border border-blue-100 bg-white p-2 shadow-sm">
+            <label className="flex min-w-[150px] flex-col gap-1 px-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tahun Ajaran</span>
+              <select
+                value={selectedYear}
+                onChange={(event) => {
+                  const year = event.target.value
+                  const firstSemester = academicTerms.find((term) => term.year === year)?.semester ?? 1
+                  changePeriod(year, String(firstSemester))
+                }}
+                className="h-8 rounded-lg border-0 bg-blue-50 px-2 text-xs font-semibold text-blue-800 outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {availableYears.map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-[105px] flex-col gap-1 border-l border-slate-100 px-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Semester</span>
+              <select
+                value={selectedSemester}
+                onChange={(event) => changePeriod(selectedYear, event.target.value)}
+                className="h-8 rounded-lg border-0 bg-blue-50 px-2 text-xs font-semibold text-blue-800 outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {availableSemesters.map((term) => <option key={term.id} value={term.semester}>{term.semester === 1 ? "Ganjil" : "Genap"}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <BellRing className="h-4 w-4" />
+            <strong>{attentionCount}</strong> dokumen perlu perhatian Anda
+          </div>
         </div>
       </div>
 
@@ -494,9 +538,9 @@ function DocumentTile({ href, label, icon: Icon, color }: { href: string; label:
 // ---------------------------------------------------------------------------
 // Ekspor utama
 // ---------------------------------------------------------------------------
-export function DashboardClient({ stats, role }: { stats: any; role: string }) {
+export function DashboardClient({ stats, role, academicTerms = [] }: { stats: any; role: string; academicTerms?: any[] }) {
   if (role === "SUPER_ADMIN" || role === "KAPRODI") {
     return <AdminDashboard stats={stats} />
   }
-  return <DosenDashboard stats={stats} />
+  return <DosenDashboard stats={stats} academicTerms={academicTerms} />
 }
