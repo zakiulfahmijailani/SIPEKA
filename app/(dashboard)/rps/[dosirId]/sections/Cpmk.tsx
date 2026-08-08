@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash, Loader2, Layers3 } from "lucide-react"
+import { Plus, Trash2, Loader2, Layers3, Target } from "lucide-react"
 import { debounce } from "lodash"
 import { saveCpmks, deleteCpmk, deleteSubCpmk } from "../../actions"
 import { toast } from "sonner"
@@ -32,6 +32,7 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
     })) : []
   )
   const [isSaving, setIsSaving] = useState(false)
+  const subCpmkCount = cpmks.reduce((total, cpmk) => total + (cpmk.subCpmks?.length || 0), 0)
 
   // Auto-save logic
   const debouncedSave = useCallback(
@@ -110,96 +111,130 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold">Capaian Pembelajaran Mata Kuliah (CPMK)</h2>
-          <p className="text-sm text-muted-foreground">Rumusan kompetensi yang diturunkan dari CPL</p>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/70 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-200">
+            <Target className="size-5" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="text-lg font-semibold tracking-tight text-slate-950">CPMK & Sub-CPMK</h2>
+              {cpmks.length > 0 && (
+                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                  {cpmks.length} CPMK · {subCpmkCount} Sub-CPMK
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-slate-500">Rumusan kompetensi dan indikator pembelajaran yang diturunkan dari CPL.</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-           {isSaving && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
-           <Button variant="outline" size="sm" onClick={handleAdd} className="gap-2">
-             <Plus className="h-4 w-4" /> Tambah CPMK
-           </Button>
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          {isSaving && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <Loader2 className="size-3.5 animate-spin text-blue-600" /> Menyimpan
+            </span>
+          )}
+          <Button size="sm" onClick={handleAdd} className="gap-2 rounded-xl bg-blue-600 px-4 shadow-sm hover:bg-blue-700">
+            <Plus className="h-4 w-4" /> Tambah CPMK
+          </Button>
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {cpmks.map((c, idx) => (
-          <div key={idx} className="p-6 border rounded-xl bg-white shadow-sm space-y-4 relative group">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+          <section key={c.id || `${c.kode}-${idx}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5">
+              <div className="flex items-center gap-3">
+                <span className="flex size-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">{idx + 1}</span>
+                <div>
+                  <p className="font-mono text-sm font-semibold text-slate-900">{c.kode}</p>
+                  <p className="text-xs text-slate-500">{(c.subCpmks || []).length} Sub-CPMK terhubung</p>
+                </div>
+              </div>
+              <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
               onClick={() => handleDelete(c.id, idx)}
             >
-              <Trash className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Hapus</span>
             </Button>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-5 p-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[11rem_minmax(0,1fr)]">
                <div className="space-y-2">
-                 <Label className="text-xs uppercase text-gray-500 font-bold">Kode</Label>
-                 <Input value={c.kode} readOnly className="bg-gray-50 font-mono" />
+                 <Label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kode CPMK</Label>
+                 <Input value={c.kode} readOnly className="h-10 border-slate-200 bg-slate-50 font-mono text-sm font-medium text-slate-700" />
                </div>
-               <div className="md:col-span-3 space-y-2">
-                 <Label className="text-xs uppercase text-gray-500 font-bold">CPL Terkait</Label>
+               <div className="min-w-0 space-y-2">
+                 <Label className="text-xs font-semibold uppercase tracking-wide text-slate-500">CPL Terkait</Label>
                  <Select 
                    value={c.cpl_id} 
                    onValueChange={(val) => handleChange(idx, "cpl_id", val || "")}
                  >
-                   <SelectTrigger>
+                   <SelectTrigger className="h-10 w-full border-slate-200 bg-white text-left font-medium">
                      <SelectValue placeholder="Pilih CPL" />
                    </SelectTrigger>
-                   <SelectContent>
+                   <SelectContent className="min-w-[min(30rem,calc(100vw-2rem))] p-1.5">
                      {mappedCpls.map(m => (
-                       <SelectItem key={m.id} value={m.id}>{m.kode} - {m.rumusan.substring(0, 80)}...</SelectItem>
+                       <SelectItem key={m.id} value={m.id} className="py-2.5 text-sm font-medium">{m.kode}</SelectItem>
                      ))}
                    </SelectContent>
                  </Select>
+                 {mappedCpls.find((m) => m.id === c.cpl_id)?.rumusan && (
+                   <p className="line-clamp-2 text-xs leading-5 text-slate-500">
+                     {mappedCpls.find((m) => m.id === c.cpl_id)?.rumusan}
+                   </p>
+                 )}
                </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-gray-500 font-bold">Rumusan CPMK</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rumusan CPMK</Label>
               <Textarea 
                 placeholder="Contoh: Mahasiswa mampu merancang basis data relasional..." 
                 value={c.deskripsi}
                 onChange={(e) => handleChange(idx, "deskripsi", e.target.value)}
                 rows={3}
+                className="min-h-28 resize-y border-slate-200 bg-white leading-6"
               />
             </div>
 
-            <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
-              <div className="flex items-center justify-between gap-3">
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="flex items-center gap-2 text-sm font-semibold text-blue-950">
-                    <Layers3 className="h-4 w-4" /> Sub-CPMK
+                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Layers3 className="h-4 w-4 text-blue-600" /> Sub-CPMK
                   </p>
-                  <p className="text-xs text-blue-700/70">Kemampuan akhir yang diukur pada pertemuan dan penugasan.</p>
+                  <p className="mt-0.5 text-xs text-slate-500">Kemampuan akhir yang akan ditautkan ke RPM, RTM, dan asesmen.</p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubCpmk(idx)}>
+                <Button type="button" variant="outline" size="sm" className="w-full gap-2 rounded-lg border-slate-300 bg-white sm:w-auto" onClick={() => handleAddSubCpmk(idx)}>
                   <Plus className="h-3.5 w-3.5" /> Tambah Sub-CPMK
                 </Button>
               </div>
 
               <div className="space-y-3">
                 {(c.subCpmks || []).map((sub: any, subIndex: number) => (
-                  <div key={sub.id || `${sub.kode}-${subIndex}`} className="grid gap-3 rounded-lg border bg-white p-3 md:grid-cols-[130px_110px_1fr_40px]">
+                  <div key={sub.id || `${sub.kode}-${subIndex}`} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3.5 md:grid-cols-[10rem_8rem_minmax(0,1fr)_2.5rem] md:items-end">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase text-gray-500">Kode</Label>
+                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Kode</Label>
                       <Input
                         value={sub.kode}
                         onChange={(event) => handleSubChange(idx, subIndex, "kode", event.target.value)}
-                        className="font-mono text-xs"
+                        className="h-10 border-slate-200 bg-slate-50 font-mono text-xs"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase text-gray-500">Level Bloom</Label>
+                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Bloom</Label>
                       <Select
                         value={sub.level_bloom || "C3"}
                         onValueChange={(value) => handleSubChange(idx, subIndex, "level_bloom", value || "C3")}
                       >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10 w-full border-slate-200 bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {["C1", "C2", "C3", "C4", "C5", "C6"].map((level) => (
                             <SelectItem key={level} value={level}>{level}</SelectItem>
@@ -208,34 +243,37 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase text-gray-500">Rumusan Sub-CPMK</Label>
+                      <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Rumusan Sub-CPMK</Label>
                       <Textarea
                         value={sub.deskripsi}
                         onChange={(event) => handleSubChange(idx, subIndex, "deskripsi", event.target.value)}
                         placeholder="Mahasiswa mampu menjelaskan, menerapkan, atau mengevaluasi..."
-                        className="min-h-10"
+                        className="min-h-10 border-slate-200 leading-5"
                       />
                     </div>
-                    <div className="flex items-end">
-                      <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteSubCpmk(idx, subIndex)}>
-                        <Trash className="h-4 w-4" />
+                    <div className="flex items-end justify-end">
+                      <Button type="button" variant="ghost" size="icon" className="text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => handleDeleteSubCpmk(idx, subIndex)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
                 {(c.subCpmks || []).length === 0 && (
-                  <p className="rounded-md border border-dashed border-blue-200 bg-white/60 px-3 py-5 text-center text-xs text-blue-700/70">
+                  <p className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-6 text-center text-xs text-slate-500">
                     Belum ada Sub-CPMK untuk CPMK ini.
                   </p>
                 )}
               </div>
             </div>
-          </div>
+            </div>
+          </section>
         ))}
 
         {cpmks.length === 0 && (
-          <div className="py-12 text-center border-2 border-dashed rounded-xl bg-gray-50">
-            <p className="text-muted-foreground">Belum ada CPMK. Klik "Tambah CPMK" untuk memulai.</p>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 py-14 text-center">
+            <Target className="mx-auto mb-3 size-7 text-slate-300" />
+            <p className="font-medium text-slate-700">Belum ada CPMK.</p>
+            <p className="mt-1 text-sm text-slate-500">Klik “Tambah CPMK” untuk mulai menyusun capaian pembelajaran.</p>
           </div>
         )}
       </div>

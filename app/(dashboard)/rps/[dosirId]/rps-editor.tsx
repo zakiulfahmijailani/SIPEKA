@@ -107,7 +107,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Header Atas */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-4 shadow-sm backdrop-blur">
         <div className="flex items-center gap-4">
           <Link
             href="/rps"
@@ -154,19 +154,19 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
 
       <div className="flex flex-1 overflow-hidden">
         {/* Navigasi Sidebar Kiri */}
-        <div className="w-64 border-r bg-gray-50/50 flex flex-col p-4 space-y-1">
+        <div className="flex w-64 flex-col space-y-1 border-r border-slate-200 bg-white p-4">
           {sections.map((s) => (
             <button
               key={s.id}
               onClick={() => setActiveSection(s.id as SectionType)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all text-left",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all",
                 activeSection === s.id
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-200"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
               )}
             >
-              <s.icon className={cn("h-4 w-4", activeSection === s.id ? "text-white" : "text-gray-400")} />
+              <s.icon className={cn("h-4 w-4", activeSection === s.id ? "text-white" : "text-slate-400")} />
               {s.label}
             </button>
           ))}
@@ -182,8 +182,8 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
         </div>
 
         {/* Area Konten Utama */}
-        <div className="flex-1 overflow-y-auto p-8 bg-white">
-          <div className="max-w-4xl mx-auto">
+        <div className="flex-1 overflow-y-auto bg-slate-50/70 p-6 lg:p-10">
+          <div className="mx-auto max-w-5xl">
             {renderSection()}
           </div>
         </div>
