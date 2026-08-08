@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 export function LoginForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState("")
 
   const handleSubmit = async (formData: FormData) => {
@@ -31,6 +32,12 @@ export function LoginForm() {
 
     router.push("/dashboard")
     router.refresh()
+  }
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true)
+    setError("")
+    await signIn("google", { callbackUrl: "/dashboard" })
   }
 
   return (
@@ -53,6 +60,24 @@ export function LoginForm() {
       <Button type="submit" disabled={isLoading} className="h-10 w-full gap-2">
         {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         Masuk ke SIPEKA
+      </Button>
+      <div className="relative py-1">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-white px-3 text-gray-400">atau</span>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={isLoading || isGoogleLoading}
+        onClick={handleGoogleSignIn}
+        className="h-10 w-full gap-2"
+      >
+        {isGoogleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base font-semibold">G</span>}
+        Masuk dengan Google
       </Button>
     </form>
   )
