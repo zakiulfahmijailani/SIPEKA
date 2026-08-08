@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -32,7 +33,7 @@ const userSchema = z.object({
   nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
   nidn: z.string().optional(),
   role: z.enum(["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"]),
-  password: z.string().min(8, "Kata sandi minimal 8 karakter").optional(),
+  password: z.string().optional().refine((value) => !value || value.length >= 8, "Kata sandi minimal 8 karakter"),
   is_active: z.boolean().default(true),
 })
 
@@ -45,6 +46,7 @@ interface UserFormSheetProps {
 }
 
 export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheetProps) {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -78,6 +80,7 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
         toast.success(data.id ? "Pengguna diperbarui" : "Pengguna ditambahkan")
         onOpenChange(false)
         reset()
+        router.refresh()
       } else {
         toast.error(result.error || "Gagal menyimpan")
       }
@@ -130,7 +133,6 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
                   <SelectValue placeholder="Pilih role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SUPER_ADMIN">SUPER ADMIN</SelectItem>
                   <SelectItem value="KAPRODI">KAPRODI</SelectItem>
                   <SelectItem value="DOSEN">DOSEN</SelectItem>
                   <SelectItem value="VIEWER">VIEWER</SelectItem>
@@ -141,8 +143,8 @@ export function UserFormSheet({ open, onOpenChange, initialData }: UserFormSheet
 
           {!initialData && (
             <div className="space-y-2">
-              <Label htmlFor="password">Kata Sandi <span className="text-red-500">*</span></Label>
-              <Input id="password" type="password" placeholder="Minimal 8 karakter" {...register("password")} />
+              <Label htmlFor="password">Kata Sandi (opsional)</Label>
+              <Input id="password" type="password" placeholder="Kosongkan untuk login Google saja" {...register("password")} />
               {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
             </div>
           )}

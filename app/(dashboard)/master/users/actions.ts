@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getCurrentSession } from "@/lib/current-session"
 import bcrypt from "bcryptjs"
+import { SUPER_ADMIN_EMAIL } from "@/lib/constants"
 
 const userSchema = z.object({
   id: z.string().optional(),
@@ -14,7 +15,7 @@ const userSchema = z.object({
   nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
   nidn: z.string().optional(),
   role: z.enum(["SUPER_ADMIN", "KAPRODI", "DOSEN", "VIEWER"]),
-  password: z.string().min(8, "Password minimal 8 karakter").optional(),
+  password: z.string().optional().refine((value) => !value || value.length >= 8, "Password minimal 8 karakter"),
   is_active: z.boolean().default(true),
 })
 
@@ -31,11 +32,17 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
     }
 
     const data = parsed.data
+    const email = data.email.trim().toLowerCase()
+    if (data.role === "SUPER_ADMIN" && email !== SUPER_ADMIN_EMAIL) {
+      return { success: false, error: `Super Admin hanya boleh ${SUPER_ADMIN_EMAIL}` }
+    }
+
+    const role = email === SUPER_ADMIN_EMAIL ? "SUPER_ADMIN" as const : data.role === "SUPER_ADMIN" ? "DOSEN" as const : data.role
     const dbData = {
-      email: data.email,
+      email,
       nama_lengkap: data.nama_lengkap,
       nidn: data.nidn || null,
-      role: data.role,
+      role,
       is_active: data.is_active,
       updated_at: new Date(),
     }
@@ -45,12 +52,9 @@ export async function saveUser(formData: z.infer<typeof userSchema>) {
       await db.update(users).set(dbData).where(eq(users.id, data.id))
     } else {
       // Create
-      if (!data.password) {
-        return { success: false, error: "Password wajib diisi untuk user baru" }
-      }
       await db.insert(users).values({
         ...dbData,
-        password: await bcrypt.hash(data.password, 12),
+        password: data.password ? await bcrypt.hash(data.password, 12) : null,
       })
     }
 

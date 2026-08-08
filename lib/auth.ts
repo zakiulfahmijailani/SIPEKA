@@ -8,11 +8,22 @@ import { accounts, users } from "@/db/schema"
 import { and, eq } from "drizzle-orm"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
+import { SUPER_ADMIN_EMAIL } from "@/lib/constants"
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 })
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
+}
+
+function effectiveRole(user: Pick<typeof users.$inferSelect, "email" | "role">) {
+  const email = normalizeEmail(user.email)
+  if (email === SUPER_ADMIN_EMAIL) return "SUPER_ADMIN" as const
+  return user.role === "SUPER_ADMIN" ? "DOSEN" as const : user.role
+}
 
 const baseAdapter = DrizzleAdapter(db)
 
@@ -105,7 +116,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!parsed.success) return null
 
         const user = await db.query.users.findFirst({
-          where: eq(users.email, parsed.data.email.toLowerCase()),
+          where: eq(users.email, normalizeEmail(parsed.data.email)),
         })
         
         if (!user || !user.password) return null
@@ -121,7 +132,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.nama_lengkap,
-          role: user.role,
+          role: effectiveRole(user),
         }
       },
     }),
@@ -135,7 +146,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ account, profile, user }) {
       if (account?.provider !== "google") return true
 
-      const email = user.email?.trim().toLowerCase()
+      const email = user.email ? normalizeEmail(user.email) : undefined
       if (!email || profile?.email_verified === false) return false
 
       const existing = await db.query.users.findFirst({
@@ -145,18 +156,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return existing?.is_active === true
     },
     async jwt({ token, user }) {
-      const email = (user?.email ?? token.email)?.trim().toLowerCase()
+      const email = user?.email ?? token.email
       if (!email) return token
 
       const dbUser = await db.query.users.findFirst({
-        where: eq(users.email, email),
+        where: eq(users.email, normalizeEmail(email)),
       })
 
       if (dbUser?.is_active) {
         token.id = dbUser.id
-        token.role = dbUser.role
+        token.role = effectiveRole(dbUser)
         token.name = dbUser.nama_lengkap
         token.email = dbUser.email
+      } else {
+        token.id = undefined
+        token.role = undefined
+        token.name = undefined
+        token.email = undefined
       }
 
       return token

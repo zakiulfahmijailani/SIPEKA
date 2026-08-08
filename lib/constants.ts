@@ -5,6 +5,8 @@ export const ROLES = {
   VIEWER: "VIEWER",
 } as const
 
+export const SUPER_ADMIN_EMAIL = "luikaz91@gmail.com"
+
 export const RPS_STATUS = {
   DRAFT: "DRAFT",
   SUBMITTED: "SUBMITTED",
