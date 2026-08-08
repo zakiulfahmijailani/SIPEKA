@@ -120,7 +120,7 @@ async function assertCanEditRps(rpsId: string) {
   return session
 }
 
-async function copyCourseTemplateToRps(rpsId: string, mkId: string) {
+async function copyCpmkTemplateToRps(rpsId: string, mkId: string) {
   const templates = await db.query.cpmkTemplate.findMany({
     where: and(eq(cpmkTemplate.mk_id, mkId), eq(cpmkTemplate.is_active, true)),
     orderBy: [asc(cpmkTemplate.urutan)],
@@ -161,7 +161,9 @@ async function copyCourseTemplateToRps(rpsId: string, mkId: string) {
       ).onConflictDoNothing()
     }
   }
+}
 
+async function copyAssessmentTemplateToRps(rpsId: string, mkId: string) {
   const assessmentTemplates = await db.query.assessmentTemplate.findMany({
     where: and(eq(assessmentTemplate.mk_id, mkId), eq(assessmentTemplate.is_active, true)),
     orderBy: [asc(assessmentTemplate.urutan)],
@@ -206,6 +208,50 @@ async function copyCourseTemplateToRps(rpsId: string, mkId: string) {
       sangat_kurang: "Sangat kurang menunjukkan pencapaian pada aspek yang dinilai.",
       urutan: 1,
     })
+  }
+}
+
+async function copyCourseTemplateToRps(rpsId: string, mkId: string) {
+  await copyCpmkTemplateToRps(rpsId, mkId)
+  await copyAssessmentTemplateToRps(rpsId, mkId)
+}
+
+export async function hydrateBlankRpsFromTemplate(dosirMkId: string) {
+  try {
+    const session = await getCurrentSession()
+    if (!session?.user) return { success: false, hydrated: false, error: "Unauthorized" }
+
+    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId) })
+    if (!dosir) return { success: false, hydrated: false, error: "Penugasan mata kuliah tidak ditemukan" }
+    if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
+      return { success: false, hydrated: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
+    }
+
+    const targetRps = await db.query.rps.findFirst({
+      where: eq(rps.dosir_mk_id, dosirMkId),
+      orderBy: (table, { desc }) => [desc(table.version)],
+      with: { cpmks: true },
+    })
+    if (!targetRps || !["DRAFT", "REVISION_REQUIRED"].includes(targetRps.status)) {
+      return { success: true, hydrated: false }
+    }
+
+    const isBlank = targetRps.cpmks.length === 0 || targetRps.cpmks.every((item) => !item.deskripsi.trim())
+    if (!isBlank) return { success: true, hydrated: false }
+
+    const hasTemplate = await db.query.cpmkTemplate.findFirst({
+      where: and(eq(cpmkTemplate.mk_id, dosir.mk_id), eq(cpmkTemplate.is_active, true)),
+      columns: { id: true },
+    })
+    if (!hasTemplate) return { success: true, hydrated: false }
+
+    await db.delete(cpmk).where(eq(cpmk.rps_id, targetRps.id))
+    await copyCpmkTemplateToRps(targetRps.id, dosir.mk_id)
+    revalidatePath(`/rps/${dosirMkId}`)
+    return { success: true, hydrated: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false, hydrated: false, error: "Gagal mengisi CPMK dari template prodi" }
   }
 }
 

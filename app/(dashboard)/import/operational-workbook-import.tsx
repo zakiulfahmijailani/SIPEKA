@@ -23,6 +23,7 @@ const SUMMARY_LABELS: Record<string, string> = {
 
 export function OperationalWorkbookImport() {
   const [file, setFile] = useState<File | null>(null)
+  const [scope, setScope] = useState<"templates" | "full">("templates")
   const [result, setResult] = useState<OperationalImportResult | null>(null)
   const [hasPreview, setHasPreview] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -37,6 +38,7 @@ export function OperationalWorkbookImport() {
       const formData = new FormData()
       formData.set("file", file)
       formData.set("mode", mode)
+      formData.set("scope", scope)
       const nextResult = await importOperationalWorkbook(formData)
       setResult(nextResult)
       if (mode === "preview") setHasPreview(nextResult.success)
@@ -78,6 +80,23 @@ export function OperationalWorkbookImport() {
               }}
             />
           </label>
+
+          <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+            <label className="text-sm font-semibold text-blue-950" htmlFor="import-scope">Cakupan impor</label>
+            <select
+              id="import-scope"
+              value={scope}
+              onChange={(event) => setScope(event.target.value as "templates" | "full")}
+              disabled={isPending}
+              className="mt-2 h-10 w-full rounded-lg border border-blue-200 bg-white px-3 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="templates">Template CPMK & Sub-CPMK saja (disarankan)</option>
+              <option value="full">Kurikulum operasional lengkap</option>
+            </select>
+            <p className="mt-2 text-xs leading-5 text-blue-800">
+              Mode disarankan hanya memperbarui template CPMK/Sub-CPMK dan tidak mengubah master mata kuliah maupun CPL yang sudah diselaraskan dengan SK 2026.
+            </p>
+          </div>
 
           <div className="flex flex-wrap gap-3">
             <Button

@@ -77,6 +77,8 @@ export type OperationalImportResult = {
   warnings?: string[]
 }
 
+type ImportScope = "templates" | "full"
+
 const REQUIRED_SHEETS = [
   "T2 CPL",
   "T9 MK",
@@ -252,6 +254,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
 
   const file = formData.get("file") as File | null
   const commit = formData.get("mode") === "commit"
+  const scope: ImportScope = formData.get("scope") === "full" ? "full" : "templates"
   if (!file || file.size === 0) return { success: false, message: "Pilih file workbook terlebih dahulu." }
 
   try {
@@ -265,87 +268,114 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
     }
 
     if (!commit) {
-      return { success: true, message: "Workbook berhasil divalidasi. Belum ada data yang disimpan.", summary, warnings: parsed.warnings }
+      return {
+        success: true,
+        message: scope === "templates"
+          ? "Workbook berhasil divalidasi. Siap mengimpor template CPMK dan Sub-CPMK tanpa mengubah master mata kuliah."
+          : "Workbook berhasil divalidasi. Belum ada data yang disimpan.",
+        summary,
+        warnings: parsed.warnings,
+      }
     }
 
     await db.transaction(async (tx) => {
       const cplByCode = new Map<string, string>()
-      for (const [index, item] of parsed.cpls.entries()) {
-        const [saved] = await tx.insert(cpl).values({
-          kode: item.kode,
-          slug: item.kode.toLowerCase(),
-          domain: domainFromCategory(item.kategori),
-          rumusan: item.rumusan,
-          urutan: index + 1,
-          is_active: true,
-          updated_at: new Date(),
-        }).onConflictDoUpdate({
-          target: cpl.kode,
-          set: {
+      if (scope === "templates") {
+        const existingCpls = await tx.select({ id: cpl.id, kode: cpl.kode }).from(cpl)
+        existingCpls.forEach((item) => cplByCode.set(item.kode, item.id))
+      } else {
+        for (const [index, item] of parsed.cpls.entries()) {
+          const [saved] = await tx.insert(cpl).values({
+            kode: item.kode,
+            slug: item.kode.toLowerCase(),
             domain: domainFromCategory(item.kategori),
             rumusan: item.rumusan,
             urutan: index + 1,
             is_active: true,
             updated_at: new Date(),
-          },
-        }).returning()
-        cplByCode.set(item.kode, saved.id)
+          }).onConflictDoUpdate({
+            target: cpl.kode,
+            set: {
+              domain: domainFromCategory(item.kategori),
+              rumusan: item.rumusan,
+              urutan: index + 1,
+              is_active: true,
+              updated_at: new Date(),
+            },
+          }).returning()
+          cplByCode.set(item.kode, saved.id)
+        }
       }
 
       const courseByCode = new Map<string, string>()
-      for (const item of parsed.courses) {
-        const [saved] = await tx.insert(mataKuliah).values({
-          kode: item.kode,
-          nama_id: item.nama_id,
-          nama_en: item.nama_en,
-          sks_teori: item.sks_teori,
-          sks_praktik: item.sks_praktik,
-          semester_rekomendasi: item.semester,
-          status: item.status,
-          track: "UMUM",
-          tipe_aktivitas: item.sks_praktik > 0 ? "TEORI_PRAKTIKUM" : "TEORI",
-          has_praktikum: item.sks_praktik > 0,
-          is_pbl: item.isPbl,
-          is_active: true,
-          updated_at: new Date(),
-        }).onConflictDoUpdate({
-          target: mataKuliah.kode,
-          set: {
+      if (scope === "templates") {
+        const existingCourses = await tx.select({ id: mataKuliah.id, kode: mataKuliah.kode }).from(mataKuliah)
+        existingCourses.forEach((item) => courseByCode.set(item.kode, item.id))
+      } else {
+        for (const item of parsed.courses) {
+          const [saved] = await tx.insert(mataKuliah).values({
+            kode: item.kode,
             nama_id: item.nama_id,
             nama_en: item.nama_en,
             sks_teori: item.sks_teori,
             sks_praktik: item.sks_praktik,
             semester_rekomendasi: item.semester,
             status: item.status,
+            track: "UMUM",
             tipe_aktivitas: item.sks_praktik > 0 ? "TEORI_PRAKTIKUM" : "TEORI",
             has_praktikum: item.sks_praktik > 0,
             is_pbl: item.isPbl,
             is_active: true,
             updated_at: new Date(),
-          },
-        }).returning()
-        courseByCode.set(item.kode, saved.id)
+          }).onConflictDoUpdate({
+            target: mataKuliah.kode,
+            set: {
+              nama_id: item.nama_id,
+              nama_en: item.nama_en,
+              sks_teori: item.sks_teori,
+              sks_praktik: item.sks_praktik,
+              semester_rekomendasi: item.semester,
+              status: item.status,
+              tipe_aktivitas: item.sks_praktik > 0 ? "TEORI_PRAKTIKUM" : "TEORI",
+              has_praktikum: item.sks_praktik > 0,
+              is_pbl: item.isPbl,
+              is_active: true,
+              updated_at: new Date(),
+            },
+          }).returning()
+          courseByCode.set(item.kode, saved.id)
+        }
       }
 
-      const importedMkIds = [...courseByCode.values()]
+      const importedMkIds = [...new Set(parsed.courseCpmks.map((item) => courseByCode.get(item.kodeMk)).filter(Boolean))] as string[]
       if (importedMkIds.length > 0) {
-        await tx.delete(assessmentTemplate).where(inArray(assessmentTemplate.mk_id, importedMkIds))
+        if (scope === "full") {
+          await tx.delete(assessmentTemplate).where(inArray(assessmentTemplate.mk_id, importedMkIds))
+        }
         await tx.delete(cpmkTemplate).where(inArray(cpmkTemplate.mk_id, importedMkIds))
-        await tx.delete(petaKurikulum).where(inArray(petaKurikulum.mk_id, importedMkIds))
+        if (scope === "full") {
+          await tx.delete(petaKurikulum).where(inArray(petaKurikulum.mk_id, importedMkIds))
+        }
       }
 
       const cpmkTemplateByKey = new Map<string, string>()
       const cpmkOrderByCourse = new Map<string, number>()
+      const seenCpmkByCourse = new Set<string>()
       for (const item of parsed.courseCpmks) {
         const mkId = courseByCode.get(item.kodeMk)
         const cplId = cplByCode.get(item.kodeCpl)
         const description = parsed.cpmkDescriptions.get(item.kodeCpmk)
         if (!mkId || !cplId || !description) continue
+        const templateKey = `${item.kodeMk}:${item.kodeCpmk}`
+        if (seenCpmkByCourse.has(templateKey)) continue
+        seenCpmkByCourse.add(templateKey)
         const order = (cpmkOrderByCourse.get(item.kodeMk) ?? 0) + 1
         cpmkOrderByCourse.set(item.kodeMk, order)
 
-        await tx.insert(petaKurikulum).values({ mk_id: mkId, cpl_id: cplId, bobot: 1 })
-          .onConflictDoNothing()
+        if (scope === "full") {
+          await tx.insert(petaKurikulum).values({ mk_id: mkId, cpl_id: cplId, bobot: 1 })
+            .onConflictDoNothing()
+        }
 
         const [saved] = await tx.insert(cpmkTemplate).values({
           mk_id: mkId,
@@ -357,7 +387,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
           updated_at: new Date(),
         }).onConflictDoUpdate({
           target: [cpmkTemplate.mk_id, cpmkTemplate.kode],
-          set: { cpl_id: cplId, deskripsi: description, is_active: true, updated_at: new Date() },
+          set: { cpl_id: cplId, deskripsi: description, urutan: order, is_active: true, updated_at: new Date() },
         }).returning()
         cpmkTemplateByKey.set(`${item.kodeMk}:${item.kodeCpmk}`, saved.id)
       }
@@ -384,27 +414,29 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         subTemplateByKey.set(`${item.kodeMk}:${item.kodeSubCpmk}`, saved.id)
       }
 
-      const assessmentGroups = new Map<string, AssessmentInput[]>()
-      for (const item of parsed.assessments) {
-        const group = assessmentGroups.get(item.kodeMk) ?? []
-        group.push(item)
-        assessmentGroups.set(item.kodeMk, group)
-      }
-      for (const [kodeMk, items] of assessmentGroups) {
-        const mkId = courseByCode.get(kodeMk)
-        if (!mkId) continue
-        for (const [index, item] of items.entries()) {
-          await tx.insert(assessmentTemplate).values({
-            mk_id: mkId,
-            cpmk_template_id: cpmkTemplateByKey.get(`${kodeMk}:${item.kodeCpmk}`) || null,
-            sub_cpmk_template_id: subTemplateByKey.get(`${kodeMk}:${item.kodeSubCpmk}`) || null,
-            nama: item.nama,
-            tipe: item.nama,
-            bobot: item.bobot,
-            kriteria_penilaian: item.kriteria || null,
-            urutan: index + 1,
-            is_active: true,
-          })
+      if (scope === "full") {
+        const assessmentGroups = new Map<string, AssessmentInput[]>()
+        for (const item of parsed.assessments) {
+          const group = assessmentGroups.get(item.kodeMk) ?? []
+          group.push(item)
+          assessmentGroups.set(item.kodeMk, group)
+        }
+        for (const [kodeMk, items] of assessmentGroups) {
+          const mkId = courseByCode.get(kodeMk)
+          if (!mkId) continue
+          for (const [index, item] of items.entries()) {
+            await tx.insert(assessmentTemplate).values({
+              mk_id: mkId,
+              cpmk_template_id: cpmkTemplateByKey.get(`${kodeMk}:${item.kodeCpmk}`) || null,
+              sub_cpmk_template_id: subTemplateByKey.get(`${kodeMk}:${item.kodeSubCpmk}`) || null,
+              nama: item.nama,
+              tipe: item.nama,
+              bobot: item.bobot,
+              kriteria_penilaian: item.kriteria || null,
+              urutan: index + 1,
+              is_active: true,
+            })
+          }
         }
       }
     })
@@ -414,7 +446,14 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
     revalidatePath("/master/mata-kuliah")
     revalidatePath("/master/cpl")
 
-    return { success: true, message: "Kurikulum operasional berhasil diimpor sebagai master dan template RPS.", summary, warnings: parsed.warnings }
+    return {
+      success: true,
+      message: scope === "templates"
+        ? "Template CPMK dan Sub-CPMK berhasil diimpor tanpa mengubah master mata kuliah atau CPL."
+        : "Kurikulum operasional berhasil diimpor sebagai master dan template RPS.",
+      summary,
+      warnings: parsed.warnings,
+    }
   } catch (error) {
     console.error(error)
     return { success: false, message: error instanceof Error ? error.message : "Import workbook gagal." }
