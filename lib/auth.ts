@@ -1,19 +1,11 @@
 import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
 import type { AdapterAccount, AdapterUser } from "next-auth/adapters"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/db"
 import { accounts, users } from "@/db/schema"
 import { and, eq } from "drizzle-orm"
-import * as bcrypt from "bcryptjs"
-import { z } from "zod"
 import { SUPER_ADMIN_EMAIL } from "@/lib/constants"
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-})
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
@@ -105,37 +97,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
   },
   providers: [
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials)
-        if (!parsed.success) return null
-
-        const user = await db.query.users.findFirst({
-          where: eq(users.email, normalizeEmail(parsed.data.email)),
-        })
-        
-        if (!user || !user.password) return null
-
-        // Check if user is active
-        const isActive = user.is_active === true
-        if (!isActive) return null
-
-        const valid = await bcrypt.compare(parsed.data.password, user.password)
-        if (!valid) return null
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.nama_lengkap,
-          role: effectiveRole(user),
-        }
-      },
-    }),
     Google({
       // Google verifies the account email. SIPEKA additionally verifies that
       // the email already exists in its own user table before allowing login.
