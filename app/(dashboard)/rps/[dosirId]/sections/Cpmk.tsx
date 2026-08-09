@@ -20,6 +20,7 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
   const [cpmks, setCpmks] = useState<any[]>(
     initialCpmks.length > 0 ? initialCpmks.map(c => ({
       ...c,
+      metode_pencapaian: c.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur",
       cpl_id: c.cplMappings?.[0]?.cpl_id || "",
       subCpmks: c.subCpmks || [],
     })) : []
@@ -44,6 +45,7 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
     const newCpmk = {
       kode: `CPMK${cpmks.length + 1}`,
       deskripsi: "",
+      metode_pencapaian: "Tatap muka dan diskusi",
       cpl_id: mappedCpls[0]?.id || "",
       urutan: cpmks.length + 1,
       subCpmks: [],
@@ -200,6 +202,16 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
                 onChange={(e) => handleChange(idx, "deskripsi", e.target.value)}
                 rows={3}
                 className="min-h-28 resize-y border-slate-200 bg-white leading-6"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Metode Pencapaian CPMK</Label>
+              <Input
+                value={c.metode_pencapaian || ""}
+                onChange={(event) => handleChange(idx, "metode_pencapaian", event.target.value)}
+                placeholder="Contoh: Tatap muka, diskusi, studi kasus, dan latihan"
+                className="h-10 border-slate-200"
               />
             </div>
 

@@ -82,6 +82,8 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
         minggu_pemberian: 1,
         minggu_pengumpulan: 2,
         is_kelompok: false,
+        referensi_tugas: "",
+        lain_lain: "",
         cpmk_ids: [],
         sub_cpmk_ids: [],
         rubrik_kriterias: [{ ...DEFAULT_RUBRIC }],
@@ -291,6 +293,25 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
                 onChange={(event) => handleChange(index, "kriteria_penilaian", event.target.value)}
                 placeholder="Contoh: ketepatan analisis, kelengkapan, orisinalitas, dan kejelasan penyajian."
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Daftar rujukan tugas</Label>
+                <Textarea
+                  value={component.referensi_tugas || ""}
+                  onChange={(event) => handleChange(index, "referensi_tugas", event.target.value)}
+                  placeholder="Sumber yang wajib atau disarankan untuk penugasan."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lain-lain</Label>
+                <Textarea
+                  value={component.lain_lain || ""}
+                  onChange={(event) => handleChange(index, "lain_lain", event.target.value)}
+                  placeholder="Ketentuan tambahan, catatan, atau aturan khusus tugas."
+                />
+              </div>
             </div>
 
             <details className="group rounded-lg border border-blue-100 bg-blue-50/30 p-4">

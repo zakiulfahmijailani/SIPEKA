@@ -43,6 +43,7 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks }: MeetingsSecti
             aktivitas_dosen: "",
             aktivitas_mahasiswa: "",
             kriteria_penilaian: "",
+            referensi: "",
             sub_cpmk_ids: [],
           }
     }),
@@ -171,6 +172,10 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks }: MeetingsSecti
                 <div className="space-y-2">
                   <Label>Kriteria / teknik penilaian minggu ini</Label>
                   <Textarea value={meeting.kriteria_penilaian || ""} onChange={(event) => handleChange(index, "kriteria_penilaian", event.target.value)} placeholder="Kosongkan bila minggu ini tidak memiliki asesmen." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Referensi / bahan pembelajaran minggu ini</Label>
+                  <Textarea value={meeting.referensi || ""} onChange={(event) => handleChange(index, "referensi", event.target.value)} placeholder="Contoh: [T1] Bab 3–4, video LMS, atau artikel pendukung." />
                 </div>
               </div>
             </details>

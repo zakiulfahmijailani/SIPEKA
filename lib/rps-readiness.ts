@@ -8,6 +8,7 @@ export type ReadinessCpmk = {
   id?: string
   kode?: string
   deskripsi?: string | null
+  metode_pencapaian?: string | null
   cplMappings?: unknown[]
   subCpmks?: ReadinessSubCpmk[]
 }
@@ -17,6 +18,7 @@ export type ReadinessMeeting = {
   materi?: string | null
   metode?: string | null
   indikator?: string | null
+  referensi?: string | null
   subCpmkMappings?: unknown[]
 }
 
@@ -30,6 +32,10 @@ export type ReadinessAssessment = {
 
 export type ReadinessRps = {
   status?: string
+  deskripsi_mk?: string | null
+  metode_pembelajaran?: string | null
+  persyaratan_kehadiran?: string | null
+  nama_penyetuju?: string | null
   cpmks?: ReadinessCpmk[]
   pertemuans?: ReadinessMeeting[]
   komponens?: ReadinessAssessment[]
@@ -46,6 +52,7 @@ export type RpsReadiness = {
     meetings: boolean
     assessments: boolean
     references: boolean
+    formalities: boolean
   }
 }
 
@@ -67,12 +74,12 @@ export function calculateRpsReadiness(rps?: ReadinessRps | null): RpsReadiness {
   const sections = {
     cpmk:
       cpmks.length > 0 &&
-      cpmks.every((item) => Boolean(item.deskripsi?.trim()) && (item.cplMappings?.length ?? 0) > 0),
+      cpmks.every((item) => Boolean(item.deskripsi?.trim()) && Boolean(item.metode_pencapaian?.trim()) && (item.cplMappings?.length ?? 0) > 0),
     subCpmk:
       subCpmks.length > 0 &&
       cpmks.every((item) => (item.subCpmks?.length ?? 0) > 0),
     meetings:
-      meetings.filter((item) => Boolean(item.materi?.trim()) && Boolean(item.metode?.trim())).length >= 14,
+      meetings.filter((item) => Boolean(item.materi?.trim()) && Boolean(item.metode?.trim()) && Boolean(item.referensi?.trim())).length >= 14,
     assessments:
       assessments.length > 0 &&
       Math.abs(totalBobot - 100) < 0.01 &&
@@ -82,21 +89,24 @@ export function calculateRpsReadiness(rps?: ReadinessRps | null): RpsReadiness {
           ((item.subCpmkMappings?.length ?? 0) > 0 || (item.cpmkMappings?.length ?? 0) > 0),
       ),
     references: references.length > 0,
+    formalities: Boolean(rps?.deskripsi_mk?.trim()) && Boolean(rps?.metode_pembelajaran?.trim()) && Boolean(rps?.persyaratan_kehadiran?.trim()) && Boolean(rps?.nama_penyetuju?.trim()),
   }
 
   const weightedSections = [
-    { done: sections.cpmk, weight: 20 },
-    { done: sections.subCpmk, weight: 15 },
-    { done: sections.meetings, weight: 30 },
-    { done: sections.assessments, weight: 25 },
+    { done: sections.formalities, weight: 10 },
+    { done: sections.cpmk, weight: 18 },
+    { done: sections.subCpmk, weight: 12 },
+    { done: sections.meetings, weight: 28 },
+    { done: sections.assessments, weight: 22 },
     { done: sections.references, weight: 10 },
   ]
   const progress = weightedSections.reduce((sum, section) => sum + (section.done ? section.weight : 0), 0)
 
   const issues: string[] = []
-  if (!sections.cpmk) issues.push("Lengkapi CPMK dan keterkaitannya dengan CPL")
+  if (!sections.formalities) issues.push("Lengkapi deskripsi, metode, kehadiran, dan data pengesah pada Dokumen RPS")
+  if (!sections.cpmk) issues.push("Lengkapi CPMK, metode pencapaian, dan keterkaitannya dengan CPL")
   if (!sections.subCpmk) issues.push("Setiap CPMK perlu memiliki minimal satu Sub-CPMK")
-  if (!sections.meetings) issues.push("Lengkapi materi dan metode minimal 14 minggu pembelajaran")
+  if (!sections.meetings) issues.push("Lengkapi materi, metode, dan referensi minimal 14 minggu pembelajaran")
   if (assessments.length === 0) {
     issues.push("Tambahkan komponen asesmen")
   } else if (Math.abs(totalBobot - 100) >= 0.01) {

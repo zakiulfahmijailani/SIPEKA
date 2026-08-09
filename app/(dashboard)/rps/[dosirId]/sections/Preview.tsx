@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
-import { CheckCircle2, Send, RotateCcw, AlertTriangle, Printer, CalendarDays, ClipboardList } from "lucide-react"
+import { CheckCircle2, Send, RotateCcw, AlertTriangle, Printer, ClipboardList, ClipboardCheck } from "lucide-react"
 import { useMemo, useState } from "react"
 import { calculateRpsReadiness } from "@/lib/rps-readiness"
 import {
@@ -50,7 +50,7 @@ export function PreviewSection({ dosir, rps, mappedCpls, onStatusChange, current
           <Printer className="h-4 w-4" /> Cetak RPS
         </Button>
         <Button variant="outline" size="sm" onClick={() => window.open(`/rpm/${dosir.id}`, "_blank")} className="gap-2">
-          <CalendarDays className="h-4 w-4" /> Lihat RPM
+          <ClipboardCheck className="h-4 w-4" /> Lihat RPM (Rubrik)
         </Button>
         <Button variant="outline" size="sm" onClick={() => window.open(`/rtm/${dosir.id}`, "_blank")} className="gap-2">
           <ClipboardList className="h-4 w-4" /> Lihat RTM

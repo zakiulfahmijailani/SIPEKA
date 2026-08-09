@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, unique, boolean, real } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, pgEnum, unique, boolean, real, date } from "drizzle-orm/pg-core"
 import { createId } from "@paralleldrive/cuid2"
 import { dosirMk } from "./dosir"
 import { users } from "./auth"
@@ -58,6 +58,14 @@ export const rps = pgTable("rps", {
   submitted_at: timestamp("submitted_at"),
   approved_at: timestamp("approved_at"),
   approved_by: text("approved_by").references(() => users.id),
+  deskripsi_mk: text("deskripsi_mk"),
+  metode_pembelajaran: text("metode_pembelajaran"),
+  persyaratan_kehadiran: text("persyaratan_kehadiran"),
+  status_revisi: text("status_revisi").notNull().default("R-1"),
+  tanggal_penyusunan: date("tanggal_penyusunan"),
+  nama_penyetuju: text("nama_penyetuju"),
+  jabatan_penyetuju: text("jabatan_penyetuju").notNull().default("Ketua Program Studi"),
+  tanggal_pengesahan: date("tanggal_pengesahan"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => [unique().on(t.dosir_mk_id, t.version)])
@@ -77,6 +85,7 @@ export const cpmk = pgTable("cpmk", {
   rps_id: text("rps_id").notNull().references(() => rps.id, { onDelete: "cascade" }),
   kode: text("kode").notNull(),
   deskripsi: text("deskripsi").notNull(),
+  metode_pencapaian: text("metode_pencapaian"),
   urutan: integer("urutan").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [unique().on(t.rps_id, t.kode)])
@@ -110,6 +119,7 @@ export const rpsPertemuan = pgTable("rps_pertemuan", {
   aktivitas_dosen: text("aktivitas_dosen"),
   aktivitas_mahasiswa: text("aktivitas_mahasiswa"),
   kriteria_penilaian: text("kriteria_penilaian"),
+  referensi: text("referensi"),
   created_at: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [unique().on(t.rps_id, t.minggu_ke)])
 
@@ -133,6 +143,8 @@ export const komponenPenilaian = pgTable("komponen_penilaian", {
   minggu_pemberian: integer("minggu_pemberian"),
   minggu_pengumpulan: integer("minggu_pengumpulan"),
   is_kelompok: boolean("is_kelompok").notNull().default(false),
+  referensi_tugas: text("referensi_tugas"),
+  lain_lain: text("lain_lain"),
   urutan: integer("urutan").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),

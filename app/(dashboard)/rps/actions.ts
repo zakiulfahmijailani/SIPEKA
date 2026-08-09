@@ -40,6 +40,7 @@ type CpmkInput = {
   id?: string
   kode: string
   deskripsi: string
+  metode_pencapaian?: string
   cpl_id?: string
   urutan: number
   subCpmks?: SubCpmkInput[]
@@ -69,6 +70,8 @@ type KomponenInput = {
   minggu_pemberian?: number | null
   minggu_pengumpulan?: number | null
   is_kelompok?: boolean
+  referensi_tugas?: string
+  lain_lain?: string
   urutan: number
   cpmk_ids?: string[]
   sub_cpmk_ids?: string[]
@@ -86,7 +89,19 @@ type MeetingInput = {
   aktivitas_dosen?: string
   aktivitas_mahasiswa?: string
   kriteria_penilaian?: string
+  referensi?: string
   sub_cpmk_ids?: string[]
+}
+
+type RpsFormalitiesInput = {
+  deskripsi_mk?: string
+  metode_pembelajaran?: string
+  persyaratan_kehadiran?: string
+  status_revisi?: string
+  tanggal_penyusunan?: string | null
+  nama_penyetuju?: string
+  jabatan_penyetuju?: string
+  tanggal_pengesahan?: string | null
 }
 
 async function resolveActorId() {
@@ -134,11 +149,12 @@ async function copyCpmkTemplateToRps(rpsId: string, mkId: string) {
         rps_id: rpsId,
         kode: template.kode,
         deskripsi: template.deskripsi,
+        metode_pencapaian: "Tatap muka, diskusi, dan latihan terstruktur",
         urutan: template.urutan,
       })
       .onConflictDoUpdate({
         target: [cpmk.rps_id, cpmk.kode],
-        set: { deskripsi: template.deskripsi, urutan: template.urutan },
+        set: { deskripsi: template.deskripsi, metode_pencapaian: "Tatap muka, diskusi, dan latihan terstruktur", urutan: template.urutan },
       })
       .returning()
 
@@ -221,7 +237,7 @@ export async function hydrateBlankRpsFromTemplate(dosirMkId: string) {
     const session = await getCurrentSession()
     if (!session?.user) return { success: false, hydrated: false, error: "Unauthorized" }
 
-    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId) })
+    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId), with: { mk: true } })
     if (!dosir) return { success: false, hydrated: false, error: "Penugasan mata kuliah tidak ditemukan" }
     if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
       return { success: false, hydrated: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
@@ -265,7 +281,7 @@ export async function createOrGetRps(dosirMkId: string) {
     })
     if (existing) return { success: true, data: existing }
 
-    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId) })
+    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId), with: { mk: true } })
     if (!dosir) return { success: false, error: "Penugasan mata kuliah tidak ditemukan" }
     if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
       return { success: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
@@ -275,6 +291,10 @@ export async function createOrGetRps(dosirMkId: string) {
       dosir_mk_id: dosirMkId,
       status: "DRAFT",
       version: 1,
+      deskripsi_mk: dosir.mk.deskripsi || null,
+      status_revisi: "R-1",
+      tanggal_penyusunan: new Date().toISOString().slice(0, 10),
+      jabatan_penyetuju: "Ketua Program Studi",
     }).returning()
 
     await copyCourseTemplateToRps(created.id, dosir.mk_id)
@@ -386,6 +406,28 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
   }
 }
 
+export async function saveRpsFormalities(rpsId: string, data: RpsFormalitiesInput) {
+  try {
+    await assertCanEditRps(rpsId)
+    await db.update(rps).set({
+      deskripsi_mk: data.deskripsi_mk?.trim() || null,
+      metode_pembelajaran: data.metode_pembelajaran?.trim() || null,
+      persyaratan_kehadiran: data.persyaratan_kehadiran?.trim() || null,
+      status_revisi: data.status_revisi?.trim() || "R-1",
+      tanggal_penyusunan: data.tanggal_penyusunan || null,
+      nama_penyetuju: data.nama_penyetuju?.trim() || null,
+      jabatan_penyetuju: data.jabatan_penyetuju?.trim() || "Ketua Program Studi",
+      tanggal_pengesahan: data.tanggal_pengesahan || null,
+      updated_at: new Date(),
+    }).where(eq(rps.id, rpsId))
+    revalidatePath(`/rps`)
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: "Gagal menyimpan kelengkapan dokumen RPS" }
+  }
+}
+
 export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
   try {
     await assertCanEditRps(rpsId)
@@ -395,10 +437,11 @@ export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
           rps_id: rpsId,
           kode: item.kode,
           deskripsi: item.deskripsi,
+          metode_pencapaian: item.metode_pencapaian || null,
           urutan: item.urutan,
         }).onConflictDoUpdate({
           target: [cpmk.rps_id, cpmk.kode],
-          set: { deskripsi: item.deskripsi, urutan: item.urutan },
+          set: { deskripsi: item.deskripsi, metode_pencapaian: item.metode_pencapaian || null, urutan: item.urutan },
         }).returning()
 
         await tx.delete(cpmkCpl).where(eq(cpmkCpl.cpmk_id, saved.id))
@@ -480,6 +523,8 @@ export async function saveKomponens(rpsId: string, data: KomponenInput[]) {
           minggu_pemberian: item.minggu_pemberian || null,
           minggu_pengumpulan: item.minggu_pengumpulan || null,
           is_kelompok: Boolean(item.is_kelompok),
+          referensi_tugas: item.referensi_tugas || null,
+          lain_lain: item.lain_lain || null,
           urutan: item.urutan,
           updated_at: new Date(),
         }
@@ -573,6 +618,7 @@ export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
           aktivitas_dosen: item.aktivitas_dosen,
           aktivitas_mahasiswa: item.aktivitas_mahasiswa,
           kriteria_penilaian: item.kriteria_penilaian,
+          referensi: item.referensi,
         }).onConflictDoUpdate({
           target: [rpsPertemuan.rps_id, rpsPertemuan.minggu_ke],
           set: {
@@ -585,6 +631,7 @@ export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
             aktivitas_dosen: item.aktivitas_dosen,
             aktivitas_mahasiswa: item.aktivitas_mahasiswa,
             kriteria_penilaian: item.kriteria_penilaian,
+            referensi: item.referensi,
           },
         }).returning()
 

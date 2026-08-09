@@ -23,6 +23,7 @@ import { toast } from "sonner"
 
 // Komponen Seksi
 import { IdentitasSection } from "./sections/Identitas"
+import { FormalitiesSection } from "./sections/Formalities"
 import { CplSection } from "./sections/CplMapping"
 import { CpmkSection } from "./sections/Cpmk"
 import { AssessmentSection } from "./sections/Assessment"
@@ -39,7 +40,7 @@ interface RpsEditorProps {
   currentUser: any
 }
 
-export type SectionType = "IDENTITAS" | "CPL" | "CPMK" | "ASSESSMENT" | "MEETINGS" | "REFERENCES" | "PREVIEW"
+export type SectionType = "IDENTITAS" | "FORMALITAS" | "CPL" | "CPMK" | "ASSESSMENT" | "MEETINGS" | "REFERENCES" | "PREVIEW"
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT:             "Draf",
@@ -55,10 +56,11 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
 
   const sections = [
     { id: "IDENTITAS",  label: "Identitas MK",          icon: Book },
+    { id: "FORMALITAS", label: "Deskripsi & Pengesahan", icon: FileCheck },
     { id: "CPL",        label: "CPL Dibebankan",         icon: Target },
     { id: "CPMK",       label: "CPMK & Sub-CPMK",        icon: Target },
-    { id: "MEETINGS",   label: "RPM • 16 Minggu",        icon: CalendarDays },
-    { id: "ASSESSMENT", label: "RTM • Asesmen & Rubrik", icon: ClipboardList },
+    { id: "MEETINGS",   label: "Rencana Mingguan · 16 Minggu", icon: CalendarDays },
+    { id: "ASSESSMENT", label: "RTM & Rubrik Penilaian", icon: ClipboardList },
     { id: "REFERENCES", label: "Referensi",               icon: Library },
     { id: "PREVIEW",    label: "Pratinjau & Ajukan",      icon: FileCheck },
   ]
@@ -92,6 +94,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
 
     switch (activeSection) {
       case "IDENTITAS":  return <IdentitasSection dosir={dosir} />
+      case "FORMALITAS": return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} />
       case "CPL":        return <CplSection cpls={mappedCpls} />
       case "CPMK":       return <CpmkSection rpsId={rpsData.id} initialCpmks={rpsData.cpmks || []} mappedCpls={mappedCpls} />
       case "ASSESSMENT": return <AssessmentSection rpsId={rpsData.id} initialKomponens={rpsData.komponens || []} cpmks={rpsData.cpmks || []} />
@@ -124,7 +127,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
         </div>
         <div className="flex items-center gap-3">
           <Link href={`/rpm/${dosir.id}`} target="_blank" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden gap-2 lg:inline-flex")}>
-            <Files className="h-4 w-4" /> RPM
+            <Files className="h-4 w-4" /> Rubrik (RPM)
           </Link>
           <Link href={`/rtm/${dosir.id}`} target="_blank" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden gap-2 lg:inline-flex")}>
             <ClipboardList className="h-4 w-4" /> RTM
