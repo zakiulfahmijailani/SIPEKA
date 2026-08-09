@@ -99,7 +99,7 @@ export default async function RpsPrintPage({ params }: { params: Promise<{ dosir
         th, td { border: 1px solid #000; padding: 5px; vertical-align: top; }
         th { font-weight: 700; text-align: center; }
       `}} />
-      <PrintToolbar backHref={`/rps/${dosirId}`} label="RPS" />
+      <PrintToolbar backHref={`/rps/${dosirId}`} label="RPS" documentType="rps" dosirId={dosirId} />
 
       <article className="print-page mx-auto max-w-[210mm] space-y-5 bg-white p-[14mm] shadow-sm print:max-w-none print:p-0">
         <OfficialHeader title="Form Rencana Pembelajaran Semester (RPS)" formCode="F-PPK-09" />

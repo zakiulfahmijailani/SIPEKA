@@ -20,7 +20,7 @@ export default async function RtmDocumentPage({ params }: { params: Promise<{ do
 
   return <div className="mx-auto max-w-[210mm] bg-slate-100 p-6 font-serif text-[10pt] print:max-w-none print:bg-white print:p-0">
     <style dangerouslySetInnerHTML={{ __html: `@media print { @page { size: A4 portrait; margin: 14mm; } .no-print { display: none !important; } .rtm-page { break-after: page; box-shadow: none !important; margin: 0 !important; } } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #000; padding: 5px; vertical-align: top; }` }} />
-    <PrintToolbar backHref="/rtm" label="RTM" />
+    <PrintToolbar backHref="/rtm" label="RTM" documentType="rtm" dosirId={dosirId} />
     {assessments.length === 0 ? <div className="mt-6 rounded-xl border-2 border-dashed bg-white py-20 text-center text-sm text-slate-500">Belum ada asesmen yang dapat dibuatkan RTM.</div> : assessments.map((assessment, index) => <article key={assessment.id} className="rtm-page mt-6 space-y-5 bg-white p-[14mm] shadow-sm print:mt-0 print:p-0">
       <OfficialHeader />
       <h1 className="text-center text-[13pt] font-bold uppercase">Rencana Tugas Mahasiswa</h1>

@@ -36,7 +36,7 @@ export default async function RpmDocumentPage({ params }: { params: Promise<{ do
         @media print { @page { size: A4 portrait; margin: 14mm; } .no-print { display: none !important; } .rpm-page { break-after: page; box-shadow: none !important; margin: 0 !important; } }
         table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #000; padding: 5px; vertical-align: top; } th { text-align: center; font-weight: 700; }
       ` }} />
-      <PrintToolbar backHref="/rpm" label="RPM (Rubrik Penilaian Mahasiswa)" />
+      <PrintToolbar backHref="/rpm" label="RPM (Rubrik Penilaian Mahasiswa)" documentType="rpm" dosirId={dosirId} />
 
       {assessments.length === 0 ? (
         <div className="mt-6 rounded-xl border-2 border-dashed bg-white py-20 text-center text-sm text-slate-500">Belum ada komponen asesmen yang dapat dibuatkan RPM.</div>
