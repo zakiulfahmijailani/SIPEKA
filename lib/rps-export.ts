@@ -1,4 +1,6 @@
 import React from "react"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 import {
   AlignmentType,
   Document as DocxDocument,
@@ -12,6 +14,7 @@ import {
   WidthType,
 } from "docx"
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer"
+import JSZip from "jszip"
 
 export type ExportDocumentType = "rps" | "rtm" | "rpm"
 
@@ -33,6 +36,159 @@ const courseName = (data: any) => data.dosir.mk.nama_en ? `${data.dosir.mk.nama_
 const assessments = (data: any) => [...(data.rps?.komponens ?? [])].sort((a, b) => a.urutan - b.urutan)
 const cpmks = (data: any) => [...(data.rps?.cpmks ?? [])].sort((a, b) => a.urutan - b.urutan)
 const meetings = (data: any) => [...(data.rps?.pertemuans ?? [])].sort((a, b) => a.minggu_ke - b.minggu_ke)
+
+const escapeXml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+function replaceTextInXml(element: string, value: string) {
+  let hasWritten = false
+  const text = escapeXml(value).replace(/\n/g, "</w:t><w:br/><w:t xml:space=\"preserve\">")
+  return element.replace(/<w:t([^>]*)>[\s\S]*?<\/w:t>/g, (_match, attributes) => {
+    if (hasWritten) return `<w:t${attributes}></w:t>`
+    hasWritten = true
+    return `<w:t${attributes}>${text}</w:t>`
+  })
+}
+
+function replaceNthSegment(xml: string, pattern: RegExp, index: number, update: (segment: string) => string) {
+  let current = 0
+  return xml.replace(pattern, (segment) => current++ === index ? update(segment) : segment)
+}
+
+function replaceCell(tableXml: string, rowIndex: number, cellIndex: number, value: string) {
+  return replaceNthSegment(tableXml, /<w:tr(?:\s[^>]*)?>[\s\S]*?<\/w:tr>/g, rowIndex, (row) =>
+    replaceNthSegment(row, /<w:tc(?:\s[^>]*)?>[\s\S]*?<\/w:tc>/g, cellIndex, (cell) => replaceTextInXml(cell, value)),
+  )
+}
+
+function replaceParagraphContaining(xml: string, needle: string, value: string) {
+  return xml.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) => paragraph.includes(needle) ? replaceTextInXml(paragraph, value) : paragraph)
+}
+
+function topLevelTables(xml: string) {
+  const tables: Array<{ start: number; end: number; xml: string }> = []
+  const opening = /<w:tbl(?:\s[^>]*)?>/g
+  let match: RegExpExecArray | null
+  while ((match = opening.exec(xml))) {
+    const end = xml.indexOf("</w:tbl>", match.index)
+    if (end < 0) break
+    tables.push({ start: match.index, end: end + "</w:tbl>".length, xml: xml.slice(match.index, end + "</w:tbl>".length) })
+    opening.lastIndex = end + "</w:tbl>".length
+  }
+  return tables
+}
+
+function cplGroups(data: any) {
+  const cpls = Array.from(new Map(cpmks(data).flatMap((item: any) => item.cplMappings.map((mapping: any) => [mapping.cpl.id, mapping.cpl]))).values()) as any[]
+  return [cpls.slice(0, 2), cpls.slice(2, 4), cpls.slice(4)]
+}
+
+function updateTemplateRpsTables(xml: string, data: any) {
+  const rps = data.rps
+  const templateTables = topLevelTables(xml)
+  const updated = templateTables.map((item) => item.xml)
+  const semesterLabel = data.dosir.tahunAkademik.semester === 1 ? "Ganjil" : "Genap"
+  const period = `${data.dosir.tahunAkademik.kode} - ${semesterLabel}`
+  const prereq = "Tidak ada"
+
+  updated[0] = replaceCell(updated[0], 0, 1, `SYLLABUS (RENCANA PEMBELAJARAN SEMESTER) [${data.dosir.mk.kode}] Pg. 1/10`)
+  updated[1] = replaceCell(updated[1], 0, 0, `Course Code (Kode Matakuliah): ${data.dosir.mk.kode}`)
+  updated[1] = replaceCell(updated[1], 0, 1, `Course Name (Nama Matakuliah): ${courseName(data)}`)
+  updated[1] = replaceCell(updated[1], 1, 0, "Study Program (Program Studi): Sistem Informasi / Information System")
+  updated[1] = replaceCell(updated[1], 1, 1, "Faculty (Fakultas): FTIK")
+  updated[1] = replaceCell(updated[1], 2, 0, `Course Prerequisite (Matakuliah Prasyarat): ${prereq}`)
+  updated[1] = replaceCell(updated[1], 2, 1, `Credit (Kredit): ${totalSks(data)} SKS`)
+  updated[1] = replaceCell(updated[1], 3, 1, `Lecture (Kuliah): ${data.dosir.mk.sks_teori} SKS`)
+  updated[1] = replaceCell(updated[1], 3, 2, "Tutorial: 0")
+  updated[1] = replaceCell(updated[1], 3, 3, `Practicum (Praktikum): ${data.dosir.mk.sks_praktik} SKS`)
+  updated[1] = replaceCell(updated[1], 4, 0, `Revision Status (Status Revisi): ${rps?.status_revisi || "R-1"}`)
+  updated[1] = replaceCell(updated[1], 4, 1, `Odd / Even Semester (${semesterLabel})\nAcademic Year: ${data.dosir.tahunAkademik.kode}`)
+  updated[1] = replaceCell(updated[1], 5, 0, `Lecturer's Name: ${data.dosir.dosen.nama_lengkap}`)
+  updated[1] = replaceCell(updated[1], 6, 0, `Dipersiapkan oleh (Prepared by)\nNama: ${data.dosir.dosen.nama_lengkap}\nJabatan: Dosen Pengampu\nTanggal: ${rps?.tanggal_penyusunan || "-"}`)
+  updated[1] = replaceCell(updated[1], 6, 1, `Disahkan oleh (Certified by)\nNama: ${rps?.nama_penyetuju || "-"}\nJabatan: ${rps?.jabatan_penyetuju || "Ketua Program Studi"}\nTanggal: ${rps?.tanggal_pengesahan || "-"}`)
+
+  const groups = cplGroups(data)
+  groups.forEach((group, index) => {
+    const codes = group.map((item: any) => item.kode).join(", ") || "-"
+    updated[2] = replaceCell(updated[2], 0, index + 3, codes)
+    updated[2] = replaceCell(updated[2], 1, index + 3, codes)
+    updated[2] = replaceCell(updated[2], 2, index + 3, codes)
+  })
+  updated[2] = replaceCell(updated[2], 2, 0, data.dosir.mk.kode)
+  updated[2] = replaceCell(updated[2], 2, 1, courseName(data))
+  updated[2] = replaceCell(updated[2], 2, 2, String(totalSks(data)))
+
+  const outcomeRows = cpmks(data)
+  for (let index = 0; index < 5; index++) {
+    const item = outcomeRows[index]
+    updated[3] = replaceCell(updated[3], index + 1, 0, item?.kode || "")
+    updated[3] = replaceCell(updated[3], index + 1, 1, item?.deskripsi || "")
+    updated[3] = replaceCell(updated[3], index + 1, 2, item ? item.cplMappings.map((mapping: any) => `${mapping.cpl.rumusan} [${mapping.cpl.kode}]`).join("; ") : "")
+    updated[3] = replaceCell(updated[3], index + 1, 3, item?.metode_pencapaian || "")
+  }
+
+  const sessionRows = meetings(data)
+  for (let index = 0; index < 16; index++) {
+    const item = sessionRows[index]
+    updated[4] = replaceCell(updated[4], index + 1, 0, item ? String(item.minggu_ke) : String(index + 1))
+    updated[4] = replaceCell(updated[4], index + 1, 1, item ? item.subCpmkMappings.map((mapping: any) => `${mapping.subCpmk.kode}: ${mapping.subCpmk.deskripsi}`).join("\n") : "")
+    updated[4] = replaceCell(updated[4], index + 1, 2, item?.materi || "")
+    updated[4] = replaceCell(updated[4], index + 1, 3, item ? `${item.bentuk_pembelajaran || ""}\n${item.metode || ""}\n${item.estimasi_waktu || ""}`.trim() : "")
+    updated[4] = replaceCell(updated[4], index + 1, 4, item?.referensi || "")
+    updated[4] = replaceCell(updated[4], index + 1, 5, item ? `${item.indikator || ""}${item.kriteria_penilaian ? `\n${item.kriteria_penilaian}` : ""}`.trim() : "")
+  }
+
+  const assessment = assessments(data)[0]
+  if (assessment) {
+    updated[5] = replaceCell(updated[5], 3, 2, `: ${period}`)
+    updated[5] = replaceCell(updated[5], 5, 1, courseName(data))
+    updated[5] = replaceCell(updated[5], 6, 1, `Tugas ke-1 dari ${assessments(data).length}`)
+    updated[5] = replaceCell(updated[5], 7, 1, data.dosir.mk.kode)
+    updated[5] = replaceCell(updated[5], 7, 3, String(totalSks(data)))
+    updated[5] = replaceCell(updated[5], 7, 5, String(data.dosir.mk.semester_rekomendasi))
+    updated[5] = replaceCell(updated[5], 8, 1, data.dosir.dosen.nama_lengkap)
+    updated[5] = replaceCell(updated[5], 12, 0, assessment.is_kelompok ? "Tugas Kelompok" : "Tugas Individu")
+    updated[5] = replaceCell(updated[5], 12, 1, `Minggu ${assessment.minggu_pemberian || "-"} s.d. ${assessment.minggu_pengumpulan || "-"}`)
+    updated[5] = replaceCell(updated[5], 14, 0, assessment.nama || assessment.tipe)
+    updated[5] = replaceCell(updated[5], 16, 0, `${assessment.cpmkMappings.map((mapping: any) => cpmks(data).find((item: any) => item.id === mapping.cpmk_id)?.kode).filter(Boolean).join(", ")} ${assessment.subCpmkMappings.map((mapping: any) => mapping.subCpmk.kode).join(", ")}`.trim())
+    updated[5] = replaceCell(updated[5], 18, 0, `${assessment.deskripsi || ""}\n${assessment.instruksi || ""}`.trim())
+    updated[5] = replaceCell(updated[5], 20, 0, assessment.bentuk || assessment.luaran || "")
+    updated[5] = replaceCell(updated[5], 22, 0, `${assessment.kriteria_penilaian || ""}\nBobot: ${percentage(assessment.bobot)}`.trim())
+    updated[5] = replaceCell(updated[5], 24, 0, assessment.lain_lain || "")
+    updated[5] = replaceCell(updated[5], 26, 0, assessment.referensi_tugas || "")
+    updated[6] = replaceCell(updated[6], 3, 2, `: ${period}`)
+  }
+
+  let result = xml
+  for (let index = templateTables.length - 1; index >= 0; index--) result = `${result.slice(0, templateTables[index].start)}${updated[index]}${result.slice(templateTables[index].end)}`
+  return result
+}
+
+async function createTemplateRpsDocxExport(data: any) {
+  const templatePath = path.join(process.cwd(), "assets", "templates", "rps-kapita-selekta-gis-template.docx")
+  const template = await readFile(templatePath)
+  const archive = await JSZip.loadAsync(template)
+  const documentFile = archive.file("word/document.xml")
+  if (!documentFile) throw new Error("Template RPS tidak memiliki word/document.xml")
+  let xml = await documentFile.async("string")
+  xml = updateTemplateRpsTables(xml, data)
+
+  xml = replaceParagraphContaining(xml, "This course exposes students", dash(data.rps?.deskripsi_mk))
+  xml = replaceParagraphContaining(xml, "Through the lecturing and mentoring", dash(data.rps?.metode_pembelajaran))
+  xml = replaceParagraphContaining(xml, "Punctuality and regular attendance", dash(data.rps?.persyaratan_kehadiran))
+  xml = replaceParagraphContaining(xml, "Coursework evaluation will be weighted as follows:", "Coursework evaluation will be weighted as follows:")
+  const assessmentRows = assessments(data)
+  ;["Mid-Semester Examination", "Final Examination", "Others Case / Assignment / Discussion Group"].forEach((needle, index) => {
+    const assessment = assessmentRows[index]
+    xml = replaceParagraphContaining(xml, needle, assessment ? `${assessment.nama || assessment.tipe}\t${percentage(assessment.bobot)}` : "")
+  })
+  ;["[T1]", "[T2]", "[T3]"].forEach((needle, index) => {
+    const reference = [...(data.rps?.referensis ?? [])].sort((a: any, b: any) => a.urutan - b.urutan)[index]
+    if (reference) xml = replaceParagraphContaining(xml, needle, `[${reference.jenis}] ${reference.teks}`)
+  })
+  xml = xml.replaceAll("SIF212", data.dosir.mk.kode).replaceAll("Kapita Selekta", data.dosir.mk.nama_id).replaceAll("Capita Selecta", data.dosir.mk.nama_en || data.dosir.mk.nama_id)
+  archive.file("word/document.xml", xml)
+  return archive.generateAsync({ type: "nodebuffer", compression: "DEFLATE" })
+}
 
 function docxCell(value: string, bold = false) {
   return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: value || "-", bold, size: 18 })] })] })
@@ -120,7 +276,8 @@ function rpmChildren(data: any) {
 }
 
 export async function createDocxExport(type: ExportDocumentType, data: any) {
-  const children = type === "rps" ? rpsChildren(data) : type === "rtm" ? rtmChildren(data) : rpmChildren(data)
+  if (type === "rps") return createTemplateRpsDocxExport(data)
+  const children = type === "rtm" ? rtmChildren(data) : rpmChildren(data)
   const document = new DocxDocument({
     numbering: { config: [{ reference: "references", levels: [{ level: 0, format: "decimal", text: "%1.", alignment: AlignmentType.START }] }] },
     sections: [{ properties: { page: { margin: { top: 700, right: 700, bottom: 700, left: 700 } } }, children }],
