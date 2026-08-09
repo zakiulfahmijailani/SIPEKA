@@ -43,10 +43,10 @@ export async function getRpsDocumentData(dosirId: string) {
   return { dosir, rps: rpsData }
 }
 
-export async function listLecturerDocuments(userId: string, role: string) {
-  const activeTa = await db.query.tahunAkademik.findFirst({
-    where: eq(tahunAkademik.is_active, true),
-  })
+export async function listLecturerDocuments(userId: string, role: string, tahunAkademikId?: string | null) {
+  const activeTa = tahunAkademikId
+    ? await db.query.tahunAkademik.findFirst({ where: eq(tahunAkademik.id, tahunAkademikId) })
+    : await db.query.tahunAkademik.findFirst({ where: eq(tahunAkademik.is_active, true) })
 
   const assignments = await db.query.dosirMk.findMany({
     where: and(

@@ -36,7 +36,7 @@ export function DocumentCourseList({
       <div className="rounded-xl border-2 border-dashed bg-white py-16 text-center">
         <Icon className="mx-auto mb-3 h-9 w-9 text-gray-300" />
         <p className="font-medium text-gray-700">Belum ada mata kuliah yang diampu.</p>
-        <p className="mt-1 text-sm text-gray-500">Penugasan dosen akan muncul pada semester aktif.</p>
+        <p className="mt-1 text-sm text-gray-500">Penugasan dosen akan muncul pada periode yang dipilih di Dashboard.</p>
       </div>
     )
   }

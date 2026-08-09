@@ -130,9 +130,11 @@ function RowSavedIndicator({ visible }: { visible: boolean }) {
 export function InputNilaiClient({
   dosirs,
   initialGrades,
+  academicTerm,
 }: {
   dosirs: any[]
   initialGrades: any[]
+  academicTerm: string
 }) {
   const [selectedDosirId, setSelectedDosirId] = useState<string | null>(null)
   const [grades, setGrades] = useState<Record<string, Record<string, number>>>({})
@@ -246,9 +248,7 @@ export function InputNilaiClient({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Input Nilai</h1>
-            <p className="text-muted-foreground text-sm">
-              Pilih kelas dan masukkan nilai komponen mahasiswa
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2"><p className="text-muted-foreground text-sm">Pilih kelas dan masukkan nilai komponen mahasiswa</p><Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">{academicTerm}</Badge></div>
           </div>
 
           {selectedDosirId && dosir?.enrollments?.length > 0 && (

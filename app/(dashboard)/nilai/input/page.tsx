@@ -1,18 +1,18 @@
-import { MOCK_SESSION } from "@/lib/mock-session"
 import { db } from "@/db"
-import { dosirMk, tahunAkademik, nilai } from "@/db/schema"
+import { dosirMk, nilai } from "@/db/schema"
 import { InputNilaiClient } from "./input-nilai-client"
 import { eq, and } from "drizzle-orm"
+import { getCurrentSession } from "@/lib/current-session"
+import { getAcademicTermContext } from "@/lib/academic-term"
+import { redirect } from "next/navigation"
 
 
 export const dynamic = "force-dynamic"
 export default async function InputNilaiPage() {
-  const session = MOCK_SESSION
-
-  // Get active TA
-  const activeTa = await db.query.tahunAkademik.findFirst({
-    where: eq(tahunAkademik.is_active, true)
-  })
+  const session = await getCurrentSession()
+  if (!session?.user) redirect("/login")
+  const period = await getAcademicTermContext()
+  const activeTa = period.term
 
   if (!activeTa) {
     return (
@@ -67,7 +67,8 @@ export default async function InputNilaiPage() {
   return (
     <InputNilaiClient 
       dosirs={myDosirs} 
-      initialGrades={existingGrades} 
+      initialGrades={existingGrades}
+      academicTerm={period.label}
     />
   )
 }

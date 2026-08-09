@@ -17,7 +17,7 @@ import { FileEdit, CheckCircle2, Clock, RotateCcw, Filter, Search } from "lucide
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
-export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
+export function RpsClientPage({ dosirs, academicTerm }: { dosirs: any[]; academicTerm: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "")
@@ -53,7 +53,7 @@ export function RpsClientPage({ dosirs }: { dosirs: any[] }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Pengelola RPS</h1>
-          <p className="text-muted-foreground">Kelola Rencana Pembelajaran Semester untuk mata kuliah Anda</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2"><p className="text-muted-foreground">Kelola Rencana Pembelajaran Semester untuk mata kuliah Anda</p><Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">{academicTerm}</Badge></div>
         </div>
       </div>
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { RpsDosenEmpty } from "@/components/empty-states"
@@ -326,7 +327,16 @@ function DosenDashboard({ stats, academicTerms }: { stats: any; academicTerms: a
     .filter((term) => term.year === selectedYear)
     .sort((a, b) => a.semester - b.semester)
 
-  const changePeriod = (year: string, semester: string) => {
+  const savePeriod = async (year: string, semester: string) => {
+    await fetch("/api/academic-term", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tahun: year, semester }) })
+  }
+
+  useEffect(() => {
+    if (selectedYear && selectedSemester) void savePeriod(selectedYear, selectedSemester)
+  }, [selectedYear, selectedSemester])
+
+  const changePeriod = async (year: string, semester: string) => {
+    await savePeriod(year, semester)
     const params = new URLSearchParams()
     params.set("tahun", year)
     params.set("semester", semester)
@@ -360,7 +370,7 @@ function DosenDashboard({ stats, academicTerms }: { stats: any; academicTerms: a
                 onChange={(event) => {
                   const year = event.target.value
                   const firstSemester = academicTerms.find((term) => term.year === year)?.semester ?? 1
-                  changePeriod(year, String(firstSemester))
+                  void changePeriod(year, String(firstSemester))
                 }}
                 className="h-8 rounded-lg border-0 bg-blue-50 px-2 text-xs font-semibold text-blue-800 outline-none focus:ring-2 focus:ring-blue-500/20"
               >
@@ -371,7 +381,7 @@ function DosenDashboard({ stats, academicTerms }: { stats: any; academicTerms: a
               <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Semester</span>
               <select
                 value={selectedSemester}
-                onChange={(event) => changePeriod(selectedYear, event.target.value)}
+                onChange={(event) => void changePeriod(selectedYear, event.target.value)}
                 className="h-8 rounded-lg border-0 bg-blue-50 px-2 text-xs font-semibold text-blue-800 outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 {availableSemesters.map((term) => <option key={term.id} value={term.semester}>{term.semester === 1 ? "Ganjil" : "Genap"}</option>)}
