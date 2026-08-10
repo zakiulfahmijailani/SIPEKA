@@ -288,7 +288,9 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
       }
     }
 
-    await db.transaction(async (tx) => {
+    // neon-http does not support Drizzle transactions; keep the import on the same
+    // database facade so it also works in the deployed server action.
+    await (async (tx: typeof db) => {
       const cplByCode = new Map<string, string>()
       if (scope === "templates") {
         const existingCpls = await tx.select({ id: cpl.id, kode: cpl.kode }).from(cpl)
@@ -449,7 +451,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
           }
         }
       }
-    })
+    })(db)
 
     revalidatePath("/dashboard")
     revalidatePath("/rps")

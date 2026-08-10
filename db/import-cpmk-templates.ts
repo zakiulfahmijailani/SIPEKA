@@ -124,7 +124,7 @@ async function main() {
   const missingCourses = [...new Set(cpmkWithDescriptions.filter((item) => !courseByCode.has(item.kodeMk)).map((item) => item.kodeMk))]
   const missingCpls = [...new Set(cpmkWithDescriptions.filter((item) => !cplByCode.has(item.kodeCpl)).map((item) => item.kodeCpl))]
 
-  await db.transaction(async (tx) => {
+  await (async (tx: typeof db) => {
     const importedMkIds = importCourseCodes.map((kode) => courseByCode.get(kode)!).filter(Boolean)
     if (importedMkIds.length) await tx.delete(cpmkTemplate).where(inArray(cpmkTemplate.mk_id, importedMkIds))
 
@@ -172,7 +172,7 @@ async function main() {
       imported: { courses: importCourseCodes.length, cpmkTemplates: templateByKey.size, subCpmkTemplates: insertedSubCpmks },
       skipped: { coursesMissingFromMaster: missingCourses, cplsMissingFromMaster: missingCpls },
     }, null, 2))
-  })
+  })(db)
 }
 
 main().catch((error) => {
