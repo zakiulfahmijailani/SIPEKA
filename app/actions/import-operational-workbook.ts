@@ -373,6 +373,8 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
       const cpmkTemplateByKey = new Map<string, string>()
       const cpmkOrderByCourse = new Map<string, number>()
       const seenCpmkByCourse = new Set<string>()
+      const cpmkRows: Array<typeof cpmkTemplate.$inferInsert> = []
+      const cpmkKeys: string[] = []
       for (const item of parsed.courseCpmks) {
         const mkId = courseByCode.get(item.kodeMk)
         const cplId = cplByCode.get(item.kodeCpl)
@@ -383,47 +385,32 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         seenCpmkByCourse.add(templateKey)
         const order = (cpmkOrderByCourse.get(item.kodeMk) ?? 0) + 1
         cpmkOrderByCourse.set(item.kodeMk, order)
-
-        if (scope === "full") {
-          await tx.insert(petaKurikulum).values({ mk_id: mkId, cpl_id: cplId, bobot: 1 })
-            .onConflictDoNothing()
-        }
-
-        const [saved] = await tx.insert(cpmkTemplate).values({
-          mk_id: mkId,
-          cpl_id: cplId,
-          kode: item.kodeCpmk,
-          deskripsi: description,
-          urutan: order,
-          is_active: true,
-          updated_at: new Date(),
-        }).onConflictDoUpdate({
-          target: [cpmkTemplate.mk_id, cpmkTemplate.kode],
-          set: { cpl_id: cplId, deskripsi: description, urutan: order, is_active: true, updated_at: new Date() },
-        }).returning()
-        cpmkTemplateByKey.set(`${item.kodeMk}:${item.kodeCpmk}`, saved.id)
+        cpmkKeys.push(templateKey)
+        cpmkRows.push({ mk_id: mkId, cpl_id: cplId, kode: item.kodeCpmk, deskripsi: description, urutan: order, is_active: true, updated_at: new Date() })
+        if (scope === "full") await tx.insert(petaKurikulum).values({ mk_id: mkId, cpl_id: cplId, bobot: 1 }).onConflictDoNothing()
       }
 
-      const subTemplateByKey = new Map<string, string>()
+      const savedCpmks = cpmkRows.length > 0
+        ? await tx.insert(cpmkTemplate).values(cpmkRows).returning()
+        : []
+      savedCpmks.forEach((saved, index) => cpmkTemplateByKey.set(cpmkKeys[index], saved.id))
+
       const subOrderByCpmk = new Map<string, number>()
+      const subRows: Array<typeof subCpmkTemplate.$inferInsert> = []
+      const subKeys: string[] = []
+      const subTemplateByKey = new Map<string, string>()
       for (const item of parsed.subCpmks) {
         const templateId = cpmkTemplateByKey.get(`${item.kodeMk}:${item.kodeCpmk}`)
         if (!templateId) continue
         const orderKey = `${item.kodeMk}:${item.kodeCpmk}`
         const order = (subOrderByCpmk.get(orderKey) ?? 0) + 1
+        subKeys.push(`${item.kodeMk}:${item.kodeSubCpmk}`)
         subOrderByCpmk.set(orderKey, order)
-        const [saved] = await tx.insert(subCpmkTemplate).values({
-          cpmk_template_id: templateId,
-          kode: item.kodeSubCpmk,
-          deskripsi: item.deskripsi,
-          level_bloom: "C3",
-          urutan: order,
-          updated_at: new Date(),
-        }).onConflictDoUpdate({
-          target: [subCpmkTemplate.cpmk_template_id, subCpmkTemplate.kode],
-          set: { deskripsi: item.deskripsi, updated_at: new Date() },
-        }).returning()
-        subTemplateByKey.set(`${item.kodeMk}:${item.kodeSubCpmk}`, saved.id)
+        subRows.push({ cpmk_template_id: templateId, kode: item.kodeSubCpmk, deskripsi: item.deskripsi, level_bloom: "C3", urutan: order, updated_at: new Date() })
+      }
+      if (subRows.length > 0) {
+        const savedSubs = await tx.insert(subCpmkTemplate).values(subRows).returning()
+        savedSubs.forEach((saved, index) => subTemplateByKey.set(subKeys[index], saved.id))
       }
 
       if (scope === "full") {
