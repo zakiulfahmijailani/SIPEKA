@@ -12,6 +12,7 @@ import * as XLSX from "xlsx"
 import { inArray } from "drizzle-orm"
 
 import { cpl, cpmkTemplate, mataKuliah, subCpmkTemplate } from "./schema"
+import { findRedT15Rows } from "../lib/t15-workbook"
 
 type CourseCpmk = {
   kodeMk: string
@@ -40,8 +41,10 @@ const sheetRows = (workbook: XLSX.WorkBook, name: string) => {
   return XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, raw: true })
 }
 
-function parseWorkbook(filePath: string) {
-  const workbook = XLSX.readFile(filePath)
+async function parseWorkbook(filePath: string) {
+  const buffer = await (await import("node:fs/promises")).readFile(filePath)
+  const workbook = XLSX.read(buffer, { type: "buffer" })
+  const redRows = await findRedT15Rows(buffer)
   const cpmkDescriptions = new Map<string, string>()
   for (const row of sheetRows(workbook, "T12b CPL-CPMK-MK").slice(1)) {
     const kode = canonicalCpmk(row[4])
@@ -49,31 +52,38 @@ function parseWorkbook(filePath: string) {
     if (kode && deskripsi) cpmkDescriptions.set(kode, deskripsi)
   }
 
-  const courseCpmks: CourseCpmk[] = []
-  const t14 = sheetRows(workbook, "T14 CPL-MK-CPMK-OK")
-  const cplHeaders = (t14[1] || []).slice(2, 12).map(text)
-  for (const row of t14.slice(2)) {
-    const kodeMk = text(row[0])
-    if (!kodeMk) continue
-    cplHeaders.forEach((kodeCpl, index) => {
-      for (const kodeCpmk of text(row[index + 2]).split(",").map(canonicalCpmk).filter(Boolean)) {
-        courseCpmks.push({ kodeMk, kodeCpl, kodeCpmk })
-      }
-    })
-  }
-
   const subCpmks: SubCpmk[] = []
+  const courseCpmkKeys = new Set<string>()
+  const cplByCpmk = new Map<string, string>()
+  let currentCpl = ""
+  for (const row of sheetRows(workbook, "T12b CPL-CPMK-MK").slice(1)) {
+    if (text(row[1])) currentCpl = text(row[1])
+    const kodeCpmk = canonicalCpmk(row[4])
+    if (currentCpl && kodeCpmk) cplByCpmk.set(kodeCpmk, currentCpl)
+  }
   let currentMk = ""
   let currentCpmk = ""
-  for (const row of sheetRows(workbook, "T15 MK-CPMK-SubCPMK-OK").slice(1)) {
+  const removedCpmks = new Set<string>()
+  const t15Rows = sheetRows(workbook, "T15 MK-CPMK-SubCPMK-OK").slice(1)
+  for (const [index, row] of t15Rows.entries()) {
+    const sheetRow = index + 2
     if (text(row[1])) currentMk = text(row[1])
     if (text(row[3])) currentCpmk = canonicalCpmk(row[3])
+    const cpmkKey = `${currentMk}:${currentCpmk}`
+    if (text(row[3]) && redRows.cpmkRows.has(sheetRow)) removedCpmks.add(cpmkKey)
+    if (currentMk && currentCpmk && !removedCpmks.has(cpmkKey)) courseCpmkKeys.add(cpmkKey)
+    if (removedCpmks.has(cpmkKey)) continue
     const kodeSubCpmk = canonicalCpmk(row[4])
     const deskripsi = text(row[5])
-    if (currentMk && currentCpmk && kodeSubCpmk && deskripsi) {
+    if (!redRows.subCpmkRows.has(sheetRow) && currentMk && currentCpmk && kodeSubCpmk && deskripsi) {
       subCpmks.push({ kodeMk: currentMk, kodeCpmk: currentCpmk, kodeSubCpmk, deskripsi })
     }
   }
+  const courseCpmks: CourseCpmk[] = [...courseCpmkKeys].flatMap((key) => {
+    const [kodeMk, kodeCpmk] = key.split(":")
+    const kodeCpl = cplByCpmk.get(kodeCpmk)
+    return kodeCpl ? [{ kodeMk, kodeCpl, kodeCpmk }] : []
+  })
 
   return { cpmkDescriptions, courseCpmks, subCpmks }
 }
@@ -84,7 +94,7 @@ async function main() {
     throw new Error("Gunakan: npx tsx db/import-cpmk-templates.ts <workbook.xlsx> --dry-run|--commit")
   }
 
-  const parsed = parseWorkbook(filePath)
+  const parsed = await parseWorkbook(filePath)
   const cpmkWithDescriptions = parsed.courseCpmks.filter((item) => parsed.cpmkDescriptions.has(item.kodeCpmk))
   const mappedCourseCodes = [...new Set(cpmkWithDescriptions.map((item) => item.kodeMk))]
   const pti = cpmkWithDescriptions.filter((item) => item.kodeMk === "SIF101")

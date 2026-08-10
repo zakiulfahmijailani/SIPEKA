@@ -14,6 +14,7 @@ import {
   subCpmkTemplate,
 } from "@/db/schema"
 import { getCurrentSession } from "@/lib/current-session"
+import { findRedT15Rows } from "@/lib/t15-workbook"
 
 type CourseInput = {
   kode: string
@@ -122,8 +123,9 @@ function domainFromCategory(category: string) {
   return "KETERAMPILAN_KHUSUS" as const
 }
 
-function parseWorkbook(buffer: ArrayBuffer): ParsedWorkbook {
+async function parseWorkbook(buffer: ArrayBuffer): Promise<ParsedWorkbook> {
   const workbook = XLSX.read(buffer, { type: "array" })
+  const redRows = await findRedT15Rows(buffer)
   const missingSheets = REQUIRED_SHEETS.filter((name) => !workbook.SheetNames.includes(name))
   if (missingSheets.length > 0) throw new Error(`Sheet wajib tidak ditemukan: ${missingSheets.join(", ")}`)
 
@@ -161,30 +163,38 @@ function parseWorkbook(buffer: ArrayBuffer): ParsedWorkbook {
     if (kode && deskripsi) cpmkDescriptions.set(kode, deskripsi)
   }
 
-  const courseCpmks: CourseCpmkInput[] = []
-  const t14 = rows(workbook, "T14 CPL-MK-CPMK-OK")
-  const cplHeaders = (t14[1] || []).slice(2, 12).map((value) => text(value))
-  for (const row of t14.slice(2)) {
-    const kodeMk = text(row[0])
-    if (!kodeMk) continue
-    cplHeaders.forEach((kodeCpl, index) => {
-      const codes = text(row[index + 2]).split(",").map(canonicalCpmk).filter(Boolean)
-      for (const kodeCpmk of codes) courseCpmks.push({ kodeMk, kodeCpl, kodeCpmk })
-    })
-  }
-
   const subCpmks: SubCpmkInput[] = []
+  const courseCpmkKeys = new Set<string>()
+  const cplByCpmk = new Map<string, string>()
+  let currentCpl = ""
+  for (const row of rows(workbook, "T12b CPL-CPMK-MK").slice(1)) {
+    if (text(row[1])) currentCpl = text(row[1])
+    const kodeCpmk = canonicalCpmk(row[4])
+    if (currentCpl && kodeCpmk) cplByCpmk.set(kodeCpmk, currentCpl)
+  }
   let currentMk = ""
   let currentCpmk = ""
-  for (const row of rows(workbook, "T15 MK-CPMK-SubCPMK-OK").slice(1)) {
+  const removedCpmks = new Set<string>()
+  const t15Rows = rows(workbook, "T15 MK-CPMK-SubCPMK-OK").slice(1)
+  for (const [index, row] of t15Rows.entries()) {
+    const sheetRow = index + 2
     if (text(row[1])) currentMk = text(row[1])
     if (text(row[3])) currentCpmk = canonicalCpmk(row[3])
+    const cpmkKey = `${currentMk}:${currentCpmk}`
+    if (text(row[3]) && redRows.cpmkRows.has(sheetRow)) removedCpmks.add(cpmkKey)
+    if (currentMk && currentCpmk && !removedCpmks.has(cpmkKey)) courseCpmkKeys.add(cpmkKey)
+    if (removedCpmks.has(cpmkKey)) continue
     const kodeSubCpmk = canonicalCpmk(row[4])
     const deskripsi = text(row[5])
-    if (currentMk && currentCpmk && kodeSubCpmk && deskripsi) {
+    if (!redRows.subCpmkRows.has(sheetRow) && currentMk && currentCpmk && kodeSubCpmk && deskripsi) {
       subCpmks.push({ kodeMk: currentMk, kodeCpmk: currentCpmk, kodeSubCpmk, deskripsi })
     }
   }
+  const courseCpmks: CourseCpmkInput[] = [...courseCpmkKeys].flatMap((key) => {
+    const [kodeMk, kodeCpmk] = key.split(":")
+    const kodeCpl = cplByCpmk.get(kodeCpmk)
+    return kodeCpl ? [{ kodeMk, kodeCpl, kodeCpmk }] : []
+  })
 
   const assessments: AssessmentInput[] = []
   currentMk = ""
@@ -258,7 +268,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
   if (!file || file.size === 0) return { success: false, message: "Pilih file workbook terlebih dahulu." }
 
   try {
-    const parsed = parseWorkbook(await file.arrayBuffer())
+    const parsed = await parseWorkbook(await file.arrayBuffer())
     const summary = {
       cpls: parsed.cpls.length,
       courses: parsed.courses.length,
