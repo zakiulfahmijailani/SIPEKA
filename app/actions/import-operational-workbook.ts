@@ -128,6 +128,12 @@ function parsePlottingWorkbook(workbook: XLSX.WorkBook): PlottingAssignment[] | 
   })
 }
 
+function plottingClass(value: string) {
+  const base = value.split("/")[0].replace(/-+$/, "")
+  const semester = value.includes("-P") ? "P" : "W"
+  return `${base}-${semester}`.slice(0, 10)
+}
+
 function cleanCourseName(value: string) {
   return value
     .replace(/[¹²³]\)/g, "")
@@ -340,7 +346,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         const mkId = courseByCode.get(item.kodeMk)
         const dosenId = userByPlotName.get(item.namaDosen)
         if (!mkId || !dosenId) { if (!mkId) missingCourses.add(item.kodeMk); continue }
-        const kelas = item.kodeKelas.split(" - ")[1] || "A"
+        const kelas = plottingClass(item.kodeKelas.split(" - ")[1] || "A")
         const existingAssignments = await db.query.dosirMk.findMany({ where: and(eq(dosirMk.mk_id, mkId), eq(dosirMk.tahun_akademik_id, term.id)) })
         const existingAssignment = existingAssignments.find((assignment) => assignment.kelas === kelas) ?? existingAssignments[0]
         if (existingAssignment) {
