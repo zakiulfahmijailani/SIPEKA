@@ -5,6 +5,7 @@ import { desc } from "drizzle-orm"
 import { redirect } from "next/navigation"
 import { getDashboardStats } from "../dashboard-actions"
 import { DashboardClient } from "../dashboard-client"
+import { getDeterministicAcademicPeriod } from "@/lib/academic-term"
 
 
 
@@ -21,7 +22,10 @@ export default async function DashboardPage({
   const allTas = await db.query.tahunAkademik.findMany({
     orderBy: [desc(tahunAkademik.tahun_mulai), desc(tahunAkademik.semester)],
   })
-  const activeTa = allTas.find((ta) => ta.is_active) ?? allTas[0]
+  const deterministic = getDeterministicAcademicPeriod()
+  const activeTa = allTas.find((ta) => `${ta.tahun_mulai}/${ta.tahun_mulai + 1}` === deterministic.tahun && ta.semester === deterministic.semester)
+    ?? allTas.find((ta) => ta.is_active)
+    ?? allTas[0]
   const selectedTa = allTas.find((ta) => {
     const year = `${ta.tahun_mulai}/${ta.tahun_mulai + 1}`
     return year === filters.tahun && String(ta.semester) === filters.semester
