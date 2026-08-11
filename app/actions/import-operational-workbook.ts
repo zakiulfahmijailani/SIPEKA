@@ -346,7 +346,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         if (existingAssignment) {
           await db.update(dosirMk).set({ dosen_id: dosenId, is_active: true }).where(eq(dosirMk.id, existingAssignment.id))
         } else {
-          await db.insert(dosirMk).values({ mk_id: mkId, dosen_id: dosenId, tahun_akademik_id: term.id, kelas, is_active: true })
+          warnings.push(`Penugasan ${item.kodeMk} (${kelas}) belum dapat dibuat karena constraint lama pada database.`)
         }
       }
       if (missingCourses.size > 0) warnings.push(`Kode MK belum ditemukan: ${[...missingCourses].join(", ")}.`)
