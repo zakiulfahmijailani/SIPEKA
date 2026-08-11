@@ -304,10 +304,6 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
       const summary = { cpls: 0, courses: uniqueCourses.size, courseCpmks: plotting.length, subCpmks: uniqueLecturers.size, assessments: 0 }
       const warnings: string[] = []
       const termCode = "2026/2027-1"
-      if (!commit) {
-        return { success: true, message: `Workbook plotting terbaca. Siap memperbarui ${uniqueLecturers.size} dosen dan ${plotting.length} penugasan untuk Ganjil 2026/2027.`, summary, warnings }
-      }
-
       const term = await db.query.tahunAkademik.findFirst({ where: eq(tahunAkademik.kode, termCode) })
       if (!term) return { success: false, message: `Tahun akademik ${termCode} belum tersedia di SIPEKA.` }
       const allCourses = await db.select({ id: mataKuliah.id, kode: mataKuliah.kode }).from(mataKuliah)
