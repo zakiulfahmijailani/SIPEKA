@@ -1,7 +1,7 @@
 "use server"
 
 import * as XLSX from "xlsx"
-import { inArray } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 import { db } from "@/db"
@@ -12,6 +12,9 @@ import {
   mataKuliah,
   petaKurikulum,
   subCpmkTemplate,
+  dosirMk,
+  tahunAkademik,
+  users,
 } from "@/db/schema"
 import { getCurrentSession } from "@/lib/current-session"
 import { findRedT15Rows } from "@/lib/t15-workbook"
@@ -80,6 +83,14 @@ export type OperationalImportResult = {
 
 type ImportScope = "templates" | "full"
 
+type PlottingAssignment = {
+  kodeMk: string
+  namaMk: string
+  kodeKelas: string
+  namaDosen: string
+  semester: number
+}
+
 const REQUIRED_SHEETS = [
   "T2 CPL",
   "T9 MK",
@@ -99,6 +110,22 @@ function rows(workbook: XLSX.WorkBook, name: string): unknown[][] {
   const worksheet = workbook.Sheets[name]
   if (!worksheet) return []
   return XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: null, raw: true })
+}
+
+function parsePlottingWorkbook(workbook: XLSX.WorkBook): PlottingAssignment[] | null {
+  const sheetName = workbook.SheetNames.length === 1 ? workbook.SheetNames[0] : ""
+  const sheet = sheetName ? workbook.Sheets[sheetName] : undefined
+  if (!sheet) return null
+  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true })
+  const first = data[0]
+  if (!first || !("Kode Kelas" in first) || !("Pengajar" in first) || !("Mata Kuliah" in first)) return null
+  return data.flatMap((row) => {
+    const pengajar = text(row["Pengajar"]).replace(/\s*\([^)]*\)\s*$/, "").trim()
+    const kodeKelas = text(row["Kode Kelas"])
+    const kodeMk = kodeKelas.split(" - ")[0].trim()
+    if (!kodeMk || !pengajar) return []
+    return [{ kodeMk, namaMk: text(row["Mata Kuliah"]), kodeKelas, namaDosen: pengajar, semester: number(row["Smt."]) }]
+  })
 }
 
 function cleanCourseName(value: string) {
@@ -268,7 +295,65 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
   if (!file || file.size === 0) return { success: false, message: "Pilih file workbook terlebih dahulu." }
 
   try {
-    const parsed = await parseWorkbook(await file.arrayBuffer())
+    const workbookBuffer = await file.arrayBuffer()
+    const workbook = XLSX.read(workbookBuffer, { type: "array", cellDates: true })
+    const plotting = parsePlottingWorkbook(workbook)
+    if (plotting) {
+      const uniqueCourses = new Set(plotting.map((item) => item.kodeMk))
+      const uniqueLecturers = new Set(plotting.map((item) => item.namaDosen))
+      const summary = { cpls: 0, courses: uniqueCourses.size, courseCpmks: plotting.length, subCpmks: uniqueLecturers.size, assessments: 0 }
+      const warnings: string[] = []
+      const termCode = "2026/2027-1"
+      if (!commit) {
+        return { success: true, message: `Workbook plotting terbaca. Siap memperbarui ${uniqueLecturers.size} dosen dan ${plotting.length} penugasan untuk Ganjil 2026/2027.`, summary, warnings }
+      }
+
+      const term = await db.query.tahunAkademik.findFirst({ where: eq(tahunAkademik.kode, termCode) })
+      if (!term) return { success: false, message: `Tahun akademik ${termCode} belum tersedia di SIPEKA.` }
+      const allCourses = await db.select({ id: mataKuliah.id, kode: mataKuliah.kode }).from(mataKuliah)
+      const courseByCode = new Map(allCourses.map((item) => [item.kode, item.id]))
+      const allUsers = await db.select({ id: users.id, email: users.email, nama: users.nama_lengkap, role: users.role }).from(users)
+      const userByName = new Map(allUsers.map((item) => [item.nama.toLowerCase(), item]))
+      const emailByName: Record<string, string> = {
+        "Haris Rafi": "haris.rafi@bakrie.ac.id",
+        "Kenny Badjora Lubis": "kenny.lubis@bakrie.ac.id",
+        "Zakiul Fahmi Jailani": "zakiul.jailani@bakrie.ac.id",
+        "Siti Rohajawati": "siti.rohajawati@bakrie.ac.id",
+        "Dewi Fatmawati Surianto": "dewi.surianto@bakrie.ac.id",
+        "Dita Nurmadewi": "dita.nurmadewi@bakrie.ac.id",
+        "Shidiq Al Hakim": "shidiq.alhakim@bakrie.ac.id",
+        "Elin Cahyaningsih": "elin.cahyaningsih@bakrie.ac.id",
+        "Hoga Saragih": "hoga.saragih@bakrie.ac.id",
+        "Benrahman": "benrahman@bakrie.ac.id",
+        "Albert A. Sembiring": "albert.sembiring@bakrie.ac.id",
+      }
+      const userByPlotName = new Map<string, string>()
+      for (const name of uniqueLecturers) {
+        const existing = [...allUsers].find((item) => item.nama.toLowerCase().includes(name.toLowerCase()))
+        if (existing) {
+          await db.update(users).set({ nama_lengkap: name, is_active: true, updated_at: new Date() }).where(eq(users.id, existing.id))
+          userByPlotName.set(name, existing.id)
+          continue
+        }
+        const email = emailByName[name] ?? `${name.toLowerCase().replace(/[^a-z0-9]+/g, ".")}@bakrie.ac.id`
+        const [created] = await db.insert(users).values({ email, nama_lengkap: name, role: "DOSEN", is_active: true, updated_at: new Date() }).onConflictDoUpdate({ target: users.email, set: { nama_lengkap: name, role: "DOSEN", is_active: true, updated_at: new Date() } }).returning({ id: users.id })
+        userByPlotName.set(name, created.id)
+      }
+      const missingCourses = new Set<string>()
+      for (const item of plotting) {
+        const mkId = courseByCode.get(item.kodeMk)
+        const dosenId = userByPlotName.get(item.namaDosen)
+        if (!mkId || !dosenId) { if (!mkId) missingCourses.add(item.kodeMk); continue }
+        await db.insert(dosirMk).values({ mk_id: mkId, dosen_id: dosenId, tahun_akademik_id: term.id, kelas: item.kodeKelas.split(" - ")[1] || "A", is_active: true }).onConflictDoUpdate({ target: [dosirMk.mk_id, dosirMk.dosen_id, dosirMk.tahun_akademik_id, dosirMk.kelas], set: { is_active: true } })
+      }
+      if (missingCourses.size > 0) warnings.push(`Kode MK belum ditemukan: ${[...missingCourses].join(", ")}.`)
+      revalidatePath("/master/users")
+      revalidatePath("/master/dosir-mk")
+      revalidatePath("/dashboard")
+      return { success: true, message: `Data plotting berhasil diperbarui: ${uniqueLecturers.size} dosen dan ${plotting.length - missingCourses.size} penugasan untuk Ganjil 2026/2027.`, summary, warnings }
+    }
+
+    const parsed = await parseWorkbook(workbookBuffer)
     const summary = {
       cpls: parsed.cpls.length,
       courses: parsed.courses.length,
