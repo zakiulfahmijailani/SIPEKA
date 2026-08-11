@@ -341,9 +341,10 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         const dosenId = userByPlotName.get(item.namaDosen)
         if (!mkId || !dosenId) { if (!mkId) missingCourses.add(item.kodeMk); continue }
         const kelas = item.kodeKelas.split(" - ")[1] || "A"
-        const existingAssignment = await db.query.dosirMk.findFirst({ where: and(eq(dosirMk.mk_id, mkId), eq(dosirMk.dosen_id, dosenId), eq(dosirMk.tahun_akademik_id, term.id)) })
+        const existingAssignments = await db.query.dosirMk.findMany({ where: and(eq(dosirMk.mk_id, mkId), eq(dosirMk.tahun_akademik_id, term.id)) })
+        const existingAssignment = existingAssignments.find((assignment) => assignment.kelas === kelas) ?? existingAssignments[0]
         if (existingAssignment) {
-          await db.update(dosirMk).set({ is_active: true }).where(eq(dosirMk.id, existingAssignment.id))
+          await db.update(dosirMk).set({ dosen_id: dosenId, is_active: true }).where(eq(dosirMk.id, existingAssignment.id))
         } else {
           await db.insert(dosirMk).values({ mk_id: mkId, dosen_id: dosenId, tahun_akademik_id: term.id, kelas, is_active: true })
         }
