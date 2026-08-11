@@ -346,7 +346,12 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         if (existingAssignment) {
           await db.update(dosirMk).set({ dosen_id: dosenId, is_active: true }).where(eq(dosirMk.id, existingAssignment.id))
         } else {
-          warnings.push(`Penugasan ${item.kodeMk} (${kelas}) belum dapat dibuat karena constraint lama pada database.`)
+          const legacyAssignment = await db.query.dosirMk.findFirst({ where: eq(dosirMk.mk_id, mkId) })
+          if (legacyAssignment) {
+            await db.update(dosirMk).set({ dosen_id: dosenId, tahun_akademik_id: term.id, is_active: true }).where(eq(dosirMk.id, legacyAssignment.id))
+          } else {
+            warnings.push(`Penugasan ${item.kodeMk} (${kelas}) belum dapat dibuat karena constraint lama pada database.`)
+          }
         }
       }
       if (missingCourses.size > 0) warnings.push(`Kode MK belum ditemukan: ${[...missingCourses].join(", ")}.`)
