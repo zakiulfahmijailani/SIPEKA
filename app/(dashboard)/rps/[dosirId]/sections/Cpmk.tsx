@@ -9,14 +9,16 @@ import { Plus, Trash2, Loader2, Layers3, Target } from "lucide-react"
 import { debounce } from "lodash"
 import { saveCpmks, deleteCpmk, deleteSubCpmk } from "../../actions"
 import { toast } from "sonner"
+import type { RegisterRpsSectionSave } from "../rps-save-progress"
 
 interface CpmkSectionProps {
   rpsId: string
   initialCpmks: any[]
   mappedCpls: any[]
+  registerSave: RegisterRpsSectionSave
 }
 
-export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProps) {
+export function CpmkSection({ rpsId, initialCpmks, mappedCpls, registerSave }: CpmkSectionProps) {
   const [cpmks, setCpmks] = useState<any[]>(
     initialCpmks.length > 0 ? initialCpmks.map(c => ({
       ...c,
@@ -40,6 +42,19 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls }: CpmkSectionProp
     }, 1500),
     [rpsId]
   )
+
+  const saveNow = useCallback(async () => {
+    debouncedSave.cancel()
+    setIsSaving(true)
+    const result = await saveCpmks(rpsId, cpmks)
+    setIsSaving(false)
+    return result
+  }, [cpmks, debouncedSave, rpsId])
+
+  useEffect(() => {
+    registerSave(saveNow)
+    return () => registerSave(null)
+  }, [registerSave, saveNow])
 
   const handleAdd = () => {
     const newCpmk = {

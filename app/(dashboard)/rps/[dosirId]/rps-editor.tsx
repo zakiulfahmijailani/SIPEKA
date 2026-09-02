@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,9 +16,10 @@ import {
   CheckCircle,
   MessageSquare,
   Files,
+  Save,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
-import { debounce } from "lodash"
 import { toast } from "sonner"
 
 // Komponen Seksi
@@ -30,8 +31,9 @@ import { AssessmentSection } from "./sections/Assessment"
 import { MeetingsSection } from "./sections/Meetings"
 import { ReferencesSection } from "./sections/References"
 import { PreviewSection } from "./sections/Preview"
+import type { RegisterRpsSectionSave, RpsSectionSave } from "./rps-save-progress"
 
-import { createOrGetRps, updateRpsStatus, type RpsStatus } from "../actions"
+import { createOrGetRps, saveRpsProgress, updateRpsStatus, type RpsStatus } from "../actions"
 
 interface RpsEditorProps {
   dosir: any
@@ -53,6 +55,12 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   const [activeSection, setActiveSection] = useState<SectionType>("IDENTITAS")
   const [rpsData, setRpsData] = useState(initialRps)
   const [isSaving, setIsSaving] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const sectionSaveRef = useRef<RpsSectionSave | null>(null)
+
+  const registerSectionSave = useCallback<RegisterRpsSectionSave>((save) => {
+    sectionSaveRef.current = save
+  }, [])
 
   const sections = [
     { id: "IDENTITAS",  label: "Identitas MK",          icon: Book },
@@ -89,23 +97,48 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
     setIsSaving(false)
   }
 
+  const handleSaveProgress = async () => {
+    if (!rpsData || isSaving) return
+
+    setIsSaving(true)
+    try {
+      const sectionResult = await sectionSaveRef.current?.()
+      if (sectionResult && !sectionResult.success) {
+        toast.error(sectionResult.error || "Gagal menyimpan isian pada bagian ini")
+        return
+      }
+
+      const result = await saveRpsProgress(rpsData.id)
+      if (!result.success) {
+        toast.error(result.error || "Gagal menyimpan progres RPS")
+        return
+      }
+
+      setLastSavedAt(result.savedAt || new Date().toISOString())
+      toast.success("Progres RPS berhasil disimpan")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const renderSection = () => {
     if (!rpsData) return <div className="p-8 text-center">Menginisialisasi RPS...</div>
 
     switch (activeSection) {
       case "IDENTITAS":  return <IdentitasSection dosir={dosir} />
-      case "FORMALITAS": return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} />
+      case "FORMALITAS": return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} registerSave={registerSectionSave} />
       case "CPL":        return <CplSection cpls={mappedCpls} />
-      case "CPMK":       return <CpmkSection rpsId={rpsData.id} initialCpmks={rpsData.cpmks || []} mappedCpls={mappedCpls} />
-      case "ASSESSMENT": return <AssessmentSection rpsId={rpsData.id} initialKomponens={rpsData.komponens || []} cpmks={rpsData.cpmks || []} />
-      case "MEETINGS":   return <MeetingsSection rpsId={rpsData.id} initialMeetings={rpsData.pertemuans || []} cpmks={rpsData.cpmks || []} />
-      case "REFERENCES": return <ReferencesSection rpsId={rpsData.id} initialReferences={rpsData.referensis || []} />
+      case "CPMK":       return <CpmkSection rpsId={rpsData.id} initialCpmks={rpsData.cpmks || []} mappedCpls={mappedCpls} registerSave={registerSectionSave} />
+      case "ASSESSMENT": return <AssessmentSection rpsId={rpsData.id} initialKomponens={rpsData.komponens || []} cpmks={rpsData.cpmks || []} registerSave={registerSectionSave} />
+      case "MEETINGS":   return <MeetingsSection rpsId={rpsData.id} initialMeetings={rpsData.pertemuans || []} cpmks={rpsData.cpmks || []} registerSave={registerSectionSave} />
+      case "REFERENCES": return <ReferencesSection rpsId={rpsData.id} initialReferences={rpsData.referensis || []} registerSave={registerSectionSave} />
       case "PREVIEW":    return <PreviewSection dosir={dosir} rps={rpsData} mappedCpls={mappedCpls} onStatusChange={handleStatusChange} currentUser={currentUser} />
       default:           return null
     }
   }
 
   const status = rpsData?.status || "DRAFT"
+  const canEdit = status === "DRAFT" || status === "REVISION_REQUIRED"
 
   return (
     <div className="flex flex-col h-full -m-6">
@@ -142,11 +175,22 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
             )}>
               {STATUS_LABEL[status] ?? status}
             </Badge>
+            {lastSavedAt && (
+              <span className="mt-1 text-[10px] text-slate-500" aria-live="polite">
+                Tersimpan {new Date(lastSavedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
           </div>
-          {status === "DRAFT" || status === "REVISION_REQUIRED" ? (
-            <Button size="sm" className="gap-2" onClick={() => setActiveSection("PREVIEW")}>
-              <Send className="h-4 w-4" /> Ajukan RPS
-            </Button>
+          {canEdit ? (
+            <>
+              <Button type="button" variant="outline" size="sm" className="gap-2" onClick={handleSaveProgress} disabled={!rpsData || isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {isSaving ? "Menyimpan..." : "Simpan progres"}
+              </Button>
+              <Button size="sm" className="gap-2" onClick={() => setActiveSection("PREVIEW")} disabled={isSaving}>
+                <Send className="h-4 w-4" /> Ajukan RPS
+              </Button>
+            </>
           ) : currentUser.role !== "DOSEN" && status === "SUBMITTED" ? (
             <Button size="sm" className="gap-2 bg-green-600 hover:bg-green-700" onClick={() => setActiveSection("PREVIEW")}>
               <CheckCircle className="h-4 w-4" /> Tinjau & Setujui

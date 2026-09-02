@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertCircle, ChevronDown, ClipboardCheck, Loader2, Plus, Trash } from "lucide-react"
 import { debounce } from "lodash"
 import { toast } from "sonner"
@@ -14,11 +14,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 import { deleteKomponen, saveKomponens } from "../../actions"
+import type { RegisterRpsSectionSave } from "../rps-save-progress"
 
 interface AssessmentSectionProps {
   rpsId: string
   initialKomponens: any[]
   cpmks: any[]
+  registerSave: RegisterRpsSectionSave
 }
 
 const DEFAULT_RUBRIC = {
@@ -32,7 +34,7 @@ const DEFAULT_RUBRIC = {
   urutan: 1,
 }
 
-export function AssessmentSection({ rpsId, initialKomponens, cpmks }: AssessmentSectionProps) {
+export function AssessmentSection({ rpsId, initialKomponens, cpmks, registerSave }: AssessmentSectionProps) {
   const subCpmks = useMemo(
     () => cpmks.flatMap((item) => (item.subCpmks || []).map((sub: any) => ({ ...sub, cpmkKode: item.kode }))),
     [cpmks],
@@ -61,6 +63,19 @@ export function AssessmentSection({ rpsId, initialKomponens, cpmks }: Assessment
     }, 1200),
     [rpsId],
   )
+
+  const saveNow = useCallback(async () => {
+    debouncedSave.cancel()
+    setIsSaving(true)
+    const result = await saveKomponens(rpsId, komponens)
+    setIsSaving(false)
+    return result
+  }, [debouncedSave, komponens, rpsId])
+
+  useEffect(() => {
+    registerSave(saveNow)
+    return () => registerSave(null)
+  }, [registerSave, saveNow])
 
   const updateState = (next: any[]) => {
     setKomponens(next)

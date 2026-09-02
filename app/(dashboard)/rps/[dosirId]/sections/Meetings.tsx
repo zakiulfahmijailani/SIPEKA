@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { CalendarDays, CheckCircle2, ChevronDown, Loader2 } from "lucide-react"
 import { debounce } from "lodash"
 import { toast } from "sonner"
@@ -12,14 +12,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 import { saveMeetings } from "../../actions"
+import type { RegisterRpsSectionSave } from "../rps-save-progress"
 
 interface MeetingsSectionProps {
   rpsId: string
   initialMeetings: any[]
   cpmks: any[]
+  registerSave: RegisterRpsSectionSave
 }
 
-export function MeetingsSection({ rpsId, initialMeetings, cpmks }: MeetingsSectionProps) {
+export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }: MeetingsSectionProps) {
   const subCpmks = useMemo(
     () => cpmks.flatMap((item) => (item.subCpmks || []).map((sub: any) => ({ ...sub, cpmkKode: item.kode }))),
     [cpmks],
@@ -61,6 +63,19 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks }: MeetingsSecti
     }, 1400),
     [rpsId],
   )
+
+  const saveNow = useCallback(async () => {
+    debouncedSave.cancel()
+    setIsSaving(true)
+    const result = await saveMeetings(rpsId, meetings)
+    setIsSaving(false)
+    return result
+  }, [debouncedSave, meetings, rpsId])
+
+  useEffect(() => {
+    registerSave(saveNow)
+    return () => registerSave(null)
+  }, [registerSave, saveNow])
 
   const handleChange = (index: number, field: string, value: unknown) => {
     const next = [...meetings]

@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Plus, Trash, Loader2, BookOpen } from "lucide-react"
 import { debounce } from "lodash"
 import { saveReferences } from "../../actions"
+import type { RegisterRpsSectionSave } from "../rps-save-progress"
 import {
   Select,
   SelectContent,
@@ -18,9 +19,10 @@ import {
 interface ReferencesSectionProps {
   rpsId: string
   initialReferences: any[]
+  registerSave: RegisterRpsSectionSave
 }
 
-export function ReferencesSection({ rpsId, initialReferences }: ReferencesSectionProps) {
+export function ReferencesSection({ rpsId, initialReferences, registerSave }: ReferencesSectionProps) {
   const [refs, setRefs] = useState<any[]>(initialReferences)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -32,6 +34,19 @@ export function ReferencesSection({ rpsId, initialReferences }: ReferencesSectio
     }, 1500),
     [rpsId]
   )
+
+  const saveNow = useCallback(async () => {
+    debouncedSave.cancel()
+    setIsSaving(true)
+    const result = await saveReferences(rpsId, refs)
+    setIsSaving(false)
+    return result
+  }, [debouncedSave, refs, rpsId])
+
+  useEffect(() => {
+    registerSave(saveNow)
+    return () => registerSave(null)
+  }, [registerSave, saveNow])
 
   const handleAdd = () => {
     const newItem = {

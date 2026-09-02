@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
 import { saveRpsFormalities } from "../../actions"
+import type { RegisterRpsSectionSave } from "../rps-save-progress"
 
 type Formalities = {
   deskripsi_mk: string
@@ -36,7 +37,7 @@ function initialState(rps: any, dosir: any): Formalities {
   }
 }
 
-export function FormalitiesSection({ rpsId, initialRps, dosir }: { rpsId: string; initialRps: any; dosir: any }) {
+export function FormalitiesSection({ rpsId, initialRps, dosir, registerSave }: { rpsId: string; initialRps: any; dosir: any; registerSave: RegisterRpsSectionSave }) {
   const [form, setForm] = useState(() => initialState(initialRps, dosir))
   const [isSaving, setIsSaving] = useState(false)
 
@@ -50,6 +51,19 @@ export function FormalitiesSection({ rpsId, initialRps, dosir }: { rpsId: string
     }, 900),
     [rpsId],
   )
+
+  const saveNow = useCallback(async () => {
+    debouncedSave.cancel()
+    setIsSaving(true)
+    const result = await saveRpsFormalities(rpsId, form)
+    setIsSaving(false)
+    return result
+  }, [debouncedSave, form, rpsId])
+
+  useEffect(() => {
+    registerSave(saveNow)
+    return () => registerSave(null)
+  }, [registerSave, saveNow])
 
   const update = (field: keyof Formalities, value: string) => {
     const next = { ...form, [field]: value }

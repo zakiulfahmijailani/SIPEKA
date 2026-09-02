@@ -428,6 +428,29 @@ export async function saveRpsFormalities(rpsId: string, data: RpsFormalitiesInpu
   }
 }
 
+export async function saveRpsProgress(rpsId: string) {
+  try {
+    await assertCanEditRps(rpsId)
+
+    const [saved] = await db
+      .update(rps)
+      .set({ updated_at: new Date() })
+      .where(eq(rps.id, rpsId))
+      .returning({
+        savedAt: rps.updated_at,
+        dosirMkId: rps.dosir_mk_id,
+      })
+
+    if (!saved) return { success: false, error: "RPS tidak ditemukan" }
+
+    revalidatePath(`/rps/${saved.dosirMkId}`)
+    return { success: true, savedAt: saved.savedAt.toISOString() }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: error instanceof Error ? error.message : "Gagal menyimpan progres RPS" }
+  }
+}
+
 export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
   try {
     await assertCanEditRps(rpsId)
