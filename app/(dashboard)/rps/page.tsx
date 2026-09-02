@@ -37,6 +37,11 @@ export default async function RpsPage({
 
   const query = filters.q?.trim().toLowerCase()
   const status = filters.status && filters.status !== "ALL" ? filters.status : null
+
+  const STATUS_PRIORITY: Record<string, number> = {
+    APPROVED: 4, SUBMITTED: 3, REVISION_REQUIRED: 2, DRAFT: 1,
+  }
+
   const dosirs = assignments
     .map((assignment) => ({
       ...assignment,
@@ -47,6 +52,21 @@ export default async function RpsPage({
       const latestStatus = assignment.rps[0]?.status || "DRAFT"
       return matchesQuery && (!status || latestStatus === status)
     })
+    // Deduplikasi: dalam satu profil dosen, 1 MK hanya tampil 1 kali.
+    // Prioritaskan dosir yang statusnya paling maju; jika sama, ambil kelas pertama (abjad).
+    .reduce<typeof assignments>((acc, curr) => {
+      const existing = acc.find((d) => d.mk_id === curr.mk_id)
+      if (!existing) {
+        acc.push(curr)
+      } else {
+        const existingPriority = STATUS_PRIORITY[existing.rps[0]?.status ?? "DRAFT"] ?? 0
+        const currPriority = STATUS_PRIORITY[curr.rps[0]?.status ?? "DRAFT"] ?? 0
+        if (currPriority > existingPriority) {
+          acc[acc.indexOf(existing)] = curr
+        }
+      }
+      return acc
+    }, [])
 
   return <RpsClientPage dosirs={dosirs} academicTerm={period.label} />
 }
