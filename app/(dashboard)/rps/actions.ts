@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { createId } from "@paralleldrive/cuid2"
 import {
   cpmk,
   cpmkCpl,
@@ -428,6 +429,81 @@ export async function saveRpsFormalities(rpsId: string, data: RpsFormalitiesInpu
   }
 }
 
+export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
+  try {
+    await assertCanEditRps(rpsId)
+    await db.transaction(async (tx) => {
+      for (const item of data) {
+        const cleanMateri = item.materi?.trim() ? item.materi.trim() : `Minggu ${item.minggu_ke}`
+        const cleanMetode = item.metode?.trim() || null
+        const cleanMedia = item.media?.trim() || null
+        const cleanEstimasi = item.estimasi_waktu?.trim() || null
+        const cleanIndikator = item.indikator?.trim() || null
+        const cleanBentuk = item.bentuk_pembelajaran?.trim() || null
+        const cleanAktDosen = item.aktivitas_dosen?.trim() || null
+        const cleanAktMhs = item.aktivitas_mahasiswa?.trim() || null
+        const cleanKriteria = item.kriteria_penilaian?.trim() || null
+        const cleanReferensi = item.referensi?.trim() || null
+
+        const [meeting] = await tx.insert(rpsPertemuan).values({
+          id: createId(),
+          rps_id: rpsId,
+          minggu_ke: item.minggu_ke,
+          materi: cleanMateri,
+          metode: cleanMetode,
+          media: cleanMedia,
+          estimasi_waktu: cleanEstimasi,
+          indikator: cleanIndikator,
+          bentuk_pembelajaran: cleanBentuk,
+          aktivitas_dosen: cleanAktDosen,
+          aktivitas_mahasiswa: cleanAktMhs,
+          kriteria_penilaian: cleanKriteria,
+          referensi: cleanReferensi,
+        }).onConflictDoUpdate({
+          target: [rpsPertemuan.rps_id, rpsPertemuan.minggu_ke],
+          set: {
+            materi: cleanMateri,
+            metode: cleanMetode,
+            media: cleanMedia,
+            estimasi_waktu: cleanEstimasi,
+            indikator: cleanIndikator,
+            bentuk_pembelajaran: cleanBentuk,
+            aktivitas_dosen: cleanAktDosen,
+            aktivitas_mahasiswa: cleanAktMhs,
+            kriteria_penilaian: cleanKriteria,
+            referensi: cleanReferensi,
+          },
+        }).returning()
+
+        await tx.delete(pertemuanSubCpmk).where(eq(pertemuanSubCpmk.pertemuan_id, meeting.id))
+        if (item.sub_cpmk_ids && item.sub_cpmk_ids.length > 0) {
+          const validSubCpmks = await tx.query.subCpmk.findMany({
+            where: inArray(subCpmk.id, item.sub_cpmk_ids),
+            columns: { id: true },
+          })
+          const validIds = new Set(validSubCpmks.map((s) => s.id))
+          const validToInsert = item.sub_cpmk_ids.filter((id) => validIds.has(id))
+
+          if (validToInsert.length > 0) {
+            await tx.insert(pertemuanSubCpmk).values(
+              validToInsert.map((subCpmkId) => ({
+                id: createId(),
+                pertemuan_id: meeting.id,
+                sub_cpmk_id: subCpmkId,
+              })),
+            )
+          }
+        }
+      }
+    })
+    revalidatePath("/dashboard")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Error saveMeetings:", error)
+    return { success: false, error: error?.message || "Gagal menyimpan rencana pertemuan" }
+  }
+}
+
 export async function saveRpsProgress(rpsId: string) {
   try {
     await assertCanEditRps(rpsId)
@@ -621,59 +697,6 @@ export async function deleteKomponen(id: string) {
   } catch (error) {
     console.error(error)
     return { success: false, error: "Gagal menghapus komponen penilaian" }
-  }
-}
-
-export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
-  try {
-    await assertCanEditRps(rpsId)
-    await db.transaction(async (tx) => {
-      for (const item of data) {
-        const [meeting] = await tx.insert(rpsPertemuan).values({
-          rps_id: rpsId,
-          minggu_ke: item.minggu_ke,
-          materi: item.materi,
-          metode: item.metode,
-          media: item.media,
-          estimasi_waktu: item.estimasi_waktu,
-          indikator: item.indikator,
-          bentuk_pembelajaran: item.bentuk_pembelajaran,
-          aktivitas_dosen: item.aktivitas_dosen,
-          aktivitas_mahasiswa: item.aktivitas_mahasiswa,
-          kriteria_penilaian: item.kriteria_penilaian,
-          referensi: item.referensi,
-        }).onConflictDoUpdate({
-          target: [rpsPertemuan.rps_id, rpsPertemuan.minggu_ke],
-          set: {
-            materi: item.materi,
-            metode: item.metode,
-            media: item.media,
-            estimasi_waktu: item.estimasi_waktu,
-            indikator: item.indikator,
-            bentuk_pembelajaran: item.bentuk_pembelajaran,
-            aktivitas_dosen: item.aktivitas_dosen,
-            aktivitas_mahasiswa: item.aktivitas_mahasiswa,
-            kriteria_penilaian: item.kriteria_penilaian,
-            referensi: item.referensi,
-          },
-        }).returning()
-
-        await tx.delete(pertemuanSubCpmk).where(eq(pertemuanSubCpmk.pertemuan_id, meeting.id))
-        if (item.sub_cpmk_ids?.length) {
-          await tx.insert(pertemuanSubCpmk).values(
-            item.sub_cpmk_ids.map((subCpmkId) => ({
-              pertemuan_id: meeting.id,
-              sub_cpmk_id: subCpmkId,
-            })),
-          )
-        }
-      }
-    })
-    revalidatePath("/dashboard")
-    return { success: true }
-  } catch (error) {
-    console.error(error)
-    return { success: false, error: "Gagal menyimpan rencana pertemuan" }
   }
 }
 
