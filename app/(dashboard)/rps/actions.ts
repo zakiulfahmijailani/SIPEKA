@@ -352,8 +352,8 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
     }
 
     const actorId = await resolveActorId()
-    await db.transaction(async (tx) => {
-      await tx.update(rps).set({
+    
+      await db.update(rps).set({
         status,
         catatan_reviewer: catatan || null,
         submitted_at: status === "SUBMITTED" ? new Date() : current.submitted_at,
@@ -362,7 +362,7 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
         updated_at: new Date(),
       }).where(eq(rps.id, id))
 
-      await tx.insert(rpsStatusLog).values({
+      await db.insert(rpsStatusLog).values({
         rps_id: id,
         status_from: current.status,
         status_to: status,
@@ -370,14 +370,14 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
         catatan: catatan || null,
       })
 
-      const fullRps = await tx.query.rps.findFirst({
+      const fullRps = await db.query.rps.findFirst({
         where: eq(rps.id, id),
         with: { dosirMk: { with: { mk: true } } },
       })
       if (!fullRps) return
 
       if (status === "SUBMITTED") {
-        const reviewers = await tx.query.users.findMany({
+        const reviewers = await db.query.users.findMany({
           where: inArray(users.role, ["KAPRODI", "SUPER_ADMIN"]),
         })
         for (const reviewer of reviewers) {
@@ -395,8 +395,7 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
             : `RPS ${fullRps.dosirMk.mk.nama_id} memerlukan revisi: ${catatan ?? ""}`,
           link: `/rps/${fullRps.dosir_mk_id}`,
         })
-      }
-    })
+      }
 
     revalidatePath("/dashboard")
     revalidatePath("/rps")
@@ -432,23 +431,35 @@ export async function saveRpsFormalities(rpsId: string, data: RpsFormalitiesInpu
 export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
   try {
     await assertCanEditRps(rpsId)
-    await db.transaction(async (tx) => {
-      for (const item of data) {
-        const cleanMateri = item.materi?.trim() ? item.materi.trim() : `Minggu ${item.minggu_ke}`
-        const cleanMetode = item.metode?.trim() || null
-        const cleanMedia = item.media?.trim() || null
-        const cleanEstimasi = item.estimasi_waktu?.trim() || null
-        const cleanIndikator = item.indikator?.trim() || null
-        const cleanBentuk = item.bentuk_pembelajaran?.trim() || null
-        const cleanAktDosen = item.aktivitas_dosen?.trim() || null
-        const cleanAktMhs = item.aktivitas_mahasiswa?.trim() || null
-        const cleanKriteria = item.kriteria_penilaian?.trim() || null
-        const cleanReferensi = item.referensi?.trim() || null
+    for (const item of data) {
+      const cleanMateri = item.materi?.trim() ? item.materi.trim() : `Minggu ${item.minggu_ke}`
+      const cleanMetode = item.metode?.trim() || null
+      const cleanMedia = item.media?.trim() || null
+      const cleanEstimasi = item.estimasi_waktu?.trim() || null
+      const cleanIndikator = item.indikator?.trim() || null
+      const cleanBentuk = item.bentuk_pembelajaran?.trim() || null
+      const cleanAktDosen = item.aktivitas_dosen?.trim() || null
+      const cleanAktMhs = item.aktivitas_mahasiswa?.trim() || null
+      const cleanKriteria = item.kriteria_penilaian?.trim() || null
+      const cleanReferensi = item.referensi?.trim() || null
 
-        const [meeting] = await tx.insert(rpsPertemuan).values({
-          id: createId(),
-          rps_id: rpsId,
-          minggu_ke: item.minggu_ke,
+      const [meeting] = await db.insert(rpsPertemuan).values({
+        id: createId(),
+        rps_id: rpsId,
+        minggu_ke: item.minggu_ke,
+        materi: cleanMateri,
+        metode: cleanMetode,
+        media: cleanMedia,
+        estimasi_waktu: cleanEstimasi,
+        indikator: cleanIndikator,
+        bentuk_pembelajaran: cleanBentuk,
+        aktivitas_dosen: cleanAktDosen,
+        aktivitas_mahasiswa: cleanAktMhs,
+        kriteria_penilaian: cleanKriteria,
+        referensi: cleanReferensi,
+      }).onConflictDoUpdate({
+        target: [rpsPertemuan.rps_id, rpsPertemuan.minggu_ke],
+        set: {
           materi: cleanMateri,
           metode: cleanMetode,
           media: cleanMedia,
@@ -459,43 +470,29 @@ export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
           aktivitas_mahasiswa: cleanAktMhs,
           kriteria_penilaian: cleanKriteria,
           referensi: cleanReferensi,
-        }).onConflictDoUpdate({
-          target: [rpsPertemuan.rps_id, rpsPertemuan.minggu_ke],
-          set: {
-            materi: cleanMateri,
-            metode: cleanMetode,
-            media: cleanMedia,
-            estimasi_waktu: cleanEstimasi,
-            indikator: cleanIndikator,
-            bentuk_pembelajaran: cleanBentuk,
-            aktivitas_dosen: cleanAktDosen,
-            aktivitas_mahasiswa: cleanAktMhs,
-            kriteria_penilaian: cleanKriteria,
-            referensi: cleanReferensi,
-          },
-        }).returning()
+        },
+      }).returning()
 
-        await tx.delete(pertemuanSubCpmk).where(eq(pertemuanSubCpmk.pertemuan_id, meeting.id))
-        if (item.sub_cpmk_ids && item.sub_cpmk_ids.length > 0) {
-          const validSubCpmks = await tx.query.subCpmk.findMany({
-            where: inArray(subCpmk.id, item.sub_cpmk_ids),
-            columns: { id: true },
-          })
-          const validIds = new Set(validSubCpmks.map((s) => s.id))
-          const validToInsert = item.sub_cpmk_ids.filter((id) => validIds.has(id))
+      await db.delete(pertemuanSubCpmk).where(eq(pertemuanSubCpmk.pertemuan_id, meeting.id))
+      if (item.sub_cpmk_ids && item.sub_cpmk_ids.length > 0) {
+        const validSubCpmks = await db.query.subCpmk.findMany({
+          where: inArray(subCpmk.id, item.sub_cpmk_ids),
+          columns: { id: true },
+        })
+        const validIds = new Set(validSubCpmks.map((s) => s.id))
+        const validToInsert = item.sub_cpmk_ids.filter((id) => validIds.has(id))
 
-          if (validToInsert.length > 0) {
-            await tx.insert(pertemuanSubCpmk).values(
-              validToInsert.map((subCpmkId) => ({
-                id: createId(),
-                pertemuan_id: meeting.id,
-                sub_cpmk_id: subCpmkId,
-              })),
-            )
-          }
+        if (validToInsert.length > 0) {
+          await db.insert(pertemuanSubCpmk).values(
+            validToInsert.map((subCpmkId) => ({
+              id: createId(),
+              pertemuan_id: meeting.id,
+              sub_cpmk_id: subCpmkId,
+            })),
+          )
         }
       }
-    })
+    }
     revalidatePath("/dashboard")
     return { success: true }
   } catch (error: any) {
@@ -530,9 +527,9 @@ export async function saveRpsProgress(rpsId: string) {
 export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
   try {
     await assertCanEditRps(rpsId)
-    await db.transaction(async (tx) => {
+    
       for (const item of data) {
-        const [saved] = await tx.insert(cpmk).values({
+        const [saved] = await db.insert(cpmk).values({
           rps_id: rpsId,
           kode: item.kode,
           deskripsi: item.deskripsi,
@@ -543,13 +540,13 @@ export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
           set: { deskripsi: item.deskripsi, metode_pencapaian: item.metode_pencapaian || null, urutan: item.urutan },
         }).returning()
 
-        await tx.delete(cpmkCpl).where(eq(cpmkCpl.cpmk_id, saved.id))
+        await db.delete(cpmkCpl).where(eq(cpmkCpl.cpmk_id, saved.id))
         if (item.cpl_id) {
-          await tx.insert(cpmkCpl).values({ cpmk_id: saved.id, cpl_id: item.cpl_id })
+          await db.insert(cpmkCpl).values({ cpmk_id: saved.id, cpl_id: item.cpl_id })
         }
 
         for (const sub of item.subCpmks ?? []) {
-          await tx.insert(subCpmk).values({
+          await db.insert(subCpmk).values({
             cpmk_id: saved.id,
             kode: sub.kode,
             deskripsi: sub.deskripsi,
@@ -564,8 +561,7 @@ export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
             },
           })
         }
-      }
-    })
+      }
     revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
@@ -606,7 +602,7 @@ export async function deleteSubCpmk(id: string) {
 export async function saveKomponens(rpsId: string, data: KomponenInput[]) {
   try {
     await assertCanEditRps(rpsId)
-    await db.transaction(async (tx) => {
+    
       for (const item of data) {
         let componentId = item.id
         const values = {
@@ -629,7 +625,7 @@ export async function saveKomponens(rpsId: string, data: KomponenInput[]) {
         }
 
         if (!componentId) {
-          const existing = await tx.query.komponenPenilaian.findFirst({
+          const existing = await db.query.komponenPenilaian.findFirst({
             where: and(
               eq(komponenPenilaian.rps_id, rpsId),
               eq(komponenPenilaian.urutan, item.urutan),
@@ -639,29 +635,29 @@ export async function saveKomponens(rpsId: string, data: KomponenInput[]) {
         }
 
         if (componentId) {
-          await tx.update(komponenPenilaian).set(values).where(eq(komponenPenilaian.id, componentId))
+          await db.update(komponenPenilaian).set(values).where(eq(komponenPenilaian.id, componentId))
         } else {
-          const [created] = await tx.insert(komponenPenilaian).values(values).returning()
+          const [created] = await db.insert(komponenPenilaian).values(values).returning()
           componentId = created.id
         }
 
-        await tx.delete(komponenCpmk).where(eq(komponenCpmk.komponen_id, componentId))
+        await db.delete(komponenCpmk).where(eq(komponenCpmk.komponen_id, componentId))
         if (item.cpmk_ids?.length) {
-          await tx.insert(komponenCpmk).values(
+          await db.insert(komponenCpmk).values(
             item.cpmk_ids.map((cpmkId) => ({ komponen_id: componentId!, cpmk_id: cpmkId })),
           )
         }
 
-        await tx.delete(komponenSubCpmk).where(eq(komponenSubCpmk.komponen_id, componentId))
+        await db.delete(komponenSubCpmk).where(eq(komponenSubCpmk.komponen_id, componentId))
         if (item.sub_cpmk_ids?.length) {
-          await tx.insert(komponenSubCpmk).values(
+          await db.insert(komponenSubCpmk).values(
             item.sub_cpmk_ids.map((subCpmkId) => ({ komponen_id: componentId!, sub_cpmk_id: subCpmkId })),
           )
         }
 
-        await tx.delete(rubrikKriteria).where(eq(rubrikKriteria.komponen_id, componentId))
+        await db.delete(rubrikKriteria).where(eq(rubrikKriteria.komponen_id, componentId))
         if (item.rubrik_kriterias?.length) {
-          await tx.insert(rubrikKriteria).values(
+          await db.insert(rubrikKriteria).values(
             item.rubrik_kriterias.map((rubrik, index) => ({
               komponen_id: componentId!,
               kriteria: rubrik.kriteria,
@@ -675,8 +671,7 @@ export async function saveKomponens(rpsId: string, data: KomponenInput[]) {
             })),
           )
         }
-      }
-    })
+      }
     revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
@@ -703,17 +698,16 @@ export async function deleteKomponen(id: string) {
 export async function saveReferences(rpsId: string, data: Array<{ jenis: string; teks: string }>) {
   try {
     await assertCanEditRps(rpsId)
-    await db.transaction(async (tx) => {
-      await tx.delete(rpsReferensi).where(eq(rpsReferensi.rps_id, rpsId))
+    
+      await db.delete(rpsReferensi).where(eq(rpsReferensi.rps_id, rpsId))
       if (data.length > 0) {
-        await tx.insert(rpsReferensi).values(data.map((item, index) => ({
+        await db.insert(rpsReferensi).values(data.map((item, index) => ({
           rps_id: rpsId,
           jenis: item.jenis,
           teks: item.teks,
           urutan: index + 1,
         })))
-      }
-    })
+      }
     revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {

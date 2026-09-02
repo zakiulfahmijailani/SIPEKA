@@ -88,11 +88,11 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
     if (!rpsData) return
     setIsSaving(true)
     const res = await updateRpsStatus(rpsData.id, status, catatan)
-    if (res.success) {
+    if (res?.success) {
       toast.success(`Status RPS diubah menjadi ${STATUS_LABEL[status] ?? status}`)
       window.location.reload()
     } else {
-      toast.error(res.error || "Gagal mengubah status")
+      toast.error(res?.error || "Gagal mengubah status")
     }
     setIsSaving(false)
   }
