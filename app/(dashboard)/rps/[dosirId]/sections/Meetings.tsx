@@ -1,10 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { CalendarDays, CheckCircle2, ChevronDown, Loader2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { CalendarDays, CheckCircle2, ChevronDown, Download, Loader2, Upload } from "lucide-react"
 import { debounce } from "lodash"
 import { toast } from "sonner"
+import * as XLSX from "xlsx"
 
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,6 +24,7 @@ interface MeetingsSectionProps {
 }
 
 export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }: MeetingsSectionProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const subCpmks = useMemo(
     () => cpmks.flatMap((item) => (item.subCpmks || []).map((sub: any) => ({ ...sub, cpmkKode: item.kode }))),
     [cpmks],
@@ -95,14 +98,196 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
     debouncedSave(next)
   }
 
+  const handleDownloadTemplate = () => {
+    const rows = meetings.map((m) => {
+      const selectedCodes = subCpmks
+        .filter((s: any) => (m.sub_cpmk_ids || []).includes(s.id))
+        .map((s: any) => s.kode)
+        .join(", ")
+
+      return {
+        "Minggu Ke": m.minggu_ke,
+        "Materi / Topik": m.materi || (m.minggu_ke === 8 ? "Ujian Tengah Semester" : m.minggu_ke === 16 ? "Ujian Akhir Semester" : ""),
+        "Kode Sub-CPMK": selectedCodes,
+        "Bentuk Pembelajaran": m.bentuk_pembelajaran || (m.minggu_ke === 8 || m.minggu_ke === 16 ? "Asesmen" : "Tatap muka / bauran"),
+        "Metode Pembelajaran": m.metode || (m.minggu_ke === 8 || m.minggu_ke === 16 ? "Tes tertulis / unjuk kerja" : "Ceramah, diskusi, dan pembelajaran berbasis kasus"),
+        "Media": m.media || "LMS, laptop, dan media presentasi",
+        "Estimasi Waktu": m.estimasi_waktu || "150 menit",
+        "Indikator Pencapaian": m.indikator || "",
+        "Aktivitas Dosen": m.aktivitas_dosen || "",
+        "Aktivitas Mahasiswa": m.aktivitas_mahasiswa || "",
+        "Kriteria Penilaian": m.kriteria_penilaian || "",
+        "Referensi": m.referensi || "",
+      }
+    })
+
+    const subCpmkRows = subCpmks.length > 0 
+      ? subCpmks.map((s: any) => ({
+          "Kode Sub-CPMK": s.kode,
+          "Induk CPMK": s.cpmkKode || "",
+          "Level Bloom": s.level_bloom || "",
+          "Deskripsi Sub-CPMK": s.deskripsi || "",
+        }))
+      : [{ "Info": "Belum ada Sub-CPMK yang dibuat pada tab CPMK" }]
+
+    const wb = XLSX.utils.book_new()
+    const ws1 = XLSX.utils.json_to_sheet(rows)
+    const ws2 = XLSX.utils.json_to_sheet(subCpmkRows)
+
+    ws1["!cols"] = [
+      { wch: 12 },
+      { wch: 35 },
+      { wch: 25 },
+      { wch: 22 },
+      { wch: 32 },
+      { wch: 24 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 35 },
+      { wch: 35 },
+      { wch: 30 },
+      { wch: 30 },
+    ]
+
+    ws2["!cols"] = [
+      { wch: 18 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 60 },
+    ]
+
+    XLSX.utils.book_append_sheet(wb, ws1, "Rencana Mingguan")
+    XLSX.utils.book_append_sheet(wb, ws2, "Daftar Sub-CPMK")
+
+    XLSX.writeFile(wb, "Template_Rencana_Mingguan_RPS.xlsx")
+    toast.success("Template Excel berhasil diunduh")
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+        
+        const sheetName = workbook.SheetNames.find((name) => name.toLowerCase().includes("rencana")) || workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        if (!worksheet) {
+          toast.error("Sheet tidak ditemukan dalam file Excel")
+          return
+        }
+
+        const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" })
+        if (!rows || rows.length === 0) {
+          toast.error("File Excel kosong atau format tidak sesuai")
+          return
+        }
+
+        const updated = Array.from({ length: 16 }, (_, index) => {
+          const targetWeek = index + 1
+          const row = rows.find((r) => {
+            const w = r["Minggu Ke"] ?? r["Minggu"] ?? r["minggu_ke"] ?? r["No"] ?? r["Minggu ke-"]
+            return Number(w) === targetWeek
+          }) || rows[index]
+
+          if (!row) return meetings[index]
+
+          const subCpmkCol = row["Kode Sub-CPMK (dipisah koma)"] ?? row["Kode Sub-CPMK"] ?? row["Sub-CPMK"] ?? row["sub_cpmk"] ?? ""
+          const rawCodes = String(subCpmkCol)
+            .split(/[,;\n]+/)
+            .map((c) => c.trim().toLowerCase())
+            .filter(Boolean)
+
+          const matchedSubCpmkIds = subCpmks
+            .filter((s: any) => rawCodes.includes(s.kode?.trim().toLowerCase()))
+            .map((s: any) => s.id)
+
+          const materi = String(row["Materi / Topik"] ?? row["Materi / Topik Pembelajaran"] ?? row["Materi"] ?? row["materi"] ?? "").trim()
+          const bentuk = String(row["Bentuk Pembelajaran"] ?? row["Bentuk"] ?? row["bentuk_pembelajaran"] ?? "").trim()
+          const metode = String(row["Metode Pembelajaran"] ?? row["Metode"] ?? row["metode"] ?? "").trim()
+          const media = String(row["Media"] ?? row["media"] ?? "").trim()
+          const waktu = String(row["Estimasi Waktu"] ?? row["Waktu"] ?? row["estimasi_waktu"] ?? "").trim()
+          const indikator = String(row["Indikator Pencapaian"] ?? row["Indikator"] ?? row["indikator"] ?? "").trim()
+          const aktDosen = String(row["Aktivitas Dosen"] ?? row["aktivitas_dosen"] ?? "").trim()
+          const aktMhs = String(row["Aktivitas Mahasiswa"] ?? row["aktivitas_mahasiswa"] ?? "").trim()
+          const kriteria = String(row["Kriteria Penilaian"] ?? row["Kriteria / Teknik Penilaian"] ?? row["kriteria_penilaian"] ?? "").trim()
+          const referensi = String(row["Referensi"] ?? row["Referensi / Bahan Pembelajaran"] ?? row["referensi"] ?? "").trim()
+
+          return {
+            ...meetings[index],
+            minggu_ke: targetWeek,
+            materi: materi || meetings[index].materi,
+            bentuk_pembelajaran: bentuk || meetings[index].bentuk_pembelajaran,
+            metode: metode || meetings[index].metode,
+            media: media || meetings[index].media,
+            estimasi_waktu: waktu || meetings[index].estimasi_waktu,
+            indikator: indikator || meetings[index].indikator,
+            aktivitas_dosen: aktDosen || meetings[index].aktivitas_dosen,
+            aktivitas_mahasiswa: aktMhs || meetings[index].aktivitas_mahasiswa,
+            kriteria_penilaian: kriteria || meetings[index].kriteria_penilaian,
+            referensi: referensi || meetings[index].referensi,
+            sub_cpmk_ids: matchedSubCpmkIds.length > 0 ? matchedSubCpmkIds : meetings[index].sub_cpmk_ids,
+          }
+        })
+
+        setMeetings(updated)
+        setIsSaving(true)
+        const res = await saveMeetings(rpsId, updated)
+        setIsSaving(false)
+        if (res.success) {
+          toast.success("16 data rencana mingguan berhasil ditarik dari Excel dan disimpan!")
+        } else {
+          toast.error(res.error || "Gagal menyimpan data dari Excel")
+        }
+      } catch (err: any) {
+        console.error(err)
+        toast.error("Gagal membaca file Excel. Pastikan format file .xlsx valid.")
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ""
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">Rencana Pembelajaran Mingguan</h2>
           <p className="text-sm text-muted-foreground">Data ini otomatis menjadi dokumen RPM dan bagian mingguan RPS.</p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".xlsx,.xls"
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadTemplate}
+            className="gap-2 text-xs bg-white"
+          >
+            <Download className="h-3.5 w-3.5 text-blue-600" />
+            Template Excel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSaving}
+            className="gap-2 text-xs border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+          >
+            <Upload className="h-3.5 w-3.5 text-blue-600" />
+            Tarik dari Excel
+          </Button>
           {isSaving && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
           <span className={cn("rounded-full px-3 py-1 font-medium", completedWeeks >= 14 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
             {completedWeeks}/16 minggu terisi
