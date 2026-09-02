@@ -23,6 +23,8 @@ interface MeetingsSectionProps {
   registerSave: RegisterRpsSectionSave
 }
 
+type ExcelMeetingRow = Record<string, unknown>
+
 export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }: MeetingsSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const subCpmks = useMemo(
@@ -180,18 +182,30 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
           return
         }
 
-        const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" })
+        const rows = XLSX.utils.sheet_to_json<ExcelMeetingRow>(worksheet, { defval: "" })
         if (!rows || rows.length === 0) {
           toast.error("File Excel kosong atau format tidak sesuai")
           return
         }
 
+        const rowsByWeek = new Map<number, ExcelMeetingRow>()
+        for (const [rowIndex, row] of rows.entries()) {
+          const rawWeek = row["Minggu Ke"] ?? row["Minggu"] ?? row["minggu_ke"] ?? row["No"] ?? row["Minggu ke-"]
+          const week = Number(rawWeek)
+
+          if (!Number.isInteger(week) || week < 1 || week > 16) {
+            throw new Error(`Nomor minggu pada baris Excel ${rowIndex + 2} harus berupa angka 1 sampai 16.`)
+          }
+          if (rowsByWeek.has(week)) {
+            throw new Error(`Minggu ${week} tercantum lebih dari sekali di file Excel.`)
+          }
+
+          rowsByWeek.set(week, row)
+        }
+
         const updated = Array.from({ length: 16 }, (_, index) => {
           const targetWeek = index + 1
-          const row = rows.find((r) => {
-            const w = r["Minggu Ke"] ?? r["Minggu"] ?? r["minggu_ke"] ?? r["No"] ?? r["Minggu ke-"]
-            return Number(w) === targetWeek
-          }) || rows[index]
+          const row = rowsByWeek.get(targetWeek)
 
           if (!row) return meetings[index]
 
@@ -238,13 +252,13 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
         const res = await saveMeetings(rpsId, updated)
         setIsSaving(false)
         if (res.success) {
-          toast.success("16 data rencana mingguan berhasil ditarik dari Excel dan disimpan!")
+          toast.success(`${rowsByWeek.size} data rencana mingguan berhasil ditarik dari Excel dan disimpan!`)
         } else {
           toast.error(res.error || "Gagal menyimpan data dari Excel")
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err)
-        toast.error("Gagal membaca file Excel. Pastikan format file .xlsx valid.")
+        toast.error(err instanceof Error ? err.message : "Gagal membaca file Excel. Pastikan format file .xlsx valid.")
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = ""
       }
