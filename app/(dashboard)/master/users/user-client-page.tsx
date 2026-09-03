@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table"
 import { UserFormSheet } from "./user-form-sheet"
 import { ResetPasswordModal } from "./reset-password-modal"
-import { Plus, Edit, Key, Power, PowerOff, LogIn, Loader2, ShieldCheck } from "lucide-react"
+import { Plus, Edit, Key, Power, PowerOff, LogIn, Loader2, ShieldCheck, AlertCircle } from "lucide-react"
 import { toggleUserActive } from "./actions"
 import { startDosenImpersonation } from "@/app/actions/impersonation"
 import { toast } from "sonner"
@@ -238,21 +238,56 @@ export function UserClientPage({ users }: { users: ManagedUser[] }) {
           if (!open && !isImpersonating) setUserToImpersonate(null)
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-blue-50 text-blue-700">
-              <ShieldCheck />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Masuk sebagai dosen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anda akan melihat SIPEKA dan menjalankan tindakan dengan hak akses {userToImpersonate?.nama_lengkap}.
-              Mode ini dapat dihentikan kapan saja dan akan dicatat pada audit log.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isImpersonating}>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={isImpersonating} onClick={handleImpersonate}>
-              {isImpersonating ? <Loader2 className="animate-spin" /> : <LogIn />}
+        <AlertDialogContent className="sm:max-w-[480px]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <AlertDialogTitle className="text-lg font-semibold text-slate-900">
+                Masuk sebagai Dosen?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm text-slate-600">
+                Anda akan mengakses SIPEKA dengan hak akses akun berikut:
+              </AlertDialogDescription>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm">
+              {userToImpersonate?.nama_lengkap?.charAt(0).toUpperCase() || "D"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-900">
+                {userToImpersonate?.nama_lengkap}
+              </p>
+              <p className="truncate text-xs text-slate-500">
+                {userToImpersonate?.email} {userToImpersonate?.nidn ? `• NIDN: ${userToImpersonate.nidn}` : ""}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-900 leading-relaxed">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <span>
+              Mode ini dapat dihentikan kapan saja via banner di atas. Semua tindakan akan dicatat pada <strong>audit log</strong>.
+            </span>
+          </div>
+
+          <AlertDialogFooter className="mt-1 flex items-center justify-end gap-2.5">
+            <AlertDialogCancel disabled={isImpersonating}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isImpersonating}
+              onClick={handleImpersonate}
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-4 shadow-sm"
+            >
+              {isImpersonating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LogIn className="h-4 w-4" />
+              )}
               Masuk sebagai Dosen
             </AlertDialogAction>
           </AlertDialogFooter>
