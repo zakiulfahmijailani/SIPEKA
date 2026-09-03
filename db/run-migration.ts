@@ -14,6 +14,7 @@ async function main() {
 
   const statements = [
     `ALTER TABLE "cpmk" ADD COLUMN IF NOT EXISTS "metode_pencapaian" text`,
+    `ALTER TABLE "cpmk_template" ADD COLUMN IF NOT EXISTS "metode_pencapaian" text`,
     `ALTER TABLE "komponen_penilaian" ADD COLUMN IF NOT EXISTS "referensi_tugas" text`,
     `ALTER TABLE "komponen_penilaian" ADD COLUMN IF NOT EXISTS "lain_lain" text`,
     `ALTER TABLE "rps" ADD COLUMN IF NOT EXISTS "deskripsi_mk" text`,

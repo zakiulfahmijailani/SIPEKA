@@ -150,12 +150,12 @@ async function copyCpmkTemplateToRps(rpsId: string, mkId: string) {
         rps_id: rpsId,
         kode: template.kode,
         deskripsi: template.deskripsi,
-        metode_pencapaian: "Tatap muka, diskusi, dan latihan terstruktur",
+        metode_pencapaian: template.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur",
         urutan: template.urutan,
       })
       .onConflictDoUpdate({
         target: [cpmk.rps_id, cpmk.kode],
-        set: { deskripsi: template.deskripsi, metode_pencapaian: "Tatap muka, diskusi, dan latihan terstruktur", urutan: template.urutan },
+        set: { deskripsi: template.deskripsi, metode_pencapaian: template.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur", urutan: template.urutan },
       })
       .returning()
 

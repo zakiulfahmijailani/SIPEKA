@@ -18,7 +18,7 @@ export default async function ImportPage() {
           Impor workbook operasional
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-          SIPEKA membaca struktur T2, T9, T12b, T14, T15, dan T18a. Template hasil impor
+          SIPEKA membaca struktur T2, T9, T12b, T14, T15, T17 PenilaianCPMK, dan T18a. Metode penilaian CPMK dari T17 ikut disimpan sebagai template RPS.
           otomatis menjadi titik awal dokumen dosen tanpa mengubah RPS yang sudah dikerjakan.
         </p>
       </div>

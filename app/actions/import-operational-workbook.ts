@@ -42,6 +42,8 @@ type CourseCpmkInput = {
   kodeCpmk: string
 }
 
+type CpmkAssessmentMethodInput = { kodeMk: string; kodeCpmk: string; metode: string }
+
 type SubCpmkInput = {
   kodeMk: string
   kodeCpmk: string
@@ -63,6 +65,7 @@ type ParsedWorkbook = {
   courses: CourseInput[]
   cpmkDescriptions: Map<string, string>
   courseCpmks: CourseCpmkInput[]
+  cpmkAssessmentMethods: CpmkAssessmentMethodInput[]
   subCpmks: SubCpmkInput[]
   assessments: AssessmentInput[]
   warnings: string[]
@@ -97,6 +100,7 @@ const REQUIRED_SHEETS = [
   "T12b CPL-CPMK-MK",
   "T14 CPL-MK-CPMK-OK",
   "T15 MK-CPMK-SubCPMK-OK",
+  "T17 PenilaianCPMK",
   "T18a BobotPen",
 ]
 
@@ -229,6 +233,23 @@ async function parseWorkbook(buffer: ArrayBuffer): Promise<ParsedWorkbook> {
     return kodeCpl ? [{ kodeMk, kodeCpl, kodeCpmk }] : []
   })
 
+  const courseByName = new Map(courses.map((item) => [item.nama_id.toLowerCase(), item.kode]))
+  const methodNames = ["Kuis", "Tugas Teori (Individu)", "Unjuk Kerja (Presentasi)", "Tes Tulis (UTS)", "Tes Tulis (UAS)", "Tugas Teori (Kelompok)", "Tugas Praktikum", "Responsi", "Partisipasi"]
+  const methodMap = new Map<string, Set<string>>()
+  for (const row of rows(workbook, "T17 PenilaianCPMK").slice(2)) {
+    const kodeMk = courseByName.get(cleanCourseName(text(row[1]).split("/")[0]).toLowerCase())
+    const kodeCpmk = canonicalCpmk(row[2])
+    if (!kodeMk || !kodeCpmk) continue
+    const key = `${kodeMk}:${kodeCpmk}`
+    const methods = methodMap.get(key) ?? new Set<string>()
+    methodNames.forEach((name, index) => { if (text(row[3 + index]) === "✓") methods.add(name) })
+    methodMap.set(key, methods)
+  }
+  const cpmkAssessmentMethods = [...methodMap.entries()].map(([key, methods]) => {
+    const [kodeMk, kodeCpmk] = key.split(":")
+    return { kodeMk, kodeCpmk, metode: [...methods].join(", ") }
+  }).filter((item) => item.metode)
+
   const assessments: AssessmentInput[] = []
   currentMk = ""
   currentCpmk = ""
@@ -286,7 +307,7 @@ async function parseWorkbook(buffer: ArrayBuffer): Promise<ParsedWorkbook> {
     warnings.push(`${coursesWithoutAssessments.length} mata kuliah belum memiliki rincian bobot penilaian pada T18a.`)
   }
 
-  return { cpls, courses, cpmkDescriptions, courseCpmks, subCpmks, assessments, warnings }
+  return { cpls, courses, cpmkDescriptions, courseCpmks, cpmkAssessmentMethods, subCpmks, assessments, warnings }
 }
 
 export async function importOperationalWorkbook(formData: FormData): Promise<OperationalImportResult> {
@@ -485,7 +506,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
         const order = (cpmkOrderByCourse.get(item.kodeMk) ?? 0) + 1
         cpmkOrderByCourse.set(item.kodeMk, order)
         cpmkKeys.push(templateKey)
-        cpmkRows.push({ mk_id: mkId, cpl_id: cplId, kode: item.kodeCpmk, deskripsi: description, urutan: order, is_active: true, updated_at: new Date() })
+        cpmkRows.push({ mk_id: mkId, cpl_id: cplId, kode: item.kodeCpmk, deskripsi: description, metode_pencapaian: parsed.cpmkAssessmentMethods.find((method) => method.kodeMk === item.kodeMk && method.kodeCpmk === item.kodeCpmk)?.metode || null, urutan: order, is_active: true, updated_at: new Date() })
         if (scope === "full") await tx.insert(petaKurikulum).values({ mk_id: mkId, cpl_id: cplId, bobot: 1 }).onConflictDoNothing()
       }
 

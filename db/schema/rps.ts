@@ -17,6 +17,7 @@ export const cpmkTemplate = pgTable("cpmk_template", {
   cpl_id: text("cpl_id").references(() => cpl.id),
   kode: text("kode").notNull(),
   deskripsi: text("deskripsi").notNull(),
+  metode_pencapaian: text("metode_pencapaian"),
   urutan: integer("urutan").notNull(),
   is_active: boolean("is_active").notNull().default(true),
   created_at: timestamp("created_at").defaultNow().notNull(),
