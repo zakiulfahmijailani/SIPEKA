@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
+import { sql } from "drizzle-orm"
 
+import { db } from "@/db"
 import { syncCurriculum2026 } from "@/db/sync-curriculum-2026"
 import { MOCK_SESSION } from "@/lib/mock-session"
 
@@ -12,6 +14,7 @@ export async function POST() {
   }
 
   try {
+    await db.execute(sql`ALTER TABLE "cpmk_template" ADD COLUMN IF NOT EXISTS "metode_pencapaian" text`)
     const result = await syncCurriculum2026()
     return NextResponse.json({ success: true, ...result })
   } catch (error) {
