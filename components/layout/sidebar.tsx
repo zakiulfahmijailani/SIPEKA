@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Loader2,
   Layers3,
+  ListTree,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -101,6 +102,7 @@ export function Sidebar({ session }: SidebarProps) {
         { name: "Master CPL", href: "/master/cpl", icon: Database, show: isSuperAdmin || isKaprodi },
         { name: "Mata Kuliah", href: "/master/mata-kuliah", icon: BookMarked, show: isSuperAdmin || isKaprodi },
         { name: "Peta Kurikulum", href: "/master/peta-kurikulum", icon: Map, show: isSuperAdmin || isKaprodi },
+        { name: "Peta CPMK", href: "/master/peta-cpmk", icon: ListTree, show: isSuperAdmin || isKaprodi },
         { name: "Pemetaan Kurikulum", href: "/kurikulum/pemetaan", icon: Table2, show: isSuperAdmin || isKaprodi },
         { name: "Sebaran CPL", href: "/kurikulum/sebaran-cpl", icon: Map, show: isSuperAdmin || isKaprodi },
         { name: "Analitik Kurikulum", href: "/kurikulum/analitik", icon: BarChart2, show: isSuperAdmin || isKaprodi },
