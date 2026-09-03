@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 interface MappingTableProps {
+  officialCreditsBySemester: Record<number, number>
   courses: {
     id: string
     code: string
@@ -31,14 +32,6 @@ const TRACK_STYLES: Record<string, { header: string; text: string }> = {
     header: "bg-amber-50/90 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-900/40",
     text: "text-amber-900 dark:text-amber-200",
   },
-  BIS: {
-    header: "bg-sky-50/90 dark:bg-sky-950/20 border-sky-200/60 dark:border-sky-900/40",
-    text: "text-sky-900 dark:text-sky-200",
-  },
-  DSA: {
-    header: "bg-emerald-50/90 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-900/40",
-    text: "text-emerald-900 dark:text-emerald-200",
-  },
   ISG: {
     header: "bg-indigo-50/90 dark:bg-indigo-950/20 border-indigo-200/60 dark:border-indigo-900/40",
     text: "text-indigo-900 dark:text-indigo-200",
@@ -49,7 +42,7 @@ const TRACK_STYLES: Record<string, { header: string; text: string }> = {
   },
 }
 
-export function MappingTable({ courses, plos }: MappingTableProps) {
+export function MappingTable({ courses, plos, officialCreditsBySemester }: MappingTableProps) {
   if (courses.length === 0 || plos.length === 0) {
     return (
       <Card className="rounded-lg">
@@ -90,17 +83,19 @@ export function MappingTable({ courses, plos }: MappingTableProps) {
                 {sortedSemesters.map((semester) => {
                   const semCourses = coursesBySemester.get(semester) ?? []
                   if (semCourses.length === 0) return null
-                  const semCredits = semCourses.reduce(
+                  const offeredCredits = semCourses.reduce(
                     (sum, c) => sum + c.creditsTheory + c.creditsPractice,
                     0
                   )
+                  const officialCredits = officialCreditsBySemester[semester] ?? offeredCredits
                   return (
                     <th
                       key={`sem-header-${semester}`}
                       colSpan={semCourses.length}
                       className="sticky top-0 z-20 border-b border-r border-blue-100 bg-blue-50/90 px-3 py-1.5 text-center text-xs font-bold text-blue-900 uppercase tracking-wider dark:border-blue-950/40 dark:bg-blue-950/40 dark:text-blue-200"
                     >
-                      Semester {semester} ({semCredits} SKS)
+                      Semester {semester} ({officialCredits} SKS
+                      {offeredCredits > officialCredits ? ` · ${offeredCredits} SKS ditawarkan` : ""})
                     </th>
                   )
                 })}

@@ -14,12 +14,30 @@ import {
 import { MkFormSheet } from "./mk-form-sheet"
 import { Plus, Edit, Check } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
+import type { MKFormValues } from "./mk-form-sheet"
 
-export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
+type MkRow = {
+  id: string
+  kode: string
+  nama_id: string
+  nama_en: string | null
+  sks_teori: number
+  sks_praktik: number
+  semester_rekomendasi: number
+  status: "WAJIB" | "PILIHAN"
+  track: "UMUM" | "BIS" | "DSA" | "ISG" | "DMS"
+  tipe_aktivitas: MKFormValues["tipe_aktivitas"]
+  deskripsi: string | null
+  has_praktikum: boolean
+  is_pbl: boolean
+  cplCount?: number
+}
+
+export function MkClientPage({ mks, role }: { mks: MkRow[]; role: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [selectedMk, setSelectedMk] = useState<any | null>(null)
+  const [selectedMk, setSelectedMk] = useState<MKFormValues | null>(null)
   
   const currentSemester = searchParams.get("semester") || "ALL"
   const currentStatus = searchParams.get("status") || "ALL"
@@ -27,8 +45,21 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
 
   const canEdit = role === "SUPER_ADMIN" || role === "KAPRODI"
 
-  const handleEdit = (mk: any) => {
-    setSelectedMk(mk)
+  const handleEdit = (mk: MkRow) => {
+    const normalizedTrack = mk.track === "BIS" ? "ISG" : mk.track === "DSA" ? "DMS" : mk.track
+    setSelectedMk({
+      id: mk.id,
+      kode: mk.kode,
+      nama_id: mk.nama_id,
+      nama_en: mk.nama_en ?? "",
+      sks_teori: mk.sks_teori,
+      sks_praktik: mk.sks_praktik,
+      semester_rekomendasi: mk.semester_rekomendasi,
+      status: mk.status,
+      track: normalizedTrack,
+      tipe_aktivitas: mk.tipe_aktivitas,
+      deskripsi: mk.deskripsi ?? "",
+    })
     setIsSheetOpen(true)
   }
 
@@ -51,10 +82,10 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
     switch (track) {
       case "UMUM":
         return <Badge variant="outline" className="text-gray-600 bg-gray-50 border-gray-200">Umum</Badge>
-      case "BIS":
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-none">BIS</Badge>
-      case "DSA":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">DSA</Badge>
+      case "ISG":
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-none">ISG</Badge>
+      case "DMS":
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none">DMS</Badge>
       default:
         return <Badge variant="outline">{track}</Badge>
     }
@@ -102,8 +133,8 @@ export function MkClientPage({ mks, role }: { mks: any[], role: string }) {
         >
           <option value="ALL">Semua Track</option>
           <option value="UMUM">Umum</option>
-          <option value="BIS">Business Information Systems</option>
-          <option value="DSA">Data Science & Analytics</option>
+          <option value="ISG">Information Systems &amp; Governance</option>
+          <option value="DMS">Data Management Systems</option>
         </select>
       </div>
 

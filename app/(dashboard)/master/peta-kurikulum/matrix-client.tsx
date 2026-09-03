@@ -3,8 +3,24 @@
 import { useState } from "react"
 import { togglePetaKurikulum } from "./actions"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+type MatrixCourse = {
+  id: string
+  kode: string
+  nama_id: string
+  sks_teori: number
+  sks_praktik: number
+  status: string
+  track: string
+}
+
+type MatrixCpl = {
+  id: string
+  kode: string
+  rumusan: string
+  domain: string
+}
 
 export function MatrixClient({ 
   mks, 
@@ -12,8 +28,8 @@ export function MatrixClient({
   initialMappings, 
   role 
 }: { 
-  mks: any[], 
-  cpls: any[], 
+  mks: MatrixCourse[],
+  cpls: MatrixCpl[],
   initialMappings: Record<string, boolean>,
   role: string
 }) {
@@ -49,7 +65,7 @@ export function MatrixClient({
           duration: 1500
         })
       }
-    } catch (e) {
+    } catch {
       // Revert on error
       setMappings(prev => ({
         ...prev,
@@ -69,7 +85,7 @@ export function MatrixClient({
     }
   }
 
-  const renderMatrix = (filteredMks: any[]) => {
+  const renderMatrix = (filteredMks: MatrixCourse[]) => {
     // Calculate column totals
     const cplCounts = cpls.map(cpl => {
       let count = 0
@@ -160,8 +176,8 @@ export function MatrixClient({
   }
 
   const wajibMks = mks.filter(mk => mk.status === "WAJIB")
-  const bisMks = mks.filter(mk => mk.status === "PILIHAN" && mk.track === "BIS")
-  const dsaMks = mks.filter(mk => mk.status === "PILIHAN" && mk.track === "DSA")
+  const isgMks = mks.filter(mk => mk.status === "PILIHAN" && mk.track === "ISG")
+  const dmsMks = mks.filter(mk => mk.status === "PILIHAN" && mk.track === "DMS")
 
   return (
     <div className="space-y-4">
@@ -173,20 +189,20 @@ export function MatrixClient({
       <Tabs defaultValue="wajib" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="wajib">Mata Kuliah Wajib</TabsTrigger>
-          <TabsTrigger value="bis">Pilihan BIS</TabsTrigger>
-          <TabsTrigger value="dsa">Pilihan DSA</TabsTrigger>
+          <TabsTrigger value="isg">Pilihan ISG</TabsTrigger>
+          <TabsTrigger value="dms">Pilihan DMS</TabsTrigger>
         </TabsList>
         
         <TabsContent value="wajib" className="mt-0">
           {renderMatrix(wajibMks)}
         </TabsContent>
         
-        <TabsContent value="bis" className="mt-0">
-          {renderMatrix(bisMks)}
+        <TabsContent value="isg" className="mt-0">
+          {renderMatrix(isgMks)}
         </TabsContent>
         
-        <TabsContent value="dsa" className="mt-0">
-          {renderMatrix(dsaMks)}
+        <TabsContent value="dms" className="mt-0">
+          {renderMatrix(dmsMks)}
         </TabsContent>
       </Tabs>
 

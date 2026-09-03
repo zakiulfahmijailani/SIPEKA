@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# local curriculum source documents
+/document reference/
+/scratch/
+check-mk.js
+update-mk.js
+
 # next.js
 /.next/
 /out/

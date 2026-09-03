@@ -94,7 +94,7 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
                 <li>Kolom: nim, nama_lengkap, angkatan</li>
                 <li>Opsional: status, track, email</li>
                 <li>Status: AKTIF, CUTI, LULUS, DO</li>
-                <li>Track: UMUM, BIS, DSA</li>
+                <li>Track: UMUM, ISG, DMS</li>
               </ul>
             </div>
           </div>

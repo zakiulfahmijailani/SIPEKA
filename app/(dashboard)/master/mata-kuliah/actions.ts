@@ -16,7 +16,7 @@ const mkSchema = z.object({
   sks_praktik: z.coerce.number().min(0).max(6),
   semester_rekomendasi: z.coerce.number().min(1).max(8),
   status: z.enum(["WAJIB", "PILIHAN"]),
-  track: z.enum(["UMUM", "BIS", "DSA"]),
+  track: z.enum(["UMUM", "ISG", "DMS"]),
   tipe_aktivitas: z.enum(["TEORI", "PRAKTIKUM", "TEORI_PRAKTIKUM", "SEMINAR", "PROYEK"]),
   deskripsi: z.string().optional(),
 })
@@ -57,9 +57,14 @@ export async function saveMK(formData: z.infer<typeof mkSchema>) {
 
     revalidatePath("/master/mata-kuliah")
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving MK:", error)
-    if (error.code === "23505") { // unique violation
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "23505"
+    ) {
       return { success: false, error: "Kode Mata Kuliah sudah digunakan" }
     }
     return { success: false, error: "Terjadi kesalahan sistem" }

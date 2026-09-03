@@ -2,85 +2,79 @@
 
 import {
   Bar,
-  BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
-  ReferenceLine,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  TooltipProps
 } from "recharts"
 
 interface SksBarChartProps {
   data: {
     semester: number
-    sksTeori: number
-    sksPraktik: number
+    sksWajib: number
+    sksPilihanDitawarkan: number
+    bebanResmi: number
   }[]
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    const teori = payload.find((p: any) => p.dataKey === 'sksTeori')?.value || 0;
-    const praktik = payload.find((p: any) => p.dataKey === 'sksPraktik')?.value || 0;
-    const total = teori + praktik;
+type TooltipPayloadItem = {
+  dataKey?: string | number
+  value?: string | number
+}
 
-    return (
-      <div className="bg-background border border-border p-3 rounded-lg shadow-md">
-        <p className="font-semibold text-foreground mb-1">{label}</p>
-        <p className="text-sm" style={{ color: '#0d9488' }}>Teori: {teori} SKS</p>
-        <p className="text-sm" style={{ color: '#ea580c' }}>Praktik: {praktik} SKS</p>
-        <div className="my-1 border-t border-border" />
-        <p className="text-sm font-medium text-foreground">Total: {total} SKS</p>
-      </div>
-    );
-  }
-  return null;
-};
+type CustomTooltipProps = {
+  active?: boolean
+  payload?: TooltipPayloadItem[]
+  label?: string | number
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (!active || !payload?.length) return null
+
+  const getValue = (dataKey: string) =>
+    Number(payload.find((item) => item.dataKey === dataKey)?.value ?? 0)
+  const wajib = getValue("sksWajib")
+  const pilihan = getValue("sksPilihanDitawarkan")
+  const resmi = getValue("bebanResmi")
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 shadow-md">
+      <p className="mb-1 font-semibold text-foreground">{label}</p>
+      <p className="text-sm text-teal-600">Wajib: {wajib} SKS</p>
+      <p className="text-sm text-orange-600">Pilihan ditawarkan: {pilihan} SKS</p>
+      <div className="my-1 border-t border-border" />
+      <p className="text-sm text-muted-foreground">Total ditawarkan: {wajib + pilihan} SKS</p>
+      <p className="text-sm font-medium text-blue-700">Beban resmi: {resmi} SKS</p>
+    </div>
+  )
+}
 
 export function SksBarChart({ data }: SksBarChartProps) {
-  const enrichedData = data.map(d => ({
-    ...d,
-    name: `Semester ${d.semester}`
+  const enrichedData = data.map((item) => ({
+    ...item,
+    name: `Semester ${item.semester}`,
   }))
 
   return (
-    <div className="w-full h-[320px]">
+    <div className="h-[320px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
+        <ComposedChart
           data={enrichedData}
-          margin={{
-            top: 20,
-            right: 30,
-            left: -10,
-            bottom: 5,
-          }}
+          margin={{ top: 20, right: 30, left: -10, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-          <XAxis 
-            dataKey="name" 
-            className="text-xs fill-muted-foreground"
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis 
-            className="text-xs fill-muted-foreground"
-            tickLine={false}
-            axisLine={false}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }} />
-          <Legend wrapperStyle={{ paddingTop: '20px' }} />
-          <ReferenceLine 
-            y={22} 
-            stroke="#ef4444" 
-            strokeDasharray="3 3" 
-            label={{ position: 'top', value: 'Batas Ideal', fill: '#ef4444', fontSize: 12 }} 
-          />
-          <Bar dataKey="sksTeori" name="SKS Teori" fill="#0d9488" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="sksPraktik" name="SKS Praktik" fill="#ea580c" radius={[4, 4, 0, 0]} />
-        </BarChart>
+          <XAxis dataKey="name" className="fill-muted-foreground text-xs" tickLine={false} axisLine={false} />
+          <YAxis className="fill-muted-foreground text-xs" tickLine={false} axisLine={false} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }} />
+          <Legend wrapperStyle={{ paddingTop: "20px" }} />
+          <Bar dataKey="sksWajib" name="SKS Wajib" stackId="offered" fill="#0d9488" radius={[0, 0, 4, 4]} />
+          <Bar dataKey="sksPilihanDitawarkan" name="Pilihan Ditawarkan" stackId="offered" fill="#ea580c" radius={[4, 4, 0, 0]} />
+          <Line dataKey="bebanResmi" name="Beban Resmi" type="monotone" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )

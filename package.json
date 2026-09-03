@@ -14,7 +14,9 @@
     "db:seed": "tsx db/seed.ts",
     "db:seed-mk": "tsx db/seed-mk.ts",
     "db:seed-cpl-mapping": "tsx db/seed-cpl-mapping.ts",
-    "db:seed-cpl-mapping-v2": "tsx db/seed-cpl-mapping-v2.ts"
+    "db:seed-cpl-mapping-v2": "tsx db/seed-cpl-mapping-v2.ts",
+    "db:sync-curriculum-2026": "tsx db/sync-curriculum-2026.ts",
+    "db:migrate-tracks": "tsx db/run-track-migration.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",

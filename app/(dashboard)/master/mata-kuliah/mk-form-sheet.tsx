@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -32,16 +32,16 @@ const mkSchema = z.object({
   kode: z.string().min(1, "Kode MK wajib diisi"),
   nama_id: z.string().min(1, "Nama MK wajib diisi"),
   nama_en: z.string().optional(),
-  sks_teori: z.coerce.number().min(0).max(6),
-  sks_praktik: z.coerce.number().min(0).max(6),
-  semester_rekomendasi: z.coerce.number().min(1).max(8),
+  sks_teori: z.number().min(0).max(6),
+  sks_praktik: z.number().min(0).max(6),
+  semester_rekomendasi: z.number().min(1).max(8),
   status: z.enum(["WAJIB", "PILIHAN"]),
-  track: z.enum(["UMUM", "BIS", "DSA"]),
+  track: z.enum(["UMUM", "ISG", "DMS"]),
   tipe_aktivitas: z.enum(["TEORI", "PRAKTIKUM", "TEORI_PRAKTIKUM", "SEMINAR", "PROYEK"]),
   deskripsi: z.string().optional(),
 })
 
-type MKFormValues = z.infer<typeof mkSchema>
+export type MKFormValues = z.infer<typeof mkSchema>
 
 interface MkFormSheetProps {
   open: boolean
@@ -60,7 +60,7 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
     setValue,
     watch,
   } = useForm<MKFormValues>({
-    resolver: zodResolver(mkSchema) as any,
+    resolver: zodResolver(mkSchema),
     defaultValues: initialData || {
       kode: "",
       nama_id: "",
@@ -75,11 +75,20 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
     },
   })
 
-  useState(() => {
-    if (initialData) {
-      reset(initialData)
-    }
-  })
+  useEffect(() => {
+    reset(initialData || {
+      kode: "",
+      nama_id: "",
+      nama_en: "",
+      sks_teori: 2,
+      sks_praktik: 0,
+      semester_rekomendasi: 1,
+      status: "WAJIB",
+      track: "UMUM",
+      tipe_aktivitas: "TEORI",
+      deskripsi: "",
+    })
+  }, [initialData, reset])
 
   const onSubmit = async (data: MKFormValues) => {
     setIsLoading(true)
@@ -92,7 +101,7 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
       } else {
         toast.error(result.error || "Gagal menyimpan Mata Kuliah")
       }
-    } catch (error) {
+    } catch {
       toast.error("Terjadi kesalahan sistem")
     } finally {
       setIsLoading(false)
@@ -125,7 +134,9 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
                 <Label htmlFor="semester_rekomendasi">Semester Rekomendasi <span className="text-red-500">*</span></Label>
                 <Select 
                   value={watch("semester_rekomendasi")?.toString()} 
-                  onValueChange={(val: any) => setValue("semester_rekomendasi", parseInt(val))}
+                  onValueChange={(val) => {
+                    if (val) setValue("semester_rekomendasi", parseInt(val))
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih semester" />
@@ -155,13 +166,13 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="sks_teori">SKS Teori <span className="text-red-500">*</span></Label>
-                <Input id="sks_teori" type="number" min="0" max="6" {...register("sks_teori")} />
+                <Input id="sks_teori" type="number" min="0" max="6" {...register("sks_teori", { valueAsNumber: true })} />
                 {errors.sks_teori && <p className="text-sm text-red-500">{errors.sks_teori.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="sks_praktik">SKS Praktik <span className="text-red-500">*</span></Label>
-                <Input id="sks_praktik" type="number" min="0" max="6" {...register("sks_praktik")} />
+                <Input id="sks_praktik" type="number" min="0" max="6" {...register("sks_praktik", { valueAsNumber: true })} />
                 {errors.sks_praktik && <p className="text-sm text-red-500">{errors.sks_praktik.message}</p>}
               </div>
             </div>
@@ -169,7 +180,9 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status MK <span className="text-red-500">*</span></Label>
-                <Select value={watch("status")} onValueChange={(val: any) => setValue("status", val)}>
+                <Select value={watch("status")} onValueChange={(val) => {
+                  if (val) setValue("status", val)
+                }}>
                   <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="WAJIB">WAJIB</SelectItem>
@@ -180,12 +193,14 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
 
               <div className="space-y-2">
                 <Label htmlFor="track">Track Peminatan <span className="text-red-500">*</span></Label>
-                <Select value={watch("track")} onValueChange={(val: any) => setValue("track", val)}>
+                <Select value={watch("track")} onValueChange={(val) => {
+                  if (val) setValue("track", val)
+                }}>
                   <SelectTrigger><SelectValue placeholder="Pilih track" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="UMUM">UMUM</SelectItem>
-                    <SelectItem value="BIS">Business Information Systems</SelectItem>
-                    <SelectItem value="DSA">Data Science & Analytics</SelectItem>
+                    <SelectItem value="ISG">Information Systems &amp; Governance</SelectItem>
+                    <SelectItem value="DMS">Data Management Systems</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -193,7 +208,9 @@ export function MkFormSheet({ open, onOpenChange, initialData }: MkFormSheetProp
 
             <div className="space-y-2">
               <Label htmlFor="tipe_aktivitas">Tipe Aktivitas <span className="text-red-500">*</span></Label>
-              <Select value={watch("tipe_aktivitas")} onValueChange={(val: any) => setValue("tipe_aktivitas", val)}>
+              <Select value={watch("tipe_aktivitas")} onValueChange={(val) => {
+                if (val) setValue("tipe_aktivitas", val)
+              }}>
                 <SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TEORI">Teori Kelas</SelectItem>

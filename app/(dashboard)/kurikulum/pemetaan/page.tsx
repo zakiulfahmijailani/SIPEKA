@@ -5,13 +5,14 @@ import { cpl, mataKuliah, petaKurikulum } from "@/db/schema"
 import { Separator } from "@/components/ui/separator"
 import { MappingTable } from "./mapping-table"
 import { UploadForm } from "./upload-form"
+import { CURRICULUM_2026_OFFICIAL_SKS_BY_SEMESTER } from "@/db/curriculum-2026"
 
 export const dynamic = "force-dynamic"
 
 type MappingLevel = "H" | "M" | "L" | null
 
 export default async function PemetaanKurikulumPage() {
-  const curriculumPlos = await db
+  const curriculumPlosQuery = db
     .select({
       id: cpl.id,
       code: cpl.kode,
@@ -22,7 +23,7 @@ export default async function PemetaanKurikulumPage() {
     .where(eq(cpl.is_active, true))
     .orderBy(asc(cpl.urutan))
 
-  const curriculumCourses = await db
+  const curriculumCoursesQuery = db
     .select({
       id: mataKuliah.id,
       code: mataKuliah.kode,
@@ -37,7 +38,7 @@ export default async function PemetaanKurikulumPage() {
     .where(eq(mataKuliah.is_active, true))
     .orderBy(asc(mataKuliah.semester_rekomendasi), asc(mataKuliah.kode))
 
-  const rows = await db
+  const rowsQuery = db
     .select({
       courseId: petaKurikulum.mk_id,
       ploCode: cpl.kode,
@@ -48,6 +49,12 @@ export default async function PemetaanKurikulumPage() {
     .from(petaKurikulum)
     .innerJoin(mataKuliah, eq(petaKurikulum.mk_id, mataKuliah.id))
     .innerJoin(cpl, eq(petaKurikulum.cpl_id, cpl.id))
+
+  const [curriculumPlos, curriculumCourses, rows] = await Promise.all([
+    curriculumPlosQuery,
+    curriculumCoursesQuery,
+    rowsQuery,
+  ])
 
   const mappingsByCourseId = rows.reduce<Map<string, { ploCode: string; contributionLevel: MappingLevel }[]>>(
     (groups, row) => {
@@ -84,7 +91,11 @@ export default async function PemetaanKurikulumPage() {
 
       <Separator />
 
-      <MappingTable courses={tableCourses} plos={curriculumPlos} />
+      <MappingTable
+        courses={tableCourses}
+        plos={curriculumPlos}
+        officialCreditsBySemester={CURRICULUM_2026_OFFICIAL_SKS_BY_SEMESTER}
+      />
     </div>
   )
 }

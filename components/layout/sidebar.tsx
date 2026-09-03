@@ -25,6 +25,7 @@ import {
   Upload,
   ArrowLeft,
   Loader2,
+  Layers3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -84,6 +85,7 @@ export function Sidebar({ session }: SidebarProps) {
       items: [
         { name: "Dashboard", href: "/dashboard", icon: Home, show: true },
         { name: "Referensi IS2020", href: "/referensi/is2020", icon: BookOpen, show: true },
+        { name: "Bahan Kajian 2026", href: "/referensi/bahan-kajian", icon: Layers3, show: true },
       ],
     },
     {

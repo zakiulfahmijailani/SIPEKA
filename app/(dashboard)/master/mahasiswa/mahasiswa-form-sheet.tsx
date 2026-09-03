@@ -30,7 +30,7 @@ const mahasiswaSchema = z.object({
   nim: z.string().min(1, "NIM wajib diisi"),
   nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
   angkatan: z.coerce.number().min(2000, "Angkatan tidak valid"),
-  track: z.enum(["UMUM", "BIS", "DSA"]),
+  track: z.enum(["UMUM", "ISG", "DMS"]),
   status: z.enum(["AKTIF", "CUTI", "LULUS", "DO"]),
   email: z.string().email("Email tidak valid").optional().or(z.literal("")),
 })
@@ -141,8 +141,8 @@ export function MahasiswaFormSheet({ open, onOpenChange, initialData }: Mahasisw
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="UMUM">UMUM</SelectItem>
-                  <SelectItem value="BIS">BIS (Business)</SelectItem>
-                  <SelectItem value="DSA">DSA (Data Science)</SelectItem>
+                  <SelectItem value="ISG">ISG (Information Systems &amp; Governance)</SelectItem>
+                  <SelectItem value="DMS">DMS (Data Management Systems)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

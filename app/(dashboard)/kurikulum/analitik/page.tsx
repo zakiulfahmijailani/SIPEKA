@@ -1,71 +1,63 @@
-import { db } from "@/db"
-import { coursePloMappings, courses, curriculums, plos } from "@/db/schema"
-import { and, asc, eq, sql } from "drizzle-orm"
-import { EmptyState } from "@/components/ui/empty-state"
+import { and, asc, eq } from "drizzle-orm"
 import { BarChart2 } from "lucide-react"
-import { ExportButtons } from "./export-buttons"
-import { SksBarChart } from "./sks-bar-chart"
-import { ObeRadarChart } from "./obe-radar-chart"
+
 import { CplCoverageCards } from "./cpl-coverage-cards"
+import { ExportButtons } from "./export-buttons"
+import { ObeRadarChart } from "./obe-radar-chart"
+import { SksBarChart } from "./sks-bar-chart"
+import { EmptyState } from "@/components/ui/empty-state"
+import { db } from "@/db"
+import { CURRICULUM_2026_OFFICIAL_SKS_BY_SEMESTER } from "@/db/curriculum-2026"
+import { cpl, mataKuliah, petaKurikulum } from "@/db/schema"
 
 export const dynamic = "force-dynamic"
 
+const DOMAIN_LABELS: Record<string, string> = {
+  SIKAP: "Sikap",
+  PENGETAHUAN: "Pengetahuan",
+  KETERAMPILAN_UMUM: "Keterampilan Umum",
+  KETERAMPILAN_KHUSUS: "Keterampilan Khusus",
+}
 export default async function AnalitikKurikulumPage() {
-  const [activeCurriculum] = await db
-    .select()
-    .from(curriculums)
-    .where(eq(curriculums.isActive, true))
-    .limit(1)
-
-  if (!activeCurriculum) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-blue-900 dark:text-blue-100">
-            Analitik Kurikulum
-          </h1>
-          <p className="text-muted-foreground">
-            Distribusi beban SKS dan ketercapaian Capaian Pembelajaran Lulusan (CPL)
-          </p>
-        </div>
-        <EmptyState
-          icon={BarChart2}
-          title="Belum ada data"
-          description="Upload pemetaan kurikulum terlebih dahulu."
-        />
-      </div>
-    )
-  }
-
-  const curriculumPlos = await db
-    .select()
-    .from(plos)
-    .where(eq(plos.curriculumId, activeCurriculum.id))
-    .orderBy(asc(plos.code))
-
-  const curriculumCourses = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.curriculumId, activeCurriculum.id))
-
-  const mappings = await db
+  const cplQuery = db
     .select({
-      courseId: courses.id,
-      ploId: plos.id,
-      ploCode: plos.code,
-      contributionLevel: coursePloMappings.contributionLevel,
-      courseCredits: sql<number>`${courses.creditsTheory} + ${courses.creditsPractice}`,
+      id: cpl.id,
+      code: cpl.kode,
+      description: cpl.rumusan,
+      domain: cpl.domain,
     })
-    .from(coursePloMappings)
-    .innerJoin(courses, eq(coursePloMappings.courseId, courses.id))
-    .innerJoin(plos, eq(coursePloMappings.ploId, plos.id))
-    .where(
-      and(
-        eq(courses.curriculumId, activeCurriculum.id),
-        eq(plos.curriculumId, activeCurriculum.id),
-        sql`${coursePloMappings.contributionLevel} IS NOT NULL`
-      )
-    )
+    .from(cpl)
+    .where(eq(cpl.is_active, true))
+    .orderBy(asc(cpl.urutan))
+
+  const coursesQuery = db
+    .select({
+      id: mataKuliah.id,
+      semester: mataKuliah.semester_rekomendasi,
+      creditsTheory: mataKuliah.sks_teori,
+      creditsPractice: mataKuliah.sks_praktik,
+      status: mataKuliah.status,
+    })
+    .from(mataKuliah)
+    .where(eq(mataKuliah.is_active, true))
+
+  const mappingsQuery = db
+    .select({
+      courseId: mataKuliah.id,
+      cplCode: cpl.kode,
+      courseCreditsTheory: mataKuliah.sks_teori,
+      courseCreditsPractice: mataKuliah.sks_praktik,
+    })
+    .from(petaKurikulum)
+    .innerJoin(mataKuliah, eq(petaKurikulum.mk_id, mataKuliah.id))
+    .innerJoin(cpl, eq(petaKurikulum.cpl_id, cpl.id))
+    .where(and(eq(mataKuliah.is_active, true), eq(cpl.is_active, true)))
+
+  const [curriculumPlos, curriculumCourses, mappings] = await Promise.all([
+    cplQuery,
+    coursesQuery,
+    mappingsQuery,
+  ])
 
   if (curriculumCourses.length === 0 || curriculumPlos.length === 0) {
     return (
@@ -81,76 +73,97 @@ export default async function AnalitikKurikulumPage() {
         <EmptyState
           icon={BarChart2}
           title="Belum ada data"
-          description="Upload pemetaan kurikulum terlebih dahulu."
+          description="Lengkapi data mata kuliah dan CPL terlebih dahulu."
         />
       </div>
     )
   }
 
-  // 1. SKS per semester
-  const sksBySemester = new Map<number, { semester: number, sksTeori: number, sksPraktik: number }>()
-  for (let i = 1; i <= 8; i++) {
-    sksBySemester.set(i, { semester: i, sksTeori: 0, sksPraktik: 0 })
+  const sksBySemester = new Map<number, {
+    semester: number
+    sksWajib: number
+    sksPilihanDitawarkan: number
+    bebanResmi: number
+  }>()
+
+  for (let semester = 1; semester <= 8; semester++) {
+    sksBySemester.set(semester, {
+      semester,
+      sksWajib: 0,
+      sksPilihanDitawarkan: 0,
+      bebanResmi: CURRICULUM_2026_OFFICIAL_SKS_BY_SEMESTER[semester] ?? 0,
+    })
   }
 
-  curriculumCourses.forEach((c) => {
-    const sem = c.semester
-    if (sksBySemester.has(sem)) {
-      const data = sksBySemester.get(sem)!
-      data.sksTeori += c.creditsTheory
-      data.sksPraktik += c.creditsPractice
-    }
-  })
-  const sksChartData = Array.from(sksBySemester.values()).sort((a, b) => a.semester - b.semester)
+  curriculumCourses.forEach((course) => {
+    const semesterData = sksBySemester.get(course.semester)
+    if (!semesterData) return
 
-  // 2. CPL coverage per code
-  const cplStats = new Map<string, { supportingCourses: number, totalSks: number }>()
-  curriculumPlos.forEach(p => cplStats.set(p.code, { supportingCourses: 0, totalSks: 0 }))
-  
-  mappings.forEach(m => {
-    if (cplStats.has(m.ploCode)) {
-      const stat = cplStats.get(m.ploCode)!
-      stat.supportingCourses += 1
-      stat.totalSks += Number(m.courseCredits) || 0
+    const credits = course.creditsTheory + course.creditsPractice
+    if (course.status === "PILIHAN") {
+      semesterData.sksPilihanDitawarkan += credits
+    } else {
+      semesterData.sksWajib += credits
     }
   })
 
-  const maxSupporting = Math.max(1, ...Array.from(cplStats.values()).map(s => s.supportingCourses))
-  
-  const cplCoverageData = curriculumPlos.map(plo => {
-    const stats = cplStats.get(plo.code) || { supportingCourses: 0, totalSks: 0 }
+  const sksChartData = Array.from(sksBySemester.values()).sort(
+    (a, b) => a.semester - b.semester
+  )
+
+  const cplStats = new Map<string, { supportingCourses: number; totalSks: number }>()
+  curriculumPlos.forEach((item) => {
+    cplStats.set(item.code, { supportingCourses: 0, totalSks: 0 })
+  })
+
+  mappings.forEach((mapping) => {
+    const stat = cplStats.get(mapping.cplCode)
+    if (!stat) return
+
+    stat.supportingCourses += 1
+    stat.totalSks += mapping.courseCreditsTheory + mapping.courseCreditsPractice
+  })
+
+  const maxSupporting = Math.max(
+    1,
+    ...Array.from(cplStats.values()).map((item) => item.supportingCourses)
+  )
+
+  const cplCoverageData = curriculumPlos.map((item) => {
+    const stats = cplStats.get(item.code) ?? { supportingCourses: 0, totalSks: 0 }
     return {
-      code: plo.code,
-      description: plo.description,
-      category: plo.category,
+      code: item.code,
+      description: item.description,
+      category: DOMAIN_LABELS[item.domain] ?? item.domain,
       supportingCourses: stats.supportingCourses,
       totalSks: stats.totalSks,
-      coveragePercent: (stats.supportingCourses / maxSupporting) * 100
+      coveragePercent: (stats.supportingCourses / maxSupporting) * 100,
     }
   })
 
-  // 3. CPL Category Coverage (Radar Chart)
-  const categoryStats = new Map<string, { totalPlos: number, coveredPlos: number }>()
-  const categories = ["Sikap", "Keterampilan Umum", "Keterampilan Khusus", "Pengetahuan"]
-  categories.forEach(cat => categoryStats.set(cat, { totalPlos: 0, coveredPlos: 0 }))
+  const categoryStats = new Map<string, { totalPlos: number; coveredPlos: number }>()
+  const categories = ["Sikap", "Pengetahuan", "Keterampilan Umum", "Keterampilan Khusus"]
+  categories.forEach((category) => {
+    categoryStats.set(category, { totalPlos: 0, coveredPlos: 0 })
+  })
 
-  curriculumPlos.forEach(plo => {
-    if (categoryStats.has(plo.category)) {
-      const cat = categoryStats.get(plo.category)!
-      cat.totalPlos += 1
-      const stats = cplStats.get(plo.code)
-      if (stats && stats.supportingCourses > 0) {
-        cat.coveredPlos += 1
-      }
+  curriculumPlos.forEach((item) => {
+    const category = DOMAIN_LABELS[item.domain] ?? item.domain
+    const stat = categoryStats.get(category)
+    if (!stat) return
+
+    stat.totalPlos += 1
+    if ((cplStats.get(item.code)?.supportingCourses ?? 0) > 0) {
+      stat.coveredPlos += 1
     }
   })
 
-  const radarChartData = categories.map(cat => {
-    const stat = categoryStats.get(cat)!
+  const radarChartData = categories.map((category) => {
+    const stat = categoryStats.get(category)!
     return {
-      category: cat,
+      category,
       percentage: stat.totalPlos > 0 ? (stat.coveredPlos / stat.totalPlos) * 100 : 0,
-      fullMark: 100
+      fullMark: 100,
     }
   })
 
@@ -168,13 +181,16 @@ export default async function AnalitikKurikulumPage() {
         <ExportButtons />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="border rounded-xl p-4 bg-card text-card-foreground shadow-sm">
-          <h3 className="font-semibold mb-4 text-center">Distribusi SKS per Semester</h3>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+          <h3 className="mb-1 text-center font-semibold">Distribusi SKS per Semester</h3>
+          <p className="mb-4 text-center text-xs text-muted-foreground">
+            Garis menunjukkan beban resmi; batang mencakup seluruh MK pilihan yang ditawarkan.
+          </p>
           <SksBarChart data={sksChartData} />
         </div>
-        <div className="border rounded-xl p-4 bg-card text-card-foreground shadow-sm">
-          <h3 className="font-semibold mb-4 text-center">Cakupan Kategori CPL</h3>
+        <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+          <h3 className="mb-4 text-center font-semibold">Cakupan Kategori CPL</h3>
           <ObeRadarChart data={radarChartData} />
         </div>
       </div>

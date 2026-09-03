@@ -12,7 +12,7 @@ const mahasiswaSchema = z.object({
   nim: z.string().min(1, "NIM wajib diisi"),
   nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
   angkatan: z.coerce.number().min(2000, "Angkatan tidak valid"),
-  track: z.enum(["UMUM", "BIS", "DSA"]),
+  track: z.enum(["UMUM", "ISG", "DMS"]),
   status: z.enum(["AKTIF", "CUTI", "LULUS", "DO"]),
   email: z.string().email("Email tidak valid").optional().or(z.literal("")),
 })
