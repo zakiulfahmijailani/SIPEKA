@@ -80,6 +80,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   // Status loading & error per seksi
   const [sectionLoading, setSectionLoading] = useState<Record<string, boolean>>({})
   const [sectionError, setSectionError] = useState<Record<string, string | null>>({})
+  const inFlightRef = useRef<Record<string, boolean>>({})
 
   const registerSectionSave = useCallback<RegisterRpsSectionSave>((save) => {
     sectionSaveRef.current = save
@@ -111,123 +112,184 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   const loadCpmks = useCallback(async (force = false) => {
     if (!rpsData?.id) return
     if (!force && cpmksData !== null) return cpmksData
+    if (inFlightRef.current.CPMK) return
 
+    inFlightRef.current.CPMK = true
     setSectionLoading((prev) => ({ ...prev, CPMK: true }))
     setSectionError((prev) => ({ ...prev, CPMK: null }))
-    const res = await getRpsCpmks(rpsData.id)
-    setSectionLoading((prev) => ({ ...prev, CPMK: false }))
-
-    if (res.success) {
-      setCpmksData(res.data)
-      return res.data
-    } else {
-      setSectionError((prev) => ({ ...prev, CPMK: res.error || "Gagal memuat CPMK" }))
+    try {
+      const res = await getRpsCpmks(rpsData.id)
+      if (res.success) {
+        setCpmksData(res.data)
+        return res.data
+      } else {
+        setSectionError((prev) => ({ ...prev, CPMK: res.error || "Gagal memuat CPMK" }))
+        return null
+      }
+    } catch (err: any) {
+      setSectionError((prev) => ({ ...prev, CPMK: err?.message || "Terjadi kesalahan jaringan" }))
       return null
+    } finally {
+      inFlightRef.current.CPMK = false
+      setSectionLoading((prev) => ({ ...prev, CPMK: false }))
     }
   }, [rpsData?.id, cpmksData])
 
   const loadMeetings = useCallback(async (force = false) => {
     if (!rpsData?.id) return
     if (!force && meetingsData !== null) return meetingsData
+    if (inFlightRef.current.MEETINGS) return
 
+    inFlightRef.current.MEETINGS = true
     setSectionLoading((prev) => ({ ...prev, MEETINGS: true }))
     setSectionError((prev) => ({ ...prev, MEETINGS: null }))
-    const [meetingsRes, cpmksRes] = await Promise.all([
-      getRpsMeetings(rpsData.id),
-      cpmksData === null ? getRpsCpmks(rpsData.id) : Promise.resolve({ success: true, data: cpmksData }),
-    ])
-    setSectionLoading((prev) => ({ ...prev, MEETINGS: false }))
+    try {
+      const [meetingsRes, cpmksRes] = await Promise.all([
+        getRpsMeetings(rpsData.id),
+        cpmksData === null ? getRpsCpmks(rpsData.id) : Promise.resolve({ success: true, data: cpmksData }),
+      ])
 
-    if (cpmksRes.success && cpmksRes.data) {
-      setCpmksData(cpmksRes.data)
-    }
+      if (cpmksRes.success && cpmksRes.data) {
+        setCpmksData(cpmksRes.data)
+      }
 
-    if (meetingsRes.success) {
-      setMeetingsData(meetingsRes.data)
-      return meetingsRes.data
-    } else {
-      setSectionError((prev) => ({ ...prev, MEETINGS: meetingsRes.error || "Gagal memuat rencana mingguan" }))
+      if (meetingsRes.success) {
+        setMeetingsData(meetingsRes.data)
+        return meetingsRes.data
+      } else {
+        setSectionError((prev) => ({ ...prev, MEETINGS: meetingsRes.error || "Gagal memuat rencana mingguan" }))
+        return null
+      }
+    } catch (err: any) {
+      setSectionError((prev) => ({ ...prev, MEETINGS: err?.message || "Terjadi kesalahan jaringan" }))
       return null
+    } finally {
+      inFlightRef.current.MEETINGS = false
+      setSectionLoading((prev) => ({ ...prev, MEETINGS: false }))
     }
   }, [rpsData?.id, meetingsData, cpmksData])
 
   const loadAssessments = useCallback(async (force = false) => {
     if (!rpsData?.id) return
     if (!force && komponensData !== null) return komponensData
+    if (inFlightRef.current.ASSESSMENT) return
 
+    inFlightRef.current.ASSESSMENT = true
     setSectionLoading((prev) => ({ ...prev, ASSESSMENT: true }))
     setSectionError((prev) => ({ ...prev, ASSESSMENT: null }))
-    const [kompRes, cpmksRes] = await Promise.all([
-      getRpsAssessments(rpsData.id),
-      cpmksData === null ? getRpsCpmks(rpsData.id) : Promise.resolve({ success: true, data: cpmksData }),
-    ])
-    setSectionLoading((prev) => ({ ...prev, ASSESSMENT: false }))
+    try {
+      const [kompRes, cpmksRes] = await Promise.all([
+        getRpsAssessments(rpsData.id),
+        cpmksData === null ? getRpsCpmks(rpsData.id) : Promise.resolve({ success: true, data: cpmksData }),
+      ])
 
-    if (cpmksRes.success && cpmksRes.data) {
-      setCpmksData(cpmksRes.data)
-    }
+      if (cpmksRes.success && cpmksRes.data) {
+        setCpmksData(cpmksRes.data)
+      }
 
-    if (kompRes.success) {
-      setKomponensData(kompRes.data)
-      return kompRes.data
-    } else {
-      setSectionError((prev) => ({ ...prev, ASSESSMENT: kompRes.error || "Gagal memuat asesmen & rubrik" }))
+      if (kompRes.success) {
+        setKomponensData(kompRes.data)
+        return kompRes.data
+      } else {
+        setSectionError((prev) => ({ ...prev, ASSESSMENT: kompRes.error || "Gagal memuat asesmen & rubrik" }))
+        return null
+      }
+    } catch (err: any) {
+      setSectionError((prev) => ({ ...prev, ASSESSMENT: err?.message || "Terjadi kesalahan jaringan" }))
       return null
+    } finally {
+      inFlightRef.current.ASSESSMENT = false
+      setSectionLoading((prev) => ({ ...prev, ASSESSMENT: false }))
     }
   }, [rpsData?.id, komponensData, cpmksData])
 
   const loadReferences = useCallback(async (force = false) => {
     if (!rpsData?.id) return
     if (!force && referencesData !== null) return referencesData
+    if (inFlightRef.current.REFERENCES) return
 
+    inFlightRef.current.REFERENCES = true
     setSectionLoading((prev) => ({ ...prev, REFERENCES: true }))
     setSectionError((prev) => ({ ...prev, REFERENCES: null }))
-    const res = await getRpsReferences(rpsData.id)
-    setSectionLoading((prev) => ({ ...prev, REFERENCES: false }))
-
-    if (res.success) {
-      setReferencesData(res.data)
-      return res.data
-    } else {
-      setSectionError((prev) => ({ ...prev, REFERENCES: res.error || "Gagal memuat referensi" }))
+    try {
+      const res = await getRpsReferences(rpsData.id)
+      if (res.success) {
+        setReferencesData(res.data)
+        return res.data
+      } else {
+        setSectionError((prev) => ({ ...prev, REFERENCES: res.error || "Gagal memuat referensi" }))
+        return null
+      }
+    } catch (err: any) {
+      setSectionError((prev) => ({ ...prev, REFERENCES: err?.message || "Terjadi kesalahan jaringan" }))
       return null
+    } finally {
+      inFlightRef.current.REFERENCES = false
+      setSectionLoading((prev) => ({ ...prev, REFERENCES: false }))
     }
   }, [rpsData?.id, referencesData])
 
-  const loadPreview = useCallback(async () => {
+  const loadPreview = useCallback(async (force = false) => {
     if (!rpsData?.id) return
+    if (!force && previewData !== null) return previewData
+    if (inFlightRef.current.PREVIEW) return
+
+    inFlightRef.current.PREVIEW = true
     setSectionLoading((prev) => ({ ...prev, PREVIEW: true }))
     setSectionError((prev) => ({ ...prev, PREVIEW: null }))
-    const res = await getRpsPreviewData(rpsData.id)
-    setSectionLoading((prev) => ({ ...prev, PREVIEW: false }))
 
-    if (res.success && res.data) {
-      setPreviewData(res.data)
-      setCpmksData(res.data.cpmks)
-      setKomponensData(res.data.komponens)
-      setMeetingsData(res.data.pertemuans)
-      setReferencesData(res.data.referensis)
-      return res.data
-    } else {
-      setSectionError((prev) => ({ ...prev, PREVIEW: res.error || "Gagal memuat data pratinjau RPS" }))
+    try {
+      const res = await getRpsPreviewData(rpsData.id)
+      if (res.success && res.data) {
+        setPreviewData(res.data)
+        setCpmksData(res.data.cpmks)
+        setKomponensData(res.data.komponens)
+        setMeetingsData(res.data.pertemuans)
+        setReferencesData(res.data.referensis)
+        return res.data
+      } else {
+        setSectionError((prev) => ({ ...prev, PREVIEW: res.error || "Gagal memuat data pratinjau RPS" }))
+        return null
+      }
+    } catch (err: any) {
+      setSectionError((prev) => ({ ...prev, PREVIEW: err?.message || "Terjadi kesalahan saat memuat pratinjau RPS" }))
       return null
+    } finally {
+      inFlightRef.current.PREVIEW = false
+      setSectionLoading((prev) => ({ ...prev, PREVIEW: false }))
     }
-  }, [rpsData?.id])
+  }, [rpsData?.id, previewData])
 
-  // Panggil lazy load saat tab aktif berganti
+  // Panggil lazy load terisolasi per seksi saat tab aktif berganti
   useEffect(() => {
     if (activeSection === "CPMK" && cpmksData === null) {
       loadCpmks()
-    } else if (activeSection === "MEETINGS" && meetingsData === null) {
+    }
+  }, [activeSection, cpmksData, loadCpmks])
+
+  useEffect(() => {
+    if (activeSection === "MEETINGS" && meetingsData === null) {
       loadMeetings()
-    } else if (activeSection === "ASSESSMENT" && komponensData === null) {
+    }
+  }, [activeSection, meetingsData, loadMeetings])
+
+  useEffect(() => {
+    if (activeSection === "ASSESSMENT" && komponensData === null) {
       loadAssessments()
-    } else if (activeSection === "REFERENCES" && referencesData === null) {
+    }
+  }, [activeSection, komponensData, loadAssessments])
+
+  useEffect(() => {
+    if (activeSection === "REFERENCES" && referencesData === null) {
       loadReferences()
-    } else if (activeSection === "PREVIEW") {
+    }
+  }, [activeSection, referencesData, loadReferences])
+
+  useEffect(() => {
+    if (activeSection === "PREVIEW" && previewData === null) {
       loadPreview()
     }
-  }, [activeSection, cpmksData, meetingsData, komponensData, referencesData, loadCpmks, loadMeetings, loadAssessments, loadReferences, loadPreview])
+  }, [activeSection, previewData, loadPreview])
 
   const handleStatusChange = async (status: RpsStatus, catatan?: string) => {
     if (!rpsData) return
@@ -260,6 +322,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
       }
 
       setLastSavedAt(result.savedAt || new Date().toISOString())
+      setPreviewData(null)
       toast.success("Progres RPS berhasil disimpan")
     } finally {
       setIsSaving(false)
@@ -300,7 +363,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
               else if (activeSection === "MEETINGS") loadMeetings(true)
               else if (activeSection === "ASSESSMENT") loadAssessments(true)
               else if (activeSection === "REFERENCES") loadReferences(true)
-              else if (activeSection === "PREVIEW") loadPreview()
+              else if (activeSection === "PREVIEW") loadPreview(true)
             }}
             className="gap-2 border-red-200 bg-white hover:bg-red-50 text-red-700 shadow-sm"
           >
