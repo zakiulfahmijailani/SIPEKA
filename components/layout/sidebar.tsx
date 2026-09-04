@@ -85,8 +85,17 @@ export function Sidebar({ session }: SidebarProps) {
       label: null,
       items: [
         { name: "Dashboard", href: "/dashboard", icon: Home, show: true },
-        { name: "Referensi IS2020", href: "/referensi/is2020", icon: BookOpen, show: true },
-        { name: "Bahan Kajian 2026", href: "/referensi/bahan-kajian", icon: Layers3, show: true },
+      ],
+    },
+    {
+      label: "Perkuliahan",
+      items: [
+        { name: isDosen ? "RPS" : "RPS Dosen", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
+        { name: "RPM", href: "/rpm", icon: CalendarDays, show: isDosen },
+        { name: "RTM", href: "/rtm", icon: ClipboardList, show: isDosen },
+        { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
+        { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
+        { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
       ],
     },
     {
@@ -115,14 +124,10 @@ export function Sidebar({ session }: SidebarProps) {
       ],
     },
     {
-      label: "Perkuliahan",
+      label: "Referensi",
       items: [
-        { name: isDosen ? "RPS" : "RPS Dosen", href: "/rps", icon: FileText, show: isSuperAdmin || isKaprodi || isDosen },
-        { name: "RPM", href: "/rpm", icon: CalendarDays, show: isDosen },
-        { name: "RTM", href: "/rtm", icon: ClipboardList, show: isDosen },
-        { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
-        { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
-        { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
+        { name: "Referensi IS2020", href: "/referensi/is2020", icon: BookOpen, show: true },
+        { name: "Bahan Kajian 2026", href: "/referensi/bahan-kajian", icon: Layers3, show: true },
       ],
     },
     {
