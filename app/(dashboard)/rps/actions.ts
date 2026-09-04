@@ -272,50 +272,311 @@ export async function hydrateBlankRpsFromTemplate(dosirMkId: string) {
   }
 }
 
-export async function createOrGetRps(dosirMkId: string) {
+export async function initializeRpsForDosir(dosirMkId: string) {
+  const startTime = performance.now()
   try {
-    const session = await getCurrentSession()
-    if (!session?.user) return { success: false, error: "Unauthorized" }
     const existing = await db.query.rps.findFirst({
       where: eq(rps.dosir_mk_id, dosirMkId),
       orderBy: (table, { desc }) => [desc(table.version)],
     })
-    if (existing) return { success: true, data: existing }
-
-    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId), with: { mk: true } })
-    if (!dosir) return { success: false, error: "Penugasan mata kuliah tidak ditemukan" }
-    if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
-      return { success: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
+    if (existing) {
+      return { success: true, data: existing, durationMs: Math.round(performance.now() - startTime) }
     }
 
-    const [created] = await db.insert(rps).values({
-      dosir_mk_id: dosirMkId,
-      status: "DRAFT",
-      version: 1,
-      deskripsi_mk: dosir.mk.deskripsi || null,
-      status_revisi: "R-1",
-      tanggal_penyusunan: new Date().toISOString().slice(0, 10),
-      jabatan_penyetuju: "Ketua Program Studi",
-    }).returning()
-
-    await copyCourseTemplateToRps(created.id, dosir.mk_id)
-    const hydrated = await db.query.rps.findFirst({
-      where: eq(rps.id, created.id),
-      with: {
-        cpmks: { with: { cplMappings: { with: { cpl: true } }, subCpmks: true } },
-        komponens: { with: { cpmkMappings: true, subCpmkMappings: true, rubrikKriterias: true } },
-        pertemuans: { with: { subCpmkMappings: true } },
-        referensis: true,
-        statusLogs: true,
-      },
+    const dosir = await db.query.dosirMk.findFirst({
+      where: eq(dosirMk.id, dosirMkId),
+      with: { mk: true },
     })
+    if (!dosir) {
+      return { success: false, error: "Penugasan mata kuliah tidak ditemukan" }
+    }
+
+    const [cpmkTemplates, assessmentTemplates] = await Promise.all([
+      db.query.cpmkTemplate.findMany({
+        where: and(eq(cpmkTemplate.mk_id, dosir.mk_id), eq(cpmkTemplate.is_active, true)),
+        orderBy: [asc(cpmkTemplate.urutan)],
+        with: { subCpmks: true },
+      }),
+      db.query.assessmentTemplate.findMany({
+        where: and(eq(assessmentTemplate.mk_id, dosir.mk_id), eq(assessmentTemplate.is_active, true)),
+        orderBy: [asc(assessmentTemplate.urutan)],
+        with: { cpmkTemplate: true, subCpmkTemplate: true },
+      }),
+    ])
+
+    const rpsId = createId()
+
+    const created = await db.transaction(async (tx) => {
+      const [insertedRps] = await tx
+        .insert(rps)
+        .values({
+          id: rpsId,
+          dosir_mk_id: dosirMkId,
+          status: "DRAFT",
+          version: 1,
+          deskripsi_mk: dosir.mk.deskripsi || null,
+          status_revisi: "R-1",
+          tanggal_penyusunan: new Date().toISOString().slice(0, 10),
+          jabatan_penyetuju: "Ketua Program Studi",
+        })
+        .returning()
+
+      // Batch CPMK & Sub-CPMK
+      const cpmkInserts: (typeof cpmk.$inferInsert)[] = []
+      const cpmkCplInserts: (typeof cpmkCpl.$inferInsert)[] = []
+      const subCpmkInserts: (typeof subCpmk.$inferInsert)[] = []
+      const templateCodeToNewCpmkId = new Map<string, string>()
+      const templateSubCodeToNewSubId = new Map<string, string>()
+
+      for (const tmpl of cpmkTemplates) {
+        const newCpmkId = createId()
+        templateCodeToNewCpmkId.set(tmpl.kode, newCpmkId)
+
+        cpmkInserts.push({
+          id: newCpmkId,
+          rps_id: rpsId,
+          kode: tmpl.kode,
+          deskripsi: tmpl.deskripsi,
+          metode_pencapaian: tmpl.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur",
+          urutan: tmpl.urutan,
+        })
+
+        if (tmpl.cpl_id) {
+          cpmkCplInserts.push({
+            cpmk_id: newCpmkId,
+            cpl_id: tmpl.cpl_id,
+          })
+        }
+
+        if (tmpl.subCpmks?.length) {
+          for (const sub of tmpl.subCpmks) {
+            const newSubId = createId()
+            templateSubCodeToNewSubId.set(sub.kode, newSubId)
+            subCpmkInserts.push({
+              id: newSubId,
+              cpmk_id: newCpmkId,
+              kode: sub.kode,
+              deskripsi: sub.deskripsi,
+              level_bloom: sub.level_bloom,
+              urutan: sub.urutan,
+            })
+          }
+        }
+      }
+
+      if (cpmkInserts.length > 0) {
+        await tx.insert(cpmk).values(cpmkInserts)
+      }
+      if (cpmkCplInserts.length > 0) {
+        await tx.insert(cpmkCpl).values(cpmkCplInserts).onConflictDoNothing()
+      }
+      if (subCpmkInserts.length > 0) {
+        await tx.insert(subCpmk).values(subCpmkInserts).onConflictDoNothing()
+      }
+
+      // Batch Assessment & Rubrik
+      const komponenInserts: (typeof komponenPenilaian.$inferInsert)[] = []
+      const komponenCpmkInserts: (typeof komponenCpmk.$inferInsert)[] = []
+      const komponenSubCpmkInserts: (typeof komponenSubCpmk.$inferInsert)[] = []
+      const rubrikInserts: (typeof rubrikKriteria.$inferInsert)[] = []
+
+      for (const tmpl of assessmentTemplates) {
+        const newKompId = createId()
+        komponenInserts.push({
+          id: newKompId,
+          rps_id: rpsId,
+          nama: tmpl.nama,
+          tipe: tmpl.tipe,
+          bobot: tmpl.bobot,
+          kriteria_penilaian: tmpl.kriteria_penilaian,
+          urutan: tmpl.urutan,
+        })
+
+        if (tmpl.cpmkTemplate?.kode) {
+          const targetCpmkId = templateCodeToNewCpmkId.get(tmpl.cpmkTemplate.kode)
+          if (targetCpmkId) {
+            komponenCpmkInserts.push({ komponen_id: newKompId, cpmk_id: targetCpmkId })
+          }
+        }
+
+        if (tmpl.subCpmkTemplate?.kode) {
+          const targetSubId = templateSubCodeToNewSubId.get(tmpl.subCpmkTemplate.kode)
+          if (targetSubId) {
+            komponenSubCpmkInserts.push({ komponen_id: newKompId, sub_cpmk_id: targetSubId })
+          }
+        }
+
+        rubrikInserts.push({
+          komponen_id: newKompId,
+          kriteria: tmpl.kriteria_penilaian || "Kualitas pencapaian tugas",
+          bobot: 100,
+          sangat_baik: "Sangat baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+          baik: "Baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+          cukup: "Cukup menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+          kurang: "Kurang menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+          sangat_kurang: "Sangat kurang menunjukkan pencapaian pada aspek yang dinilai.",
+          urutan: 1,
+        })
+      }
+
+      if (komponenInserts.length > 0) {
+        await tx.insert(komponenPenilaian).values(komponenInserts)
+      }
+      if (komponenCpmkInserts.length > 0) {
+        await tx.insert(komponenCpmk).values(komponenCpmkInserts)
+      }
+      if (komponenSubCpmkInserts.length > 0) {
+        await tx.insert(komponenSubCpmk).values(komponenSubCpmkInserts)
+      }
+      if (rubrikInserts.length > 0) {
+        await tx.insert(rubrikKriteria).values(rubrikInserts)
+      }
+
+      return insertedRps
+    })
+
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS Batch Init] Initialized RPS ${created.id} for dosir ${dosirMkId} in ${durationMs}ms`)
     revalidatePath(`/rps/${dosirMkId}`)
-    return { success: true, data: hydrated ?? created }
+    return { success: true, data: created, durationMs }
   } catch (error) {
-    console.error(error)
-    return { success: false, error: "Gagal memuat RPS" }
+    console.error("[RPS Batch Init Error]", error)
+    return { success: false, error: "Gagal menginisialisasi RPS untuk penugasan ini" }
   }
 }
+
+export async function createOrGetRps(dosirMkId: string) {
+  return initializeRpsForDosir(dosirMkId)
+}
+
+export async function getRpsCpmks(rpsId: string) {
+  const startTime = performance.now()
+  try {
+    const data = await db.query.cpmk.findMany({
+      where: eq(cpmk.rps_id, rpsId),
+      orderBy: [asc(cpmk.urutan)],
+      with: {
+        cplMappings: { with: { cpl: true } },
+        subCpmks: { orderBy: [asc(subCpmk.urutan)] },
+      },
+    })
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS LazyLoad] getRpsCpmks(${rpsId}) took ${durationMs}ms (${data.length} CPMK)`)
+    return { success: true, data, durationMs }
+  } catch (error) {
+    console.error("[RPS LazyLoad Error] getRpsCpmks:", error)
+    return { success: false, error: "Gagal memuat data CPMK & Sub-CPMK", data: [] }
+  }
+}
+
+export async function getRpsMeetings(rpsId: string) {
+  const startTime = performance.now()
+  try {
+    const data = await db.query.rpsPertemuan.findMany({
+      where: eq(rpsPertemuan.rps_id, rpsId),
+      orderBy: [asc(rpsPertemuan.minggu_ke)],
+      with: {
+        subCpmkMappings: true,
+      },
+    })
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS LazyLoad] getRpsMeetings(${rpsId}) took ${durationMs}ms (${data.length} pertemuan)`)
+    return { success: true, data, durationMs }
+  } catch (error) {
+    console.error("[RPS LazyLoad Error] getRpsMeetings:", error)
+    return { success: false, error: "Gagal memuat rencana mingguan", data: [] }
+  }
+}
+
+export async function getRpsAssessments(rpsId: string) {
+  const startTime = performance.now()
+  try {
+    const data = await db.query.komponenPenilaian.findMany({
+      where: eq(komponenPenilaian.rps_id, rpsId),
+      orderBy: [asc(komponenPenilaian.urutan)],
+      with: {
+        cpmkMappings: true,
+        subCpmkMappings: true,
+        rubrikKriterias: { orderBy: [asc(rubrikKriteria.urutan)] },
+      },
+    })
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS LazyLoad] getRpsAssessments(${rpsId}) took ${durationMs}ms (${data.length} komponen)`)
+    return { success: true, data, durationMs }
+  } catch (error) {
+    console.error("[RPS LazyLoad Error] getRpsAssessments:", error)
+    return { success: false, error: "Gagal memuat komponen asesmen & rubrik", data: [] }
+  }
+}
+
+export async function getRpsReferences(rpsId: string) {
+  const startTime = performance.now()
+  try {
+    const data = await db.query.rpsReferensi.findMany({
+      where: eq(rpsReferensi.rps_id, rpsId),
+      orderBy: [asc(rpsReferensi.urutan)],
+    })
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS LazyLoad] getRpsReferences(${rpsId}) took ${durationMs}ms (${data.length} referensi)`)
+    return { success: true, data, durationMs }
+  } catch (error) {
+    console.error("[RPS LazyLoad Error] getRpsReferences:", error)
+    return { success: false, error: "Gagal memuat referensi", data: [] }
+  }
+}
+
+export async function getRpsPreviewData(rpsId: string) {
+  const startTime = performance.now()
+  try {
+    const [statusLogsData, rpsRecord, cpmksData, komponensData, pertemuansData, referensisData] = await Promise.all([
+      db.query.rpsStatusLog.findMany({
+        where: eq(rpsStatusLog.rps_id, rpsId),
+        orderBy: (table, { desc }) => [desc(table.created_at)],
+        with: { changedBy: true },
+      }),
+      db.query.rps.findFirst({
+        where: eq(rps.id, rpsId),
+      }),
+      db.query.cpmk.findMany({
+        where: eq(cpmk.rps_id, rpsId),
+        orderBy: [asc(cpmk.urutan)],
+        with: { cplMappings: { with: { cpl: true } }, subCpmks: { orderBy: [asc(subCpmk.urutan)] } },
+      }),
+      db.query.komponenPenilaian.findMany({
+        where: eq(komponenPenilaian.rps_id, rpsId),
+        orderBy: [asc(komponenPenilaian.urutan)],
+        with: { cpmkMappings: true, subCpmkMappings: true, rubrikKriterias: { orderBy: [asc(rubrikKriteria.urutan)] } },
+      }),
+      db.query.rpsPertemuan.findMany({
+        where: eq(rpsPertemuan.rps_id, rpsId),
+        orderBy: [asc(rpsPertemuan.minggu_ke)],
+        with: { subCpmkMappings: true },
+      }),
+      db.query.rpsReferensi.findMany({
+        where: eq(rpsReferensi.rps_id, rpsId),
+        orderBy: [asc(rpsReferensi.urutan)],
+      }),
+    ])
+
+    const combinedRps = rpsRecord ? {
+      ...rpsRecord,
+      cpmks: cpmksData,
+      komponens: komponensData,
+      pertemuans: pertemuansData,
+      referensis: referensisData,
+      statusLogs: statusLogsData,
+    } : null
+
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS LazyLoad] getRpsPreviewData(${rpsId}) took ${durationMs}ms`)
+    return { success: true, data: combinedRps, durationMs }
+  } catch (error) {
+    console.error("[RPS LazyLoad Error] getRpsPreviewData:", error)
+    return { success: false, error: "Gagal memuat pratinjau lengkap RPS", data: null }
+  }
+}
+
+
 
 export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: string) {
   try {

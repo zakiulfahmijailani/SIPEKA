@@ -1,13 +1,13 @@
 import { getCurrentSession } from "@/lib/current-session"
 import { db } from "@/db"
-import { dosirMk, rps, petaKurikulum, rpsStatusLog } from "@/db/schema"
+import { dosirMk, rps, petaKurikulum } from "@/db/schema"
 import { redirect, notFound } from "next/navigation"
 import { RpsEditor } from "./rps-editor"
-import { eq, and, desc } from "drizzle-orm"
-import { hydrateBlankRpsFromTemplate } from "../actions"
-
+import { eq, desc } from "drizzle-orm"
+import { initializeRpsForDosir } from "../actions"
 
 export const dynamic = "force-dynamic"
+
 export default async function RpsEditorPage(props: {
   params: Promise<{ dosirId: string }>
 }) {
@@ -17,7 +17,7 @@ export default async function RpsEditorPage(props: {
   const params = await props.params
   const dosirId = params.dosirId
 
-  // Fetch dosir details
+  // 1. Fetch dosir details (MK + Dosen + TA)
   const dosir = await db.query.dosirMk.findFirst({
     where: eq(dosirMk.id, dosirId),
     with: {
@@ -34,62 +34,21 @@ export default async function RpsEditorPage(props: {
     redirect("/rps")
   }
 
-  // Fetch existing RPS
+  // 2. Fetch lightweight RPS header (no heavy joins)
   let rpsData = await db.query.rps.findFirst({
     where: eq(rps.dosir_mk_id, dosirId),
     orderBy: [desc(rps.version)],
-    with: {
-      cpmks: {
-        with: {
-          cplMappings: {
-            with: {
-              cpl: true
-            }
-          },
-          subCpmks: true
-        }
-      },
-      komponens: {
-        with: {
-          cpmkMappings: true,
-          subCpmkMappings: true,
-          rubrikKriterias: true,
-        }
-      },
-      pertemuans: {
-        with: {
-          subCpmkMappings: true,
-        }
-      },
-      referensis: true,
-      statusLogs: {
-        with: {
-          changedBy: true
-        },
-        orderBy: [desc(rpsStatusLog.created_at)]
-      }
-    }
   })
 
-  const hasOnlyBlankCpmks = rpsData && (rpsData.cpmks.length === 0 || rpsData.cpmks.every((item) => !item.deskripsi.trim()))
-  if (hasOnlyBlankCpmks) {
-    const hydration = await hydrateBlankRpsFromTemplate(dosirId)
-    if (hydration.success && hydration.hydrated) {
-      rpsData = await db.query.rps.findFirst({
-        where: eq(rps.dosir_mk_id, dosirId),
-        orderBy: [desc(rps.version)],
-        with: {
-          cpmks: { with: { cplMappings: { with: { cpl: true } }, subCpmks: true } },
-          komponens: { with: { cpmkMappings: true, subCpmkMappings: true, rubrikKriterias: true } },
-          pertemuans: { with: { subCpmkMappings: true } },
-          referensis: true,
-          statusLogs: { with: { changedBy: true }, orderBy: [desc(rpsStatusLog.created_at)] },
-        },
-      })
+  // Inisialisasi cepat jika penugasan lama belum memiliki baris RPS
+  if (!rpsData) {
+    const initResult = await initializeRpsForDosir(dosirId)
+    if (initResult.success && initResult.data) {
+      rpsData = initResult.data as any
     }
   }
 
-  // Fetch CPL mapped to this MK
+  // 3. Fetch CPL mapped to this MK
   const mappedCpls = await db.query.petaKurikulum.findMany({
     where: eq(petaKurikulum.mk_id, dosir.mk_id),
     with: {

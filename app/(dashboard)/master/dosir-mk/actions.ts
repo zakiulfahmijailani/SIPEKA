@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { MOCK_SESSION } from "@/lib/mock-session"
 
+import { initializeRpsForDosir } from "@/app/(dashboard)/rps/actions"
+
 const dosirSchema = z.object({
   id: z.string().optional(),
   mk_id: z.string().min(1, "Mata Kuliah wajib dipilih"),
@@ -40,7 +42,11 @@ export async function saveDosirMk(formData: z.infer<typeof dosirSchema>) {
     if (data.id) {
       await db.update(dosirMk).set(dbData).where(eq(dosirMk.id, data.id))
     } else {
-      await db.insert(dosirMk).values(dbData)
+      const [inserted] = await db.insert(dosirMk).values(dbData).returning()
+      // Siapkan RPS + template prodi sekaligus saat penugasan dibuat
+      if (inserted?.id) {
+        await initializeRpsForDosir(inserted.id)
+      }
     }
 
     revalidatePath("/master/dosir-mk")

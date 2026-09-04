@@ -18,6 +18,8 @@ import {
   Files,
   Save,
   Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -33,7 +35,17 @@ import { ReferencesSection } from "./sections/References"
 import { PreviewSection } from "./sections/Preview"
 import type { RegisterRpsSectionSave, RpsSectionSave } from "./rps-save-progress"
 
-import { createOrGetRps, saveRpsProgress, updateRpsStatus, type RpsStatus } from "../actions"
+import { 
+  createOrGetRps, 
+  saveRpsProgress, 
+  updateRpsStatus, 
+  getRpsCpmks,
+  getRpsMeetings,
+  getRpsAssessments,
+  getRpsReferences,
+  getRpsPreviewData,
+  type RpsStatus 
+} from "../actions"
 
 interface RpsEditorProps {
   dosir: any
@@ -57,6 +69,17 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   const [isSaving, setIsSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const sectionSaveRef = useRef<RpsSectionSave | null>(null)
+
+  // Cache data per seksi (Lazy Loaded on click)
+  const [cpmksData, setCpmksData] = useState<any[] | null>(initialRps?.cpmks ?? null)
+  const [komponensData, setKomponensData] = useState<any[] | null>(initialRps?.komponens ?? null)
+  const [meetingsData, setMeetingsData] = useState<any[] | null>(initialRps?.pertemuans ?? null)
+  const [referencesData, setReferencesData] = useState<any[] | null>(initialRps?.referensis ?? null)
+  const [previewData, setPreviewData] = useState<any | null>(null)
+
+  // Status loading & error per seksi
+  const [sectionLoading, setSectionLoading] = useState<Record<string, boolean>>({})
+  const [sectionError, setSectionError] = useState<Record<string, string | null>>({})
 
   const registerSectionSave = useCallback<RegisterRpsSectionSave>((save) => {
     sectionSaveRef.current = save
@@ -83,6 +106,128 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
       init()
     }
   }, [initialRps, dosir.id])
+
+  // Fetcher on-demand untuk setiap seksi dengan pengukuran waktu & penanganan error
+  const loadCpmks = useCallback(async (force = false) => {
+    if (!rpsData?.id) return
+    if (!force && cpmksData !== null) return cpmksData
+
+    setSectionLoading((prev) => ({ ...prev, CPMK: true }))
+    setSectionError((prev) => ({ ...prev, CPMK: null }))
+    const res = await getRpsCpmks(rpsData.id)
+    setSectionLoading((prev) => ({ ...prev, CPMK: false }))
+
+    if (res.success) {
+      setCpmksData(res.data)
+      return res.data
+    } else {
+      setSectionError((prev) => ({ ...prev, CPMK: res.error || "Gagal memuat CPMK" }))
+      return null
+    }
+  }, [rpsData?.id, cpmksData])
+
+  const loadMeetings = useCallback(async (force = false) => {
+    if (!rpsData?.id) return
+    if (!force && meetingsData !== null) return meetingsData
+
+    setSectionLoading((prev) => ({ ...prev, MEETINGS: true }))
+    setSectionError((prev) => ({ ...prev, MEETINGS: null }))
+    const [meetingsRes, cpmksRes] = await Promise.all([
+      getRpsMeetings(rpsData.id),
+      cpmksData === null ? getRpsCpmks(rpsData.id) : Promise.resolve({ success: true, data: cpmksData }),
+    ])
+    setSectionLoading((prev) => ({ ...prev, MEETINGS: false }))
+
+    if (cpmksRes.success && cpmksRes.data) {
+      setCpmksData(cpmksRes.data)
+    }
+
+    if (meetingsRes.success) {
+      setMeetingsData(meetingsRes.data)
+      return meetingsRes.data
+    } else {
+      setSectionError((prev) => ({ ...prev, MEETINGS: meetingsRes.error || "Gagal memuat rencana mingguan" }))
+      return null
+    }
+  }, [rpsData?.id, meetingsData, cpmksData])
+
+  const loadAssessments = useCallback(async (force = false) => {
+    if (!rpsData?.id) return
+    if (!force && komponensData !== null) return komponensData
+
+    setSectionLoading((prev) => ({ ...prev, ASSESSMENT: true }))
+    setSectionError((prev) => ({ ...prev, ASSESSMENT: null }))
+    const [kompRes, cpmksRes] = await Promise.all([
+      getRpsAssessments(rpsData.id),
+      cpmksData === null ? getRpsCpmks(rpsData.id) : Promise.resolve({ success: true, data: cpmksData }),
+    ])
+    setSectionLoading((prev) => ({ ...prev, ASSESSMENT: false }))
+
+    if (cpmksRes.success && cpmksRes.data) {
+      setCpmksData(cpmksRes.data)
+    }
+
+    if (kompRes.success) {
+      setKomponensData(kompRes.data)
+      return kompRes.data
+    } else {
+      setSectionError((prev) => ({ ...prev, ASSESSMENT: kompRes.error || "Gagal memuat asesmen & rubrik" }))
+      return null
+    }
+  }, [rpsData?.id, komponensData, cpmksData])
+
+  const loadReferences = useCallback(async (force = false) => {
+    if (!rpsData?.id) return
+    if (!force && referencesData !== null) return referencesData
+
+    setSectionLoading((prev) => ({ ...prev, REFERENCES: true }))
+    setSectionError((prev) => ({ ...prev, REFERENCES: null }))
+    const res = await getRpsReferences(rpsData.id)
+    setSectionLoading((prev) => ({ ...prev, REFERENCES: false }))
+
+    if (res.success) {
+      setReferencesData(res.data)
+      return res.data
+    } else {
+      setSectionError((prev) => ({ ...prev, REFERENCES: res.error || "Gagal memuat referensi" }))
+      return null
+    }
+  }, [rpsData?.id, referencesData])
+
+  const loadPreview = useCallback(async () => {
+    if (!rpsData?.id) return
+    setSectionLoading((prev) => ({ ...prev, PREVIEW: true }))
+    setSectionError((prev) => ({ ...prev, PREVIEW: null }))
+    const res = await getRpsPreviewData(rpsData.id)
+    setSectionLoading((prev) => ({ ...prev, PREVIEW: false }))
+
+    if (res.success && res.data) {
+      setPreviewData(res.data)
+      setCpmksData(res.data.cpmks)
+      setKomponensData(res.data.komponens)
+      setMeetingsData(res.data.pertemuans)
+      setReferencesData(res.data.referensis)
+      return res.data
+    } else {
+      setSectionError((prev) => ({ ...prev, PREVIEW: res.error || "Gagal memuat data pratinjau RPS" }))
+      return null
+    }
+  }, [rpsData?.id])
+
+  // Panggil lazy load saat tab aktif berganti
+  useEffect(() => {
+    if (activeSection === "CPMK" && cpmksData === null) {
+      loadCpmks()
+    } else if (activeSection === "MEETINGS" && meetingsData === null) {
+      loadMeetings()
+    } else if (activeSection === "ASSESSMENT" && komponensData === null) {
+      loadAssessments()
+    } else if (activeSection === "REFERENCES" && referencesData === null) {
+      loadReferences()
+    } else if (activeSection === "PREVIEW") {
+      loadPreview()
+    }
+  }, [activeSection, cpmksData, meetingsData, komponensData, referencesData, loadCpmks, loadMeetings, loadAssessments, loadReferences, loadPreview])
 
   const handleStatusChange = async (status: RpsStatus, catatan?: string) => {
     if (!rpsData) return
@@ -124,16 +269,66 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   const renderSection = () => {
     if (!rpsData) return <div className="p-8 text-center">Menginisialisasi RPS...</div>
 
+    // Tampilkan Loading State jika seksi sedang mengambil data
+    if (sectionLoading[activeSection]) {
+      const currentLabel = sections.find((s) => s.id === activeSection)?.label || activeSection
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-slate-500 space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm font-medium">Memuat data {currentLabel}...</p>
+          <span className="text-xs text-slate-400">Hanya mengambil data untuk tab ini</span>
+        </div>
+      )
+    }
+
+    // Tampilkan Error State jika terjadi kegagalan jaringan / query
+    if (sectionError[activeSection]) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 rounded-2xl border border-red-200 bg-red-50/50 p-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-red-900">Gagal Memuat Bagian Ini</h3>
+            <p className="text-xs text-red-700 max-w-md">{sectionError[activeSection]}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (activeSection === "CPMK") loadCpmks(true)
+              else if (activeSection === "MEETINGS") loadMeetings(true)
+              else if (activeSection === "ASSESSMENT") loadAssessments(true)
+              else if (activeSection === "REFERENCES") loadReferences(true)
+              else if (activeSection === "PREVIEW") loadPreview()
+            }}
+            className="gap-2 border-red-200 bg-white hover:bg-red-50 text-red-700 shadow-sm"
+          >
+            <RefreshCw className="h-4 w-4" /> Coba Lagi
+          </Button>
+        </div>
+      )
+    }
+
     switch (activeSection) {
-      case "IDENTITAS":  return <IdentitasSection dosir={dosir} />
-      case "FORMALITAS": return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} registerSave={registerSectionSave} />
-      case "CPL":        return <CplSection cpls={mappedCpls} />
-      case "CPMK":       return <CpmkSection rpsId={rpsData.id} initialCpmks={rpsData.cpmks || []} mappedCpls={mappedCpls} registerSave={registerSectionSave} />
-      case "ASSESSMENT": return <AssessmentSection rpsId={rpsData.id} initialKomponens={rpsData.komponens || []} cpmks={rpsData.cpmks || []} registerSave={registerSectionSave} />
-      case "MEETINGS":   return <MeetingsSection rpsId={rpsData.id} initialMeetings={rpsData.pertemuans || []} cpmks={rpsData.cpmks || []} registerSave={registerSectionSave} />
-      case "REFERENCES": return <ReferencesSection rpsId={rpsData.id} initialReferences={rpsData.referensis || []} registerSave={registerSectionSave} />
-      case "PREVIEW":    return <PreviewSection dosir={dosir} rps={rpsData} mappedCpls={mappedCpls} onStatusChange={handleStatusChange} currentUser={currentUser} />
-      default:           return null
+      case "IDENTITAS":
+        return <IdentitasSection dosir={dosir} />
+      case "FORMALITAS":
+        return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} registerSave={registerSectionSave} />
+      case "CPL":
+        return <CplSection cpls={mappedCpls} />
+      case "CPMK":
+        return <CpmkSection rpsId={rpsData.id} initialCpmks={cpmksData || []} mappedCpls={mappedCpls} registerSave={registerSectionSave} />
+      case "ASSESSMENT":
+        return <AssessmentSection rpsId={rpsData.id} initialKomponens={komponensData || []} cpmks={cpmksData || []} registerSave={registerSectionSave} />
+      case "MEETINGS":
+        return <MeetingsSection rpsId={rpsData.id} initialMeetings={meetingsData || []} cpmks={cpmksData || []} registerSave={registerSectionSave} />
+      case "REFERENCES":
+        return <ReferencesSection rpsId={rpsData.id} initialReferences={referencesData || []} registerSave={registerSectionSave} />
+      case "PREVIEW":
+        return <PreviewSection dosir={dosir} rps={previewData || rpsData} mappedCpls={mappedCpls} onStatusChange={handleStatusChange} currentUser={currentUser} />
+      default:
+        return null
     }
   }
 
