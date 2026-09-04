@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { dosirMk } from "@/db/schema"
+import { dosirMk, rps } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -14,7 +14,7 @@ const dosirSchema = z.object({
   mk_id: z.string().min(1, "Mata Kuliah wajib dipilih"),
   dosen_id: z.string().min(1, "Dosen wajib dipilih"),
   tahun_akademik_id: z.string().min(1, "Tahun Akademik wajib dipilih"),
-  kelas: z.string().min(1).max(2).toUpperCase(),
+  kelas: z.string().trim().min(1).max(20).toUpperCase(),
   is_active: z.boolean().default(true),
 })
 
@@ -66,6 +66,18 @@ export async function deleteDosirMk(id: string) {
     const session = MOCK_SESSION
     if (!session || (session.user.role !== "SUPER_ADMIN" && session.user.role !== "KAPRODI")) {
       return { success: false, error: "Unauthorized" }
+    }
+
+    const linkedRps = await db.query.rps.findFirst({
+      where: eq(rps.dosir_mk_id, id),
+      columns: { id: true },
+    })
+
+    if (linkedRps) {
+      return {
+        success: false,
+        error: "Penugasan sudah memiliki RPS. Nonaktifkan penugasan agar tidak tampil, atau ubah dosennya lewat Edit Penugasan.",
+      }
     }
 
     await db.delete(dosirMk).where(eq(dosirMk.id, id))

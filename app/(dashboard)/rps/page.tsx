@@ -23,6 +23,7 @@ export default async function RpsPage({
 
   const assignments = await db.query.dosirMk.findMany({
     where: and(
+      eq(dosirMk.is_active, true),
       session.user.role === "DOSEN" ? eq(dosirMk.dosen_id, session.user.id) : undefined,
       period.term ? eq(dosirMk.tahun_akademik_id, period.term.id) : undefined,
     ),

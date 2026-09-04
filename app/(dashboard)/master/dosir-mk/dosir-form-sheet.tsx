@@ -19,7 +19,7 @@ const dosirSchema = z.object({
   mk_id: z.string().min(1, "Mata Kuliah wajib dipilih"),
   dosen_id: z.string().min(1, "Dosen wajib dipilih"),
   tahun_akademik_id: z.string().min(1, "Tahun Akademik wajib dipilih"),
-  kelas: z.string().min(1).max(2).toUpperCase(),
+  kelas: z.string().trim().min(1).max(20).toUpperCase(),
   is_active: z.boolean().default(true),
 })
 
@@ -164,7 +164,7 @@ export function DosirFormSheet({ open, onOpenChange, initialData, mks, dosens, t
 
                   <div className="space-y-2">
                     <Label htmlFor="kelas" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kelas <span className="text-red-500">*</span></Label>
-                    <Input id="kelas" placeholder="A" {...register("kelas")} maxLength={2} className="h-10 rounded-xl bg-white text-center text-sm font-semibold uppercase shadow-sm" />
+                    <Input id="kelas" placeholder="A atau SIF31-W" {...register("kelas")} maxLength={20} className="h-10 rounded-xl bg-white text-center text-sm font-semibold uppercase shadow-sm" />
                     {errors.kelas && <p className="text-sm text-red-500">{errors.kelas.message}</p>}
                   </div>
                 </div>
