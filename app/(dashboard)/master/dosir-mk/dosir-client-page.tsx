@@ -32,12 +32,14 @@ export function DosirClientPage({
   mks, 
   dosens, 
   tas,
+  kelasOptions,
   activeTaId
 }: { 
   dosirs: any[], 
   mks: any[], 
   dosens: any[], 
   tas: any[],
+  kelasOptions: string[],
   activeTaId?: string
 }) {
   const router = useRouter()
@@ -202,6 +204,7 @@ export function DosirClientPage({
         mks={mks}
         dosens={dosens}
         tas={tas}
+        kelasOptions={kelasOptions}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

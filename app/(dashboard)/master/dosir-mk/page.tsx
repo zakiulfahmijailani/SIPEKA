@@ -46,6 +46,7 @@ export default async function DosirMkPage(props: {
   const mksFormatted = allMks.map(m => ({ id: m.id, label: `${m.kode} - ${m.nama_id}` }))
   const dosensFormatted = allDosens.map(d => ({ id: d.id, label: d.nama_lengkap }))
   const tasFormatted = allTas.map(t => ({ id: t.id, label: `${t.tahun_mulai}/${t.tahun_mulai + 1} ${t.semester}` }))
+  const kelasOptions = Array.from(new Set(dosirs.map((dosir) => dosir.kelas).filter(Boolean))).sort()
 
   return (
     <DosirClientPage
@@ -53,6 +54,7 @@ export default async function DosirMkPage(props: {
       mks={mksFormatted}
       dosens={dosensFormatted}
       tas={tasFormatted}
+      kelasOptions={kelasOptions}
       activeTaId={activeTa?.id}
     />
   )

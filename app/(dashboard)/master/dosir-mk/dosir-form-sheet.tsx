@@ -32,9 +32,10 @@ interface DosirFormSheetProps {
   mks: { id: string, label: string }[]
   dosens: { id: string, label: string }[]
   tas: { id: string, label: string }[]
+  kelasOptions: string[]
 }
 
-export function DosirFormSheet({ open, onOpenChange, initialData, mks, dosens, tas }: DosirFormSheetProps) {
+export function DosirFormSheet({ open, onOpenChange, initialData, mks, dosens, tas, kelasOptions }: DosirFormSheetProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -53,7 +54,7 @@ export function DosirFormSheet({ open, onOpenChange, initialData, mks, dosens, t
       mk_id: "",
       dosen_id: "",
       tahun_akademik_id: "",
-      kelas: "A",
+      kelas: "",
       is_active: true,
     },
   })
@@ -164,7 +165,10 @@ export function DosirFormSheet({ open, onOpenChange, initialData, mks, dosens, t
 
                   <div className="space-y-2">
                     <Label htmlFor="kelas" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kelas <span className="text-red-500">*</span></Label>
-                    <Input id="kelas" placeholder="A atau SIF31-W" {...register("kelas")} maxLength={20} className="h-10 rounded-xl bg-white text-center text-sm font-semibold uppercase shadow-sm" />
+                    <select id="kelas" {...register("kelas")} className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                      <option value="">Pilih kelas...</option>
+                      {kelasOptions.map((kelas) => <option key={kelas} value={kelas}>{kelas}</option>)}
+                    </select>
                     {errors.kelas && <p className="text-sm text-red-500">{errors.kelas.message}</p>}
                   </div>
                 </div>
