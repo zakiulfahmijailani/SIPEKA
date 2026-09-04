@@ -43,7 +43,6 @@ import {
   rps,
   users,
 } from "@/db/schema"
-import { ensureOfficialRpsSchema } from "@/db/ensure-schema"
 
 export type OfficialRpsData = {
   dosir: any
@@ -92,8 +91,6 @@ const dash = (val?: string | null) => (val && val.trim() ? val.trim() : "—")
 const cleanStr = (val?: string | null) => (val && val.trim() ? val.trim() : "")
 
 export async function getOfficialRpsExportData(dosirId: string): Promise<OfficialRpsData | null> {
-  await ensureOfficialRpsSchema()
-
   const dosir = await db.query.dosirMk.findFirst({
     where: eq(dosirMk.id, dosirId),
     with: {
