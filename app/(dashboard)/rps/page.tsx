@@ -68,5 +68,7 @@ export default async function RpsPage({
       return acc
     }, [])
 
-  return <RpsClientPage dosirs={dosirs} academicTerm={period.label} />
+  const canBackfill = Boolean(session?.user?.role && ["SUPER_ADMIN", "KAPRODI"].includes(session.user.role))
+
+  return <RpsClientPage dosirs={dosirs} academicTerm={period.label} canBackfill={canBackfill} />
 }

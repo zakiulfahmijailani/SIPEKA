@@ -13,14 +13,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { FileEdit, CheckCircle2, Clock, RotateCcw, Filter, Search } from "lucide-react"
+import { FileEdit, CheckCircle2, Clock, RotateCcw, Filter, Search, Sparkles, Loader2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { toast } from "sonner"
+import { backfillAllMissingRps } from "./actions"
 
-export function RpsClientPage({ dosirs, academicTerm }: { dosirs: any[]; academicTerm: string }) {
+export function RpsClientPage({
+  dosirs,
+  academicTerm,
+  canBackfill = false,
+}: {
+  dosirs: any[]
+  academicTerm: string
+  canBackfill?: boolean
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "")
+  const [isBackfilling, setIsBackfilling] = useState(false)
+
+  const handleBackfill = async () => {
+    setIsBackfilling(true)
+    try {
+      const res = await backfillAllMissingRps()
+      if (res.success) {
+        toast.success(`Selesai! ${res.backfilledCount} RPS penugasan berhasil disiapkan secara massal.`)
+        router.refresh()
+      } else {
+        toast.error(res.error || "Gagal menginisialisasi RPS")
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Terjadi kesalahan sistem")
+    } finally {
+      setIsBackfilling(false)
+    }
+  }
 
   const currentStatus = searchParams.get("status") || "ALL"
 
@@ -55,6 +83,23 @@ export function RpsClientPage({ dosirs, academicTerm }: { dosirs: any[]; academi
           <h1 className="text-2xl font-bold tracking-tight">Pengelola RPS</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2"><p className="text-muted-foreground">Kelola Rencana Pembelajaran Semester untuk mata kuliah Anda</p><Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">{academicTerm}</Badge></div>
         </div>
+
+        {canBackfill && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isBackfilling}
+            onClick={handleBackfill}
+            className="flex items-center gap-2 border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 shadow-sm"
+          >
+            {isBackfilling ? (
+              <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+            ) : (
+              <Sparkles className="h-4 w-4 text-indigo-600" />
+            )}
+            {isBackfilling ? "Menginisialisasi..." : "Inisialisasi Massal RPS"}
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3 py-2">

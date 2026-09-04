@@ -306,142 +306,172 @@ export async function initializeRpsForDosir(dosirMkId: string) {
 
     const rpsId = createId()
 
-    const created = await db.transaction(async (tx) => {
-      const [insertedRps] = await tx
-        .insert(rps)
-        .values({
-          id: rpsId,
-          dosir_mk_id: dosirMkId,
-          status: "DRAFT",
-          version: 1,
-          deskripsi_mk: dosir.mk.deskripsi || null,
-          status_revisi: "R-1",
-          tanggal_penyusunan: new Date().toISOString().slice(0, 10),
-          jabatan_penyetuju: "Ketua Program Studi",
+    const [insertedRps] = await db
+      .insert(rps)
+      .values({
+        id: rpsId,
+        dosir_mk_id: dosirMkId,
+        status: "DRAFT",
+        version: 1,
+        deskripsi_mk: dosir.mk.deskripsi || null,
+        status_revisi: "R-1",
+        tanggal_penyusunan: new Date().toISOString().slice(0, 10),
+        jabatan_penyetuju: "Ketua Program Studi",
+      })
+      .returning()
+
+    // Batch CPMK & Sub-CPMK
+    const cpmkInserts: (typeof cpmk.$inferInsert)[] = []
+    const cpmkCplInserts: (typeof cpmkCpl.$inferInsert)[] = []
+    const subCpmkInserts: (typeof subCpmk.$inferInsert)[] = []
+    const templateCodeToNewCpmkId = new Map<string, string>()
+    const templateSubCodeToNewSubId = new Map<string, string>()
+
+    for (const tmpl of cpmkTemplates) {
+      const newCpmkId = createId()
+      templateCodeToNewCpmkId.set(tmpl.kode, newCpmkId)
+
+      cpmkInserts.push({
+        id: newCpmkId,
+        rps_id: rpsId,
+        kode: tmpl.kode,
+        deskripsi: tmpl.deskripsi,
+        metode_pencapaian: tmpl.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur",
+        urutan: tmpl.urutan,
+      })
+
+      if (tmpl.cpl_id) {
+        cpmkCplInserts.push({
+          cpmk_id: newCpmkId,
+          cpl_id: tmpl.cpl_id,
         })
-        .returning()
+      }
 
-      // Batch CPMK & Sub-CPMK
-      const cpmkInserts: (typeof cpmk.$inferInsert)[] = []
-      const cpmkCplInserts: (typeof cpmkCpl.$inferInsert)[] = []
-      const subCpmkInserts: (typeof subCpmk.$inferInsert)[] = []
-      const templateCodeToNewCpmkId = new Map<string, string>()
-      const templateSubCodeToNewSubId = new Map<string, string>()
-
-      for (const tmpl of cpmkTemplates) {
-        const newCpmkId = createId()
-        templateCodeToNewCpmkId.set(tmpl.kode, newCpmkId)
-
-        cpmkInserts.push({
-          id: newCpmkId,
-          rps_id: rpsId,
-          kode: tmpl.kode,
-          deskripsi: tmpl.deskripsi,
-          metode_pencapaian: tmpl.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur",
-          urutan: tmpl.urutan,
-        })
-
-        if (tmpl.cpl_id) {
-          cpmkCplInserts.push({
+      if (tmpl.subCpmks?.length) {
+        for (const sub of tmpl.subCpmks) {
+          const newSubId = createId()
+          templateSubCodeToNewSubId.set(sub.kode, newSubId)
+          subCpmkInserts.push({
+            id: newSubId,
             cpmk_id: newCpmkId,
-            cpl_id: tmpl.cpl_id,
+            kode: sub.kode,
+            deskripsi: sub.deskripsi,
+            level_bloom: sub.level_bloom,
+            urutan: sub.urutan,
           })
         }
+      }
+    }
 
-        if (tmpl.subCpmks?.length) {
-          for (const sub of tmpl.subCpmks) {
-            const newSubId = createId()
-            templateSubCodeToNewSubId.set(sub.kode, newSubId)
-            subCpmkInserts.push({
-              id: newSubId,
-              cpmk_id: newCpmkId,
-              kode: sub.kode,
-              deskripsi: sub.deskripsi,
-              level_bloom: sub.level_bloom,
-              urutan: sub.urutan,
-            })
-          }
+    if (cpmkInserts.length > 0) {
+      await db.insert(cpmk).values(cpmkInserts)
+    }
+    if (cpmkCplInserts.length > 0) {
+      await db.insert(cpmkCpl).values(cpmkCplInserts).onConflictDoNothing()
+    }
+    if (subCpmkInserts.length > 0) {
+      await db.insert(subCpmk).values(subCpmkInserts).onConflictDoNothing()
+    }
+
+    // Batch Assessment & Rubrik
+    const komponenInserts: (typeof komponenPenilaian.$inferInsert)[] = []
+    const komponenCpmkInserts: (typeof komponenCpmk.$inferInsert)[] = []
+    const komponenSubCpmkInserts: (typeof komponenSubCpmk.$inferInsert)[] = []
+    const rubrikInserts: (typeof rubrikKriteria.$inferInsert)[] = []
+
+    for (const tmpl of assessmentTemplates) {
+      const newKompId = createId()
+      komponenInserts.push({
+        id: newKompId,
+        rps_id: rpsId,
+        nama: tmpl.nama,
+        tipe: tmpl.tipe,
+        bobot: tmpl.bobot,
+        kriteria_penilaian: tmpl.kriteria_penilaian,
+        urutan: tmpl.urutan,
+      })
+
+      if (tmpl.cpmkTemplate?.kode) {
+        const targetCpmkId = templateCodeToNewCpmkId.get(tmpl.cpmkTemplate.kode)
+        if (targetCpmkId) {
+          komponenCpmkInserts.push({ komponen_id: newKompId, cpmk_id: targetCpmkId })
         }
       }
 
-      if (cpmkInserts.length > 0) {
-        await tx.insert(cpmk).values(cpmkInserts)
-      }
-      if (cpmkCplInserts.length > 0) {
-        await tx.insert(cpmkCpl).values(cpmkCplInserts).onConflictDoNothing()
-      }
-      if (subCpmkInserts.length > 0) {
-        await tx.insert(subCpmk).values(subCpmkInserts).onConflictDoNothing()
-      }
-
-      // Batch Assessment & Rubrik
-      const komponenInserts: (typeof komponenPenilaian.$inferInsert)[] = []
-      const komponenCpmkInserts: (typeof komponenCpmk.$inferInsert)[] = []
-      const komponenSubCpmkInserts: (typeof komponenSubCpmk.$inferInsert)[] = []
-      const rubrikInserts: (typeof rubrikKriteria.$inferInsert)[] = []
-
-      for (const tmpl of assessmentTemplates) {
-        const newKompId = createId()
-        komponenInserts.push({
-          id: newKompId,
-          rps_id: rpsId,
-          nama: tmpl.nama,
-          tipe: tmpl.tipe,
-          bobot: tmpl.bobot,
-          kriteria_penilaian: tmpl.kriteria_penilaian,
-          urutan: tmpl.urutan,
-        })
-
-        if (tmpl.cpmkTemplate?.kode) {
-          const targetCpmkId = templateCodeToNewCpmkId.get(tmpl.cpmkTemplate.kode)
-          if (targetCpmkId) {
-            komponenCpmkInserts.push({ komponen_id: newKompId, cpmk_id: targetCpmkId })
-          }
+      if (tmpl.subCpmkTemplate?.kode) {
+        const targetSubId = templateSubCodeToNewSubId.get(tmpl.subCpmkTemplate.kode)
+        if (targetSubId) {
+          komponenSubCpmkInserts.push({ komponen_id: newKompId, sub_cpmk_id: targetSubId })
         }
-
-        if (tmpl.subCpmkTemplate?.kode) {
-          const targetSubId = templateSubCodeToNewSubId.get(tmpl.subCpmkTemplate.kode)
-          if (targetSubId) {
-            komponenSubCpmkInserts.push({ komponen_id: newKompId, sub_cpmk_id: targetSubId })
-          }
-        }
-
-        rubrikInserts.push({
-          komponen_id: newKompId,
-          kriteria: tmpl.kriteria_penilaian || "Kualitas pencapaian tugas",
-          bobot: 100,
-          sangat_baik: "Sangat baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
-          baik: "Baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
-          cukup: "Cukup menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
-          kurang: "Kurang menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
-          sangat_kurang: "Sangat kurang menunjukkan pencapaian pada aspek yang dinilai.",
-          urutan: 1,
-        })
       }
 
-      if (komponenInserts.length > 0) {
-        await tx.insert(komponenPenilaian).values(komponenInserts)
-      }
-      if (komponenCpmkInserts.length > 0) {
-        await tx.insert(komponenCpmk).values(komponenCpmkInserts)
-      }
-      if (komponenSubCpmkInserts.length > 0) {
-        await tx.insert(komponenSubCpmk).values(komponenSubCpmkInserts)
-      }
-      if (rubrikInserts.length > 0) {
-        await tx.insert(rubrikKriteria).values(rubrikInserts)
-      }
+      rubrikInserts.push({
+        komponen_id: newKompId,
+        kriteria: tmpl.kriteria_penilaian || "Kualitas pencapaian tugas",
+        bobot: 100,
+        sangat_baik: "Sangat baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+        baik: "Baik menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+        cukup: "Cukup menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+        kurang: "Kurang menunjukkan analisis, implementasi, pengujian, dokumentasi, sikap, dan pemahaman.",
+        sangat_kurang: "Sangat kurang menunjukkan pencapaian pada aspek yang dinilai.",
+        urutan: 1,
+      })
+    }
 
-      return insertedRps
-    })
+    if (komponenInserts.length > 0) {
+      await db.insert(komponenPenilaian).values(komponenInserts)
+    }
+    if (komponenCpmkInserts.length > 0) {
+      await db.insert(komponenCpmk).values(komponenCpmkInserts)
+    }
+    if (komponenSubCpmkInserts.length > 0) {
+      await db.insert(komponenSubCpmk).values(komponenSubCpmkInserts)
+    }
+    if (rubrikInserts.length > 0) {
+      await db.insert(rubrikKriteria).values(rubrikInserts)
+    }
 
     const durationMs = Math.round(performance.now() - startTime)
-    console.log(`[RPS Batch Init] Initialized RPS ${created.id} for dosir ${dosirMkId} in ${durationMs}ms`)
+    console.log(`[RPS Batch Init] Initialized RPS ${insertedRps.id} for dosir ${dosirMkId} in ${durationMs}ms`)
     revalidatePath(`/rps/${dosirMkId}`)
-    return { success: true, data: created, durationMs }
+    return { success: true, data: insertedRps, durationMs }
   } catch (error) {
     console.error("[RPS Batch Init Error]", error)
     return { success: false, error: "Gagal menginisialisasi RPS untuk penugasan ini" }
+  }
+}
+
+export async function backfillAllMissingRps() {
+  const startTime = performance.now()
+  try {
+    const allDosirs = await db.query.dosirMk.findMany({
+      columns: { id: true, mk_id: true },
+      with: {
+        rps: { columns: { id: true } },
+      },
+    })
+
+    const missingDosirs = allDosirs.filter((d) => !d.rps || d.rps.length === 0)
+    console.log(`[RPS Backfill] Found ${missingDosirs.length} dosirs without RPS out of ${allDosirs.length} total`)
+
+    const results = []
+    for (const d of missingDosirs) {
+      const res = await initializeRpsForDosir(d.id)
+      results.push({ dosirId: d.id, ...res })
+    }
+
+    const durationMs = Math.round(performance.now() - startTime)
+    console.log(`[RPS Backfill] Completed backfill for ${missingDosirs.length} dosirs in ${durationMs}ms`)
+    return {
+      success: true,
+      totalDosirs: allDosirs.length,
+      backfilledCount: missingDosirs.length,
+      durationMs,
+      results,
+    }
+  } catch (error) {
+    console.error("[RPS Backfill Error]", error)
+    return { success: false, error: "Gagal menjalankan backfill RPS" }
   }
 }
 
