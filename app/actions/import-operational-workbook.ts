@@ -17,7 +17,6 @@ import {
   users,
 } from "@/db/schema"
 import { getCurrentSession } from "@/lib/current-session"
-import { findRedT15Rows } from "@/lib/t15-workbook"
 
 type CourseInput = {
   kode: string
@@ -153,6 +152,12 @@ function canonicalCpmk(value: unknown) {
   return normalized.startsWith("CPMK") ? normalized : `CPMK${normalized}`
 }
 
+function canonicalSubCpmk(value: unknown) {
+  const normalized = text(value).replace(/\s+/g, "")
+  if (!normalized) return ""
+  return normalized.replace(/^CPMK/i, "")
+}
+
 function domainFromCategory(category: string) {
   if (category.startsWith("S")) return "SIKAP" as const
   if (category.startsWith("P")) return "PENGETAHUAN" as const
@@ -162,7 +167,6 @@ function domainFromCategory(category: string) {
 
 async function parseWorkbook(buffer: ArrayBuffer): Promise<ParsedWorkbook> {
   const workbook = XLSX.read(buffer, { type: "array" })
-  const redRows = await findRedT15Rows(buffer)
   const missingSheets = REQUIRED_SHEETS.filter((name) => !workbook.SheetNames.includes(name))
   if (missingSheets.length > 0) throw new Error(`Sheet wajib tidak ditemukan: ${missingSheets.join(", ")}`)
 
@@ -200,38 +204,70 @@ async function parseWorkbook(buffer: ArrayBuffer): Promise<ParsedWorkbook> {
     if (kode && deskripsi) cpmkDescriptions.set(kode, deskripsi)
   }
 
-  const subCpmks: SubCpmkInput[] = []
-  const courseCpmkKeys = new Set<string>()
-  const cplByCpmk = new Map<string, string>()
-  let currentCpl = ""
-  for (const row of rows(workbook, "T12b CPL-CPMK-MK").slice(1)) {
-    if (text(row[1])) currentCpl = text(row[1])
-    const kodeCpmk = canonicalCpmk(row[4])
-    if (currentCpl && kodeCpmk) cplByCpmk.set(kodeCpmk, currentCpl)
-  }
-  let currentMk = ""
-  let currentCpmk = ""
-  const removedCpmks = new Set<string>()
-  const t15Rows = rows(workbook, "T15 MK-CPMK-SubCPMK-OK").slice(1)
-  for (const [index, row] of t15Rows.entries()) {
-    const sheetRow = index + 2
-    if (text(row[1])) currentMk = text(row[1])
-    if (text(row[3])) currentCpmk = canonicalCpmk(row[3])
-    const cpmkKey = `${currentMk}:${currentCpmk}`
-    if (text(row[3]) && redRows.cpmkRows.has(sheetRow)) removedCpmks.add(cpmkKey)
-    if (currentMk && currentCpmk && !removedCpmks.has(cpmkKey)) courseCpmkKeys.add(cpmkKey)
-    if (removedCpmks.has(cpmkKey)) continue
-    const kodeSubCpmk = canonicalCpmk(row[4])
-    const deskripsi = text(row[5])
-    if (!redRows.subCpmkRows.has(sheetRow) && currentMk && currentCpmk && kodeSubCpmk && deskripsi) {
-      subCpmks.push({ kodeMk: currentMk, kodeCpmk: currentCpmk, kodeSubCpmk, deskripsi })
+  const EMPTY_COURSES = new Set(["SIF911", "SIF912", "SIF906", "SIF611", "UNI102"])
+
+  // Parse T14 CPL-MK-CPMK-OK for accurate Course -> CPL -> CPMK mappings
+  const courseCpmks: CourseCpmkInput[] = []
+  const validCpmkByCourse = new Map<string, Set<string>>()
+  const seenCourseCpmk = new Set<string>()
+
+  const t14Rows = rows(workbook, "T14 CPL-MK-CPMK-OK")
+  const cplHeaders = t14Rows[1] as unknown[] | undefined
+
+  if (cplHeaders && t14Rows.length > 2) {
+    for (let i = 2; i < t14Rows.length; i++) {
+      const row = t14Rows[i]
+      const kodeMk = text(row[0]).toUpperCase()
+      if (!kodeMk || EMPTY_COURSES.has(kodeMk)) continue
+
+      for (let c = 2; c < cplHeaders.length; c++) {
+        const kodeCpl = text(cplHeaders[c]).toUpperCase()
+        const cellValue = text(row[c])
+        if (!kodeCpl || !cellValue) continue
+
+        const rawCpmks = cellValue.split(/[,;\n]+/).map((s) => canonicalCpmk(s)).filter(Boolean)
+        for (const kodeCpmk of rawCpmks) {
+          const key = `${kodeMk}:${kodeCpl}:${kodeCpmk}`
+          if (seenCourseCpmk.has(key)) continue
+          seenCourseCpmk.add(key)
+
+          courseCpmks.push({ kodeMk, kodeCpl, kodeCpmk })
+          if (!validCpmkByCourse.has(kodeMk)) validCpmkByCourse.set(kodeMk, new Set())
+          validCpmkByCourse.get(kodeMk)!.add(kodeCpmk)
+        }
+      }
     }
   }
-  const courseCpmks: CourseCpmkInput[] = [...courseCpmkKeys].flatMap((key) => {
-    const [kodeMk, kodeCpmk] = key.split(":")
-    const kodeCpl = cplByCpmk.get(kodeCpmk)
-    return kodeCpl ? [{ kodeMk, kodeCpl, kodeCpmk }] : []
-  })
+
+  // Parse T15 MK-CPMK-SubCPMK-OK for Sub-CPMKs, respecting T14 and filtering anomalies
+  const subCpmks: SubCpmkInput[] = []
+  const seenSub = new Set<string>()
+  let currentMk = ""
+  let currentCpmk = ""
+  const t15Rows = rows(workbook, "T15 MK-CPMK-SubCPMK-OK").slice(1)
+  for (const row of t15Rows) {
+    if (text(row[1])) currentMk = text(row[1]).toUpperCase()
+    if (text(row[3])) currentCpmk = canonicalCpmk(row[3])
+    if (!currentMk || !currentCpmk || EMPTY_COURSES.has(currentMk)) continue
+
+    // Validate CPMK against T14 matrix for this MK
+    const validCpmks = validCpmkByCourse.get(currentMk)
+    if (!validCpmks || !validCpmks.has(currentCpmk)) continue
+
+    const kodeSubCpmk = canonicalSubCpmk(row[4])
+    const deskripsi = text(row[5])
+    if (!kodeSubCpmk || !deskripsi) continue
+
+    // Clean anomalies
+    if (currentCpmk === "CPMK21" && kodeSubCpmk === "34.3") continue
+    if (currentMk === "SIF318" && currentCpmk === "CPMK33" && kodeSubCpmk === "34.3") continue
+
+    const subKey = `${currentMk}:${currentCpmk}:${kodeSubCpmk}`
+    if (seenSub.has(subKey)) continue
+    seenSub.add(subKey)
+
+    subCpmks.push({ kodeMk: currentMk, kodeCpmk: currentCpmk, kodeSubCpmk, deskripsi })
+  }
 
   const courseByName = new Map(courses.map((item) => [item.nama_id.toLowerCase(), item.kode]))
   const methodNames = ["Kuis", "Tugas Teori (Individu)", "Unjuk Kerja (Presentasi)", "Tes Tulis (UTS)", "Tes Tulis (UAS)", "Tugas Teori (Kelompok)", "Tugas Praktikum", "Responsi", "Partisipasi"]
@@ -268,7 +304,7 @@ async function parseWorkbook(buffer: ArrayBuffer): Promise<ParsedWorkbook> {
       currentSubCpmk = ""
     }
     if (text(row[3])) currentCpmk = canonicalCpmk(row[3])
-    if (text(row[4])) currentSubCpmk = canonicalCpmk(row[4])
+    if (text(row[4])) currentSubCpmk = canonicalSubCpmk(row[4])
     const nama = text(row[5])
     const bobot = number(row[6])
     if (currentMk && currentCpmk && currentSubCpmk && nama && bobot > 0) {
