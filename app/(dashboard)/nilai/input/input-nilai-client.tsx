@@ -247,7 +247,12 @@ export function InputNilaiClient({
         {/* Page header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Input Nilai</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">Input Nilai</h1>
+              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-xs">
+                Disabled
+              </Badge>
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-2"><p className="text-muted-foreground text-sm">Pilih kelas dan masukkan nilai komponen mahasiswa</p><Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">{academicTerm}</Badge></div>
           </div>
 
@@ -261,19 +266,30 @@ export function InputNilaiClient({
               )}
               <Button
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={true}
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 opacity-60 cursor-not-allowed"
+                title="Fitur simpan nilai dinonaktifkan sementara"
               >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {isSaving ? "Menyimpan..." : "Simpan Nilai"}
+                <Save className="h-4 w-4" />
+                Simpan Nilai
               </Button>
             </div>
           )}
+        </div>
+
+        {/* Disabled Notice Banner */}
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 flex items-start sm:items-center gap-3 text-amber-900 shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">Modul Input Nilai Dinonaktifkan Sementara</span>
+              <span className="rounded bg-amber-200/70 text-amber-900 px-1.5 py-0.5 text-[10px] font-medium">Read Only</span>
+            </div>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Fitur input dan penyimpanan nilai mahasiswa saat ini dinonaktifkan sementara di seluruh sistem. Anda masih dapat melihat daftar kelas dan data yang ada.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -424,8 +440,9 @@ export function InputNilaiClient({
                                   <TableCell key={c.id} className="p-1">
                                     <Input
                                       type="number"
+                                      disabled
                                       className={cn(
-                                        "h-8 text-center text-xs tabular-nums transition-colors duration-200",
+                                        "h-8 text-center text-xs tabular-nums transition-colors duration-200 opacity-70 bg-gray-50 cursor-not-allowed",
                                         "focus-visible:ring-blue-500",
                                         hasScore && inputCls
                                       )}

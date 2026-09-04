@@ -5,7 +5,7 @@ import { eq, and, asc, avg, count, sql } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Users, BookOpen, GraduationCap, TrendingUp, CheckCircle2 } from "lucide-react"
+import { Users, BookOpen, GraduationCap, TrendingUp, CheckCircle2, AlertTriangle } from "lucide-react"
 
 
 export const dynamic = "force-dynamic"
@@ -91,9 +91,30 @@ export default async function RekapNilaiPage(props: {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Rekap Nilai</h1>
-        <p className="text-muted-foreground">Laporan ringkasan pencapaian nilai mahasiswa</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">Rekap Nilai</h1>
+            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-xs">
+              Disabled
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-sm">Laporan ringkasan pencapaian nilai mahasiswa</p>
+        </div>
+      </div>
+
+      {/* Disabled Notice Banner */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 flex items-start sm:items-center gap-3 text-amber-900 shadow-sm">
+        <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">Modul Rekap Nilai Dinonaktifkan Sementara</span>
+            <span className="rounded bg-amber-200/70 text-amber-900 px-1.5 py-0.5 text-[10px] font-medium">Read Only</span>
+          </div>
+          <p className="text-xs text-amber-700 mt-0.5">
+            Laporan dan rekapitulasi nilai saat ini dinonaktifkan sementara di seluruh sistem.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

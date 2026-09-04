@@ -48,6 +48,7 @@ type NavItem = {
   icon: LucideIcon
   show: boolean
   badge?: string
+  disabled?: boolean
 }
 
 type NavGroup = {
@@ -94,8 +95,8 @@ export function Sidebar({ session }: SidebarProps) {
         { name: "RPM", href: "/rpm", icon: CalendarDays, show: isDosen },
         { name: "RTM", href: "/rtm", icon: ClipboardList, show: isDosen },
         { name: "Enrollment", href: "/nilai/enrollment", icon: Users, show: isSuperAdmin || isKaprodi },
-        { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen },
-        { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true },
+        { name: "Input Nilai", href: "/nilai/input", icon: PenSquare, show: isSuperAdmin || isKaprodi || isDosen, disabled: true },
+        { name: "Rekap Nilai", href: "/nilai/rekap", icon: BarChart2, show: true, disabled: true },
       ],
     },
     {
@@ -154,6 +155,23 @@ export function Sidebar({ session }: SidebarProps) {
             <div className="space-y-0.5">
               {visible.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+
+                if (item.disabled) {
+                  return (
+                    <div
+                      key={item.name}
+                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-400 opacity-50 cursor-not-allowed select-none bg-transparent"
+                      title={`${item.name} dinonaktifkan sementara`}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0 text-gray-400" />
+                      <span className="flex-1 truncate">{item.name}</span>
+                      <span className="ml-auto rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-gray-400">
+                        Disabled
+                      </span>
+                    </div>
+                  )
+                }
+
                 return (
                   <Link
                     key={item.name}
