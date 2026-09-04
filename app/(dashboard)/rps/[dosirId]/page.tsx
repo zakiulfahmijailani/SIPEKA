@@ -39,12 +39,15 @@ export default async function RpsEditorPage(props: {
     where: eq(rps.dosir_mk_id, dosirId),
     orderBy: [desc(rps.version)],
   })
+  let initializationError: string | null = null
 
   // Inisialisasi cepat jika penugasan lama belum memiliki baris RPS
   if (!rpsData) {
     const initResult = await initializeRpsForDosir(dosirId)
     if (initResult.success && initResult.data) {
       rpsData = initResult.data as any
+    } else {
+      initializationError = initResult.error || "Gagal menginisialisasi RPS"
     }
   }
 
@@ -62,6 +65,7 @@ export default async function RpsEditorPage(props: {
       initialRps={rpsData} 
       mappedCpls={mappedCpls.map(m => m.cpl)}
       currentUser={session.user}
+      initialInitializationError={initializationError}
     />
   )
 }

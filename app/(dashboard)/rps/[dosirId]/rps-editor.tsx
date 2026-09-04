@@ -52,6 +52,7 @@ interface RpsEditorProps {
   initialRps: any | null
   mappedCpls: any[]
   currentUser: any
+  initialInitializationError?: string | null
 }
 
 export type SectionType = "IDENTITAS" | "FORMALITAS" | "CPL" | "CPMK" | "ASSESSMENT" | "MEETINGS" | "REFERENCES" | "PREVIEW"
@@ -63,11 +64,13 @@ const STATUS_LABEL: Record<string, string> = {
   REVISION_REQUIRED: "Perlu Revisi",
 }
 
-export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEditorProps) {
+export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialInitializationError = null }: RpsEditorProps) {
   const [activeSection, setActiveSection] = useState<SectionType>("IDENTITAS")
   const [rpsData, setRpsData] = useState(initialRps)
   const [isSaving, setIsSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const [isInitializing, setIsInitializing] = useState(false)
+  const [initializationError, setInitializationError] = useState<string | null>(initialInitializationError)
   const sectionSaveRef = useRef<RpsSectionSave | null>(null)
 
   // Cache data per seksi (Lazy Loaded on click)
@@ -97,16 +100,26 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
     { id: "PREVIEW",    label: "Pratinjau & Ajukan",      icon: FileCheck },
   ]
 
-  // Inisialisasi RPS jika belum ada
-  useEffect(() => {
-    if (!initialRps) {
-      const init = async () => {
-        const res = await createOrGetRps(dosir.id)
-        if (res.success) setRpsData(res.data)
+  const initializeRps = useCallback(async () => {
+    if (inFlightRef.current.INITIALIZE) return
+
+    inFlightRef.current.INITIALIZE = true
+    setIsInitializing(true)
+    setInitializationError(null)
+    try {
+      const res = await createOrGetRps(dosir.id)
+      if (res.success && res.data) {
+        setRpsData(res.data)
+      } else {
+        setInitializationError(res.error || "Gagal menginisialisasi RPS")
       }
-      init()
+    } catch (error) {
+      setInitializationError(error instanceof Error ? error.message : "Terjadi kesalahan jaringan saat menginisialisasi RPS")
+    } finally {
+      inFlightRef.current.INITIALIZE = false
+      setIsInitializing(false)
     }
-  }, [initialRps, dosir.id])
+  }, [dosir.id])
 
   // Fetcher on-demand untuk setiap seksi dengan pengukuran waktu & penanganan error
   const loadCpmks = useCallback(async (force = false) => {
@@ -330,7 +343,39 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser }: RpsEdi
   }
 
   const renderSection = () => {
-    if (!rpsData) return <div className="p-8 text-center">Menginisialisasi RPS...</div>
+    if (!rpsData) {
+      if (isInitializing) {
+        return (
+          <div className="flex flex-col items-center justify-center space-y-3 py-24 text-slate-500">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-sm font-medium">Menginisialisasi RPS...</p>
+          </div>
+        )
+      }
+
+      return (
+        <div className="flex flex-col items-center justify-center space-y-4 rounded-2xl border border-red-200 bg-red-50/50 p-8 py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-red-900">RPS Gagal Diinisialisasi</h3>
+            <p className="max-w-md text-xs text-red-700">
+              {initializationError || "Data RPS belum tersedia. Silakan coba kembali."}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={initializeRps}
+            className="gap-2 border-red-200 bg-white text-red-700 shadow-sm hover:bg-red-50"
+          >
+            <RefreshCw className="h-4 w-4" /> Coba Lagi
+          </Button>
+        </div>
+      )
+    }
 
     // Tampilkan Loading State jika seksi sedang mengambil data
     if (sectionLoading[activeSection]) {
