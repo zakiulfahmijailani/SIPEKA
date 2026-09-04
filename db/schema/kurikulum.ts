@@ -47,6 +47,7 @@ export const mataKuliah = pgTable("mata_kuliah", {
   nama_en: text("nama_en"),
   sks_teori: integer("sks_teori").notNull().default(2),
   sks_praktik: integer("sks_praktik").notNull().default(0),
+  sks_tutorial: integer("sks_tutorial").notNull().default(0),
   semester_rekomendasi: integer("semester_rekomendasi").notNull(),
   status: mkStatusEnum("status").notNull().default("WAJIB"),
   track: mkTrackEnum("track").notNull().default("UMUM"),

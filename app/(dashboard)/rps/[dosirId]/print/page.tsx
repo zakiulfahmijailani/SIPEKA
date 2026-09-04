@@ -1,184 +1,417 @@
-import { db } from "@/db"
-import { dosirMk, mkPrasyarat, petaKurikulum, rps } from "@/db/schema"
-import { desc, eq } from "drizzle-orm"
 import { notFound, redirect } from "next/navigation"
 
 import { PrintToolbar } from "@/components/rps/print-toolbar"
 import { getCurrentSession } from "@/lib/current-session"
+import { getOfficialRpsExportData } from "@/lib/rps-export-official"
 
 export const dynamic = "force-dynamic"
 
-const formatDate = (value?: string | Date | null) => {
-  if (!value) return "—"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(date)
-}
-
-const semesterLabel = (kode: string) => kode.endsWith("-2") ? "Genap" : "Ganjil"
-
-function OfficialHeader({ title, formCode }: { title: string; formCode: string }) {
-  return (
-    <header className="grid grid-cols-[72px_1fr_170px] border border-black text-center text-[9pt] leading-tight">
-      <div className="flex items-center justify-center border-r border-black font-sans text-[9pt] font-bold">UB</div>
-      <div className="px-4 py-3">
-        <p className="font-bold uppercase">Universitas Bakrie</p>
-        <p className="font-bold uppercase">Fakultas Teknologi Informasi</p>
-        <p className="mt-1 font-bold uppercase">{title}</p>
-      </div>
-      <div className="border-l border-black px-2 py-2 text-left text-[8pt]">
-        <p>No. Form: {formCode}</p>
-        <p>Tgl. Form: 1 April 2026</p>
-        <p>Rev. Form: 01</p>
-      </div>
-    </header>
-  )
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="border-y border-black py-1.5 text-[10pt] font-bold uppercase">{children}</h2>
-}
-
-function Signature({ label, name, position, date }: { label: string; name?: string | null; position: string; date?: string | Date | null }) {
-  return (
-    <div className="text-center text-[10pt]">
-      <p className="whitespace-pre-line">{label}</p>
-      <div className="h-20" />
-      <p className="font-bold underline underline-offset-2">{name || "(........................................)"}</p>
-      <p>{position}</p>
-      <p className="mt-1 text-[9pt]">{formatDate(date)}</p>
-    </div>
-  )
-}
-
-export default async function RpsPrintPage({ params }: { params: Promise<{ dosirId: string }> }) {
+export default async function RpsPrintPage({
+  params,
+}: {
+  params: Promise<{ dosirId: string }>
+}) {
   const session = await getCurrentSession()
   if (!session?.user) redirect("/login")
 
   const { dosirId } = await params
-  const dosir = await db.query.dosirMk.findFirst({
-    where: eq(dosirMk.id, dosirId),
-    with: { mk: true, dosen: true, tahunAkademik: true },
-  })
-  if (!dosir) notFound()
-  if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) redirect("/rps")
+  const data = await getOfficialRpsExportData(dosirId)
+  if (!data) notFound()
 
-  const [rpsData, mappedCpls, prerequisites] = await Promise.all([
-    db.query.rps.findFirst({
-      where: eq(rps.dosir_mk_id, dosirId),
-      orderBy: [desc(rps.version)],
-      with: {
-        cpmks: { with: { cplMappings: { with: { cpl: true } } } },
-        komponens: { with: { cpmkMappings: true, subCpmkMappings: { with: { subCpmk: true } }, rubrikKriterias: true } },
-        pertemuans: { with: { subCpmkMappings: { with: { subCpmk: true } } } },
-        referensis: true,
-      },
-    }),
-    db.query.petaKurikulum.findMany({ where: eq(petaKurikulum.mk_id, dosir.mk_id), with: { cpl: true } }),
-    db.query.mkPrasyarat.findMany({ where: eq(mkPrasyarat.mk_id, dosir.mk_id), with: { prasyarat: true } }),
-  ])
-  if (!rpsData) return <div className="p-20 text-center">RPS belum tersedia untuk dicetak.</div>
+  // Authorization check
+  if (session.user.role === "DOSEN") {
+    const isAssigned =
+      data.dosir.dosen_id === session.user.id ||
+      (session.user.name && data.dosenList.includes(session.user.name))
+    if (!isAssigned) redirect("/rps")
+  }
 
-  const totalSks = dosir.mk.sks_teori + dosir.mk.sks_praktik
-  const totalBobot = Number((rpsData.komponens.reduce((sum, item) => sum + Number(item.bobot || 0), 0)).toFixed(2))
-  const courseName = dosir.mk.nama_en ? `${dosir.mk.nama_id} / ${dosir.mk.nama_en}` : dosir.mk.nama_id
+  const {
+    dosir,
+    mk,
+    tahunAkademik,
+    rps: rpsData,
+    dosenList,
+    institution,
+    prasyaratText,
+    allCpls,
+    mappedCplCodes,
+    cpmkRows,
+    assessmentSummary,
+    isWeightValid,
+    isDraft,
+    outlineRows,
+    references,
+    perlengkapan,
+  } = data
+
+  const totalSks = (mk.sks_teori || 0) + (mk.sks_praktik || 0)
+  const lecturerNames = dosenList.join(", ") || dosir.dosen?.nama_lengkap || "—"
+  const preparedByName = (rpsData as any)?.nama_penyusun || dosir.dosen?.nama_lengkap || "—"
+  const preparedByPosition = (rpsData as any)?.jabatan_penyusun || "Dosen Pengampu"
+  const certifiedByName = rpsData?.nama_penyetuju || "—"
+  const certifiedByPosition = rpsData?.jabatan_penyetuju || "Ketua Program Studi"
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 font-serif text-[10pt] leading-snug print:bg-white print:p-0">
-      <style dangerouslySetInnerHTML={{ __html: `
+    <div className="min-h-screen bg-slate-100 p-6 font-serif text-[9pt] leading-snug print:bg-white print:p-0">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @media print {
-          @page { size: A4 portrait; margin: 14mm; }
-          @page course-outline { size: A4 landscape; margin: 10mm; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-print { display: none !important; }
-          .print-page { box-shadow: none !important; margin: 0 !important; }
-          .course-outline-page { page: course-outline; break-before: page; }
-          .avoid-break { break-inside: avoid; }
+          @page {
+            size: A4 portrait;
+            margin: 12mm 10mm 10mm 10mm;
+          }
+          @page landscape-sheet {
+            size: A4 landscape;
+            margin: 8mm 8mm 8mm 8mm;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-sheet {
+            box-shadow: none !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            border: none !important;
+          }
+          .page-break {
+            break-before: page;
+            page-break-before: always;
+          }
+          .landscape-page {
+            page: landscape-sheet;
+            break-before: page;
+            page-break-before: always;
+          }
+          .avoid-break {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
         }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #000; padding: 5px; vertical-align: top; }
-        th { font-weight: 700; text-align: center; }
-      `}} />
-      <PrintToolbar backHref={`/rps/${dosirId}`} label="RPS" documentType="rps" dosirId={dosirId} />
+        table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        th, td {
+          border: 1px solid #000;
+          padding: 4px;
+          vertical-align: top;
+        }
+        th {
+          font-weight: 700;
+          text-align: center;
+        }
+      `,
+        }}
+      />
 
-      <article className="print-page mx-auto max-w-[210mm] space-y-5 bg-white p-[14mm] shadow-sm print:max-w-none print:p-0">
-        <OfficialHeader title="Form Rencana Pembelajaran Semester (RPS)" formCode="F-PPK-09" />
+      <PrintToolbar
+        backHref={`/rps/${dosirId}`}
+        label="RPS"
+        documentType="rps"
+        dosirId={dosirId}
+      />
 
-        <table className="text-[9pt]">
+      {/* PAGE 1: PORTRAIT */}
+      <article className="print-sheet mx-auto max-w-[210mm] space-y-4 bg-white p-[12mm] shadow-sm mb-8 print:mb-0">
+        {/* Header Page 1 */}
+        <header className="grid grid-cols-[80px_1fr_160px] border border-black text-center leading-tight">
+          <div className="flex items-center justify-center border-r border-black p-2">
+            <img
+              src="/images/rps/image1.jpeg"
+              alt="Logo Universitas Bakrie"
+              className="max-h-12 w-auto object-contain"
+            />
+          </div>
+          <div className="p-2 flex flex-col justify-center">
+            <p className="text-[12pt] font-bold tracking-wide">SYLLABUS</p>
+            <p className="text-[10pt] font-semibold">(RENCANA PEMBELAJARAN SEMESTER)</p>
+          </div>
+          <div className="border-l border-black p-2 flex flex-col justify-center text-left text-[8.5pt] font-semibold">
+            <p>[{mk.kode}]</p>
+            <p className="text-slate-500 font-normal">Pg. 1/3</p>
+          </div>
+        </header>
+
+        {/* Table 1: Identitas Mata Kuliah */}
+        <table className="text-[8.5pt]">
           <tbody>
-            <tr><td className="w-[26%] font-bold">Course Code / Kode Mata Kuliah</td><td>{dosir.mk.kode}</td><td className="w-[25%] font-bold">Course Name / Nama Mata Kuliah</td><td>{courseName}</td></tr>
-            <tr><td className="font-bold">Study Program / Program Studi</td><td>Sistem Informasi / Information System</td><td className="font-bold">Faculty / Fakultas</td><td>Fakultas Teknologi Informasi</td></tr>
-            <tr><td className="font-bold">Course Prerequisite / Prasyarat</td><td colSpan={3}>{prerequisites.length ? prerequisites.map((item) => `${item.prasyarat.kode} — ${item.prasyarat.nama_id}`).join("; ") : "Tidak ada"}</td></tr>
-            <tr><td className="font-bold">Credit / Kredit</td><td>{totalSks} SKS</td><td className="font-bold">Lecture / Tutorial / Practicum</td><td>{dosir.mk.sks_teori} / 0 / {dosir.mk.sks_praktik} SKS</td></tr>
-            <tr><td className="font-bold">Revision Status / Status Revisi</td><td>{rpsData.status_revisi}</td><td className="font-bold">Semester / Tahun Akademik</td><td>{semesterLabel(dosir.tahunAkademik.kode)} / {dosir.tahunAkademik.kode}</td></tr>
-            <tr><td className="font-bold">Lecturer’s Name / Dosen Pengampu</td><td colSpan={3}>{dosir.dosen.nama_lengkap}</td></tr>
+            <tr>
+              <td className="w-[28%] font-bold">Course Code (Kode Mata Kuliah)</td>
+              <td className="w-[22%] font-mono">{mk.kode}</td>
+              <td className="w-[25%] font-bold">Course Name (Nama Mata Kuliah)</td>
+              <td className="w-[25%] font-bold">{mk.nama_id}{mk.nama_en ? ` / ${mk.nama_en}` : ""}</td>
+            </tr>
+            <tr>
+              <td className="font-bold">Study Program (Program Studi)</td>
+              <td>{institution.prodi}</td>
+              <td className="font-bold">Faculty (Fakultas)</td>
+              <td>{institution.fakultas}</td>
+            </tr>
+            <tr>
+              <td className="font-bold">Course Prerequisite (Prasyarat)</td>
+              <td colSpan={3}>{prasyaratText}</td>
+            </tr>
+            <tr>
+              <td className="font-bold">Credit (Kredit)</td>
+              <td>{totalSks} SKS</td>
+              <td className="font-bold">Lecture / Tutorial / Practicum</td>
+              <td>{mk.sks_teori || 0} / {(mk as any).sks_tutorial || 0} / {mk.sks_praktik || 0} SKS</td>
+            </tr>
+            <tr>
+              <td className="font-bold">Revision Status (Status Revisi)</td>
+              <td>{rpsData?.status_revisi || "R-1"}</td>
+              <td className="font-bold">Semester & Academic Year</td>
+              <td>Semester {mk.semester_rekomendasi || 1} - {tahunAkademik.kode}</td>
+            </tr>
+            <tr>
+              <td className="font-bold">Lecturer's name (Dosen Pengampu)</td>
+              <td colSpan={3} className="font-bold">{lecturerNames}</td>
+            </tr>
+            <tr>
+              <td colSpan={2} className="align-top">
+                <p className="font-bold text-[8.5pt]">Dipersiapkan oleh (Prepared by) :</p>
+                <p className="mt-1">Nama (Name) : {preparedByName}</p>
+                <p>Jabatan (Position) : {preparedByPosition}</p>
+                <p>Tanggal (Date) : {rpsData?.tanggal_penyusunan || "—"}</p>
+                <div className="h-12" />
+                <p className="text-center font-mono text-[8pt] text-slate-400">( Tanda Tangan )</p>
+              </td>
+              <td colSpan={2} className="align-top">
+                <p className="font-bold text-[8.5pt]">Disahkan oleh (Certified by) :</p>
+                <p className="mt-1">Nama (Name) : {certifiedByName}</p>
+                <p>Jabatan (Position) : {certifiedByPosition}</p>
+                <p>Tanggal (Date) : {rpsData?.tanggal_pengesahan || "—"}</p>
+                <div className="h-12" />
+                <p className="text-center font-mono text-[8pt] text-slate-400">( Tanda Tangan )</p>
+              </td>
+            </tr>
           </tbody>
         </table>
 
-        <section className="space-y-2 avoid-break">
-          <SectionTitle>Course Description / Deskripsi Mata Kuliah</SectionTitle>
-          <p className="whitespace-pre-wrap text-justify">{rpsData.deskripsi_mk || "—"}</p>
+        {/* Course Description */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">COURSE DESCRIPTION / Deskripsi Matakuliah</h2>
+          <p className="text-justify text-[8.5pt] whitespace-pre-wrap">{rpsData?.deskripsi_mk || "—"}</p>
         </section>
 
-        <section className="space-y-2 avoid-break">
-          <SectionTitle>Learning Outcome / Capaian Pembelajaran</SectionTitle>
-          <table className="text-[8.5pt]">
-            <thead><tr><th>Kode MK</th><th>Nama Mata Kuliah</th><th>SKS</th>{mappedCpls.map((item) => <th key={item.cpl_id}>{item.cpl.kode}</th>)}</tr></thead>
-            <tbody><tr><td>{dosir.mk.kode}</td><td>{courseName}</td><td className="text-center">{totalSks}</td>{mappedCpls.map((item) => <td key={item.cpl_id} className="text-center font-bold">{item.cpl.kode}</td>)}</tr></tbody>
+        {/* Course Objectives */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">COURSE OBJECTIVES / Sasaran Kompetensi Lulusan</h2>
+          <p className="text-justify text-[8.5pt] whitespace-pre-wrap">
+            {(rpsData as any)?.sasaran_kompetensi_lulusan ||
+              "Menguasai kompetensi dasar, analisis, perancangan, dan implementasi sesuai bidang keilmuan mata kuliah ini."}
+          </p>
+        </section>
+
+        {/* Learning Outcome (Table 2: CPL Matrix) */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">LEARNING OUTCOME / Capaian Pembelajaran*</h2>
+          <table className="text-[8pt] text-center">
+            <thead>
+              <tr className="bg-slate-50 font-bold">
+                <th className="w-[14%]">Course Code</th>
+                <th className="w-[30%]">Course Name</th>
+                <th className="w-[10%]">Credit</th>
+                {allCpls.map((c) => (
+                  <th key={c.id} className="p-1 text-[7.5pt]">CP<br />({c.kode})</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-mono">{mk.kode}</td>
+                <td className="text-left font-medium">{mk.nama_id}</td>
+                <td>{totalSks}</td>
+                {allCpls.map((c) => (
+                  <td key={c.id} className="font-bold">
+                    {mappedCplCodes.includes(c.kode) ? "✓" : ""}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
           </table>
+          <p className="text-[7.5pt] italic text-slate-600">*beri tanda pada CP yang dibebankan pada MK</p>
         </section>
 
-        <section className="space-y-2">
-          <SectionTitle>Subject Learning Outcome / Capaian Pembelajaran Mata Kuliah</SectionTitle>
-          <table className="text-[8.5pt]">
-            <thead><tr><th className="w-16">Kode CPMK</th><th>Uraian CPMK</th><th>CP / CPL</th><th className="w-[20%]">Metode Pencapaian</th></tr></thead>
-            <tbody>{rpsData.cpmks.sort((a, b) => a.urutan - b.urutan).map((item) => (
-              <tr key={item.id}><td className="text-center font-bold">{item.kode}</td><td className="text-justify">{item.deskripsi}</td><td className="text-justify">{item.cplMappings.map((mapping) => `${mapping.cpl.kode} — ${mapping.cpl.rumusan}`).join("; ") || "—"}</td><td>{item.metode_pencapaian || "—"}</td></tr>
-            ))}</tbody>
-          </table>
-        </section>
-
-        <section className="space-y-2 avoid-break"><SectionTitle>Methods of Instruction / Metode Pembelajaran</SectionTitle><p className="whitespace-pre-wrap text-justify">{rpsData.metode_pembelajaran || "—"}</p></section>
-        <section className="space-y-2 avoid-break"><SectionTitle>Attendance Requirement / Persyaratan Kehadiran</SectionTitle><p className="whitespace-pre-wrap text-justify">{rpsData.persyaratan_kehadiran || "—"}</p></section>
-
-        <section className="space-y-2 avoid-break">
-          <SectionTitle>Assessment / Penilaian</SectionTitle>
-          <table className="text-[9pt]"><thead><tr><th className="w-10">No.</th><th>Komponen Penilaian</th><th className="w-24">Bobot</th></tr></thead><tbody>
-            {rpsData.komponens.sort((a, b) => a.urutan - b.urutan).map((item, index) => <tr key={item.id}><td className="text-center">{index + 1}</td><td>{item.nama || item.tipe}</td><td className="text-center">{Number(item.bobot).toFixed(2).replace(/\.00$/, "")}%</td></tr>)}
-            <tr className="font-bold"><td colSpan={2} className="text-right">Total</td><td className="text-center">{totalBobot}%</td></tr>
-          </tbody></table>
-        </section>
-
-        <section className="space-y-2 avoid-break">
-          <SectionTitle>Material References / Bahan Referensi</SectionTitle>
-          <ol className="list-decimal space-y-1 pl-5">{rpsData.referensis.sort((a, b) => a.urutan - b.urutan).map((item) => <li key={item.id}><strong>[{item.jenis}]</strong> {item.teks}</li>)}</ol>
-        </section>
-
-        <section className="grid grid-cols-2 gap-16 pt-8">
-          <Signature label="Dipersiapkan oleh" name={dosir.dosen.nama_lengkap} position="Dosen Pengampu" date={rpsData.tanggal_penyusunan} />
-          <Signature label="Disahkan oleh" name={rpsData.nama_penyetuju} position={rpsData.jabatan_penyetuju} date={rpsData.tanggal_pengesahan} />
-        </section>
+        <div className="pt-2 text-right text-[8pt] text-slate-500 font-mono">F-PPK-09-r1</div>
       </article>
 
-      <article className="course-outline-page print-page mx-auto mt-6 max-w-[297mm] space-y-5 bg-white p-[10mm] shadow-sm print:mt-0 print:max-w-none print:p-0">
-        <OfficialHeader title="Course Outline / Rencana Pembelajaran Mingguan" formCode="F-PPK-09" />
-        <table className="text-[7.5pt] leading-tight">
-          <thead><tr><th className="w-10">Sesi</th><th className="w-[19%]">Targeted Competencies / Kemampuan Akhir</th><th className="w-[24%]">Topic & Sub-topics / Materi Pembelajaran</th><th className="w-[18%]">Forms of Instruction & Duration</th><th className="w-[14%]">Material References</th><th>Assessment Indicators / Indikator Penilaian</th></tr></thead>
-          <tbody>{rpsData.pertemuans.sort((a, b) => a.minggu_ke - b.minggu_ke).map((meeting) => (
-            <tr key={meeting.id}>
-              <td className="text-center font-bold">{meeting.minggu_ke}</td>
-              <td>{meeting.subCpmkMappings.map((mapping) => <p key={mapping.sub_cpmk_id}><strong>{mapping.subCpmk.kode}</strong> — {mapping.subCpmk.deskripsi}</p>)}{!meeting.subCpmkMappings.length && "—"}</td>
-              <td className="whitespace-pre-wrap">{meeting.materi || "—"}</td>
-              <td><p><strong>Bentuk:</strong> {meeting.bentuk_pembelajaran || "—"}</p><p><strong>Metode:</strong> {meeting.metode || "—"}</p><p><strong>Waktu:</strong> {meeting.estimasi_waktu || "—"}</p></td>
-              <td className="whitespace-pre-wrap">{meeting.referensi || "—"}</td>
-              <td><p className="whitespace-pre-wrap">{meeting.indikator || "—"}</p>{meeting.kriteria_penilaian && <p className="mt-1 whitespace-pre-wrap"><strong>Penilaian:</strong> {meeting.kriteria_penilaian}</p>}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-        <section className="grid grid-cols-2 gap-16 pt-6">
-          <Signature label="Dipersiapkan oleh" name={dosir.dosen.nama_lengkap} position="Dosen Pengampu" date={rpsData.tanggal_penyusunan} />
-          <Signature label="Disahkan oleh" name={rpsData.nama_penyetuju} position={rpsData.jabatan_penyetuju} date={rpsData.tanggal_pengesahan} />
+      {/* PAGE 2: PORTRAIT */}
+      <article className="print-sheet page-break mx-auto max-w-[210mm] space-y-4 bg-white p-[12mm] shadow-sm mb-8 print:mb-0">
+        {/* Header Page 2 */}
+        <header className="grid grid-cols-[80px_1fr_160px] border border-black text-center leading-tight">
+          <div className="flex items-center justify-center border-r border-black p-2">
+            <img
+              src="/images/rps/image1.jpeg"
+              alt="Logo Universitas Bakrie"
+              className="max-h-12 w-auto object-contain"
+            />
+          </div>
+          <div className="p-2 flex flex-col justify-center">
+            <p className="text-[12pt] font-bold tracking-wide">SYLLABUS</p>
+            <p className="text-[10pt] font-semibold">(RENCANA PEMBELAJARAN SEMESTER)</p>
+          </div>
+          <div className="border-l border-black p-2 flex flex-col justify-center text-left text-[8.5pt] font-semibold">
+            <p>[{mk.kode}]</p>
+            <p className="text-slate-500 font-normal">Pg. 2/3</p>
+          </div>
+        </header>
+
+        {/* Subject Learning Outcome (CPMK Table) */}
+        <section className="space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">SUBJECT LEARNING OUTCOME / Capaian Pembelajaran Mata Kuliah</h2>
+          <table className="text-[8pt]">
+            <thead>
+              <tr className="bg-slate-50 font-bold text-center">
+                <th className="w-[12%]">Course LO (CPMK)</th>
+                <th className="w-[42%]">Learning Outcome / Deskripsi</th>
+                <th className="w-[20%]">Program LO (CPL)</th>
+                <th className="w-[26%]">Methods of Instruction</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cpmkRows.map((c) => (
+                <tr key={c.kode}>
+                  <td className="text-center font-bold font-mono">{c.kode}</td>
+                  <td className="text-justify">{c.deskripsi}</td>
+                  <td className="text-center">{c.cplCodes}</td>
+                  <td className="text-justify">{c.metode}</td>
+                </tr>
+              ))}
+              {cpmkRows.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="text-center p-3 text-slate-400 italic">Belum ada data CPMK</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </section>
+
+        {/* Methods of Instruction */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">METHODS OF INSTRUCTION / Metode Pembelajaran</h2>
+          <p className="text-justify text-[8.5pt]">
+            {rpsData?.metode_pembelajaran ||
+              "Diskusi kelompok, simulasi, studi kasus, pembelajaran kolaboratif, dan pembelajaran berbasis proyek (PBL)."}
+          </p>
+        </section>
+
+        {/* Attendance Requirement */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">ATTENDANCE REQUIREMENT / Syarat Kehadiran</h2>
+          <p className="text-justify text-[8.5pt]">
+            {rpsData?.persyaratan_kehadiran ||
+              "Sesuai dengan peraturan akademik Universitas Bakrie (kehadiran minimal 75% dari total tatap muka untuk dapat mengikuti Ujian Akhir Semester)."}
+          </p>
+        </section>
+
+        {/* Assessment */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">ASSESSMENT / Penilaian dan Pembobotannya</h2>
+          <div className="border border-black p-2 text-[8.5pt] space-y-1">
+            <p className="font-bold">Coursework evaluation will be weighted as follows:</p>
+            <div className="grid grid-cols-2 gap-x-4">
+              <p>• Mid-Semester Examination (UTS) : {assessmentSummary.uts}%</p>
+              <p>• Final Examination (UAS) : {assessmentSummary.uas}%</p>
+              <p>• Assignment (Tugas) : {assessmentSummary.tugas}%</p>
+              <p>• Others (Partisipasi, Kuis, dll) : {assessmentSummary.lainnya}%</p>
+            </div>
+            <p className="font-bold pt-1 border-t border-slate-300">Total : {assessmentSummary.total}%</p>
+            {!isWeightValid && (
+              <p className="text-red-600 font-bold text-[8pt]">
+                PERINGATAN: Total bobot penilaian belum 100% (Status: DRAFT).
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* Material References & Supplies */}
+        <section className="avoid-break space-y-1">
+          <h2 className="font-bold text-[9pt] uppercase">MATERIAL REFERENCES AND REQUIRED SUPPLIES / Daftar Referensi & Perlengkapan</h2>
+          <div className="text-[8pt] space-y-1">
+            <p className="font-bold">Daftar Referensi:</p>
+            <ol className="list-decimal pl-4 space-y-0.5">
+              {references.map((r, idx) => (
+                <li key={idx}><strong>[{r.jenis}]</strong> {r.teks}</li>
+              ))}
+              {references.length === 0 && <li className="text-slate-400 italic">Belum ada daftar referensi</li>}
+            </ol>
+            <p className="font-bold pt-1">Perlengkapan / Required Supplies:</p>
+            <p>{perlengkapan}</p>
+          </div>
+        </section>
+
+        <div className="pt-2 text-right text-[8pt] text-slate-500 font-mono">F-PPK-09-r1</div>
+      </article>
+
+      {/* PAGE 3: LANDSCAPE (Course Outline) */}
+      <article className="print-sheet landscape-page mx-auto max-w-[297mm] space-y-3 bg-white p-[10mm] shadow-sm print:max-w-none">
+        {/* Header Page 3 Landscape */}
+        <header className="grid grid-cols-[80px_1fr_180px] border border-black text-center leading-tight">
+          <div className="flex items-center justify-center border-r border-black p-2">
+            <img
+              src="/images/rps/image1.jpeg"
+              alt="Logo Universitas Bakrie"
+              className="max-h-12 w-auto object-contain"
+            />
+          </div>
+          <div className="p-2 flex flex-col justify-center">
+            <p className="text-[12pt] font-bold tracking-wide">SYLLABUS</p>
+            <p className="text-[10pt] font-semibold">(RENCANA PEMBELAJARAN SEMESTER)</p>
+          </div>
+          <div className="border-l border-black p-2 flex flex-col justify-center text-left text-[8.5pt] font-semibold">
+            <p>[{mk.kode}]</p>
+            <p className="text-slate-500 font-normal">Pg. 3/3</p>
+          </div>
+        </header>
+
+        <section className="space-y-1">
+          <h2 className="font-bold text-[9.5pt] uppercase">COURSE OUTLINE / Rencana Pembelajaran Mingguan</h2>
+          <table className="text-[7.5pt] leading-tight">
+            <thead>
+              <tr className="bg-slate-100 font-bold text-center">
+                <th className="w-[6%]">Session<br />(Sesi)</th>
+                <th className="w-[19%]">Targeted Competencies<br />(Kemampuan Akhir)</th>
+                <th className="w-[22%]">Topic & Sub-topics<br />(Materi Pembelajaran)</th>
+                <th className="w-[21%]">Forms of Instruction & Duration<br />(Bentuk & Waktu)</th>
+                <th className="w-[16%]">Material References<br />(Sumber Pembelajaran)</th>
+                <th className="w-[16%]">Assessment Indicators<br />(Indikator Penilaian)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {outlineRows.map((row, idx) => {
+                if (row.type === "UTS" || row.type === "UAS") {
+                  return (
+                    <tr key={`outline-${idx}`} className="bg-slate-100 font-bold">
+                      <td colSpan={6} className="text-center p-2 text-[8.5pt] uppercase tracking-wider">
+                        {row.topic}
+                      </td>
+                    </tr>
+                  )
+                }
+                return (
+                  <tr key={`outline-${idx}`}>
+                    <td className="text-center font-bold font-mono">{row.sessionNum}</td>
+                    <td>{row.competency}</td>
+                    <td className="whitespace-pre-wrap font-medium">{row.topic}</td>
+                    <td>{row.formAndDuration}</td>
+                    <td>{row.references}</td>
+                    <td>{row.indicators}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </section>
+
+        <div className="pt-2 text-right text-[8pt] text-slate-500 font-mono">F-PPK-09-r1</div>
       </article>
     </div>
   )

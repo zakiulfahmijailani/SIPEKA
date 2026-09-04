@@ -580,7 +580,7 @@ export async function getRpsPreviewData(rpsId: string) {
       db.query.rpsPertemuan.findMany({
         where: eq(rpsPertemuan.rps_id, rpsId),
         orderBy: [asc(rpsPertemuan.minggu_ke)],
-        with: { subCpmkMappings: true },
+        with: { subCpmkMappings: { with: { subCpmk: true } } },
       }),
       db.query.rpsReferensi.findMany({
         where: eq(rpsReferensi.rps_id, rpsId),
@@ -606,7 +606,17 @@ export async function getRpsPreviewData(rpsId: string) {
   }
 }
 
-
+export async function getOfficialRpsDataAction(dosirId: string) {
+  try {
+    const { getOfficialRpsExportData } = await import("@/lib/rps-export-official")
+    const data = await getOfficialRpsExportData(dosirId)
+    if (!data) return { success: false, error: "Data RPS tidak ditemukan" }
+    return { success: true, data }
+  } catch (error: any) {
+    console.error("[getOfficialRpsDataAction error]", error)
+    return { success: false, error: error?.message || "Gagal memuat format resmi RPS" }
+  }
+}
 
 export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: string) {
   try {
@@ -635,7 +645,7 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
       }
     }
 
-    if (status === "SUBMITTED") {
+    if (status === "SUBMITTED" || status === "APPROVED") {
       const readiness = calculateRpsReadiness(current)
       if (readiness.issues.length > 0) {
         return { success: false, error: readiness.issues[0] }
@@ -643,29 +653,29 @@ export async function updateRpsStatus(id: string, status: RpsStatus, catatan?: s
     }
 
     const actorId = await resolveActorId()
-    
-      await db.update(rps).set({
-        status,
-        catatan_reviewer: catatan || null,
-        submitted_at: status === "SUBMITTED" ? new Date() : current.submitted_at,
-        approved_at: status === "APPROVED" ? new Date() : current.approved_at,
-        approved_by: status === "APPROVED" ? actorId : current.approved_by,
-        updated_at: new Date(),
-      }).where(eq(rps.id, id))
 
-      await db.insert(rpsStatusLog).values({
-        rps_id: id,
-        status_from: current.status,
-        status_to: status,
-        changed_by: actorId,
-        catatan: catatan || null,
-      })
+    await db.update(rps).set({
+      status,
+      catatan_reviewer: catatan || null,
+      submitted_at: status === "SUBMITTED" ? new Date() : current.submitted_at,
+      approved_at: status === "APPROVED" ? new Date() : current.approved_at,
+      approved_by: status === "APPROVED" ? actorId : current.approved_by,
+      updated_at: new Date(),
+    }).where(eq(rps.id, id))
 
-      const fullRps = await db.query.rps.findFirst({
-        where: eq(rps.id, id),
-        with: { dosirMk: { with: { mk: true } } },
-      })
-      if (!fullRps) return
+    await db.insert(rpsStatusLog).values({
+      rps_id: id,
+      status_from: current.status,
+      status_to: status,
+      changed_by: actorId,
+      catatan: catatan || null,
+    })
+
+    const fullRps = await db.query.rps.findFirst({
+      where: eq(rps.id, id),
+      with: { dosirMk: { with: { mk: true } } },
+    })
+    if (!fullRps) return
 
       if (status === "SUBMITTED") {
         const reviewers = await db.query.users.findMany({
