@@ -1082,7 +1082,7 @@ export async function generateOfficialRpsPdf(data: OfficialRpsData): Promise<Buf
     // Header
     React.createElement(
       PdfView,
-      { style: pdfStyles.headerTable },
+      { style: pdfStyles.headerTable, wrap: false },
       React.createElement(
         PdfView,
         { style: pdfStyles.headerLogoCol },
@@ -1242,7 +1242,7 @@ export async function generateOfficialRpsPdf(data: OfficialRpsData): Promise<Buf
     // Header
     React.createElement(
       PdfView,
-      { style: pdfStyles.headerTable },
+      { style: pdfStyles.headerTable, wrap: false },
       React.createElement(
         PdfView,
         { style: pdfStyles.headerLogoCol },
@@ -1316,7 +1316,7 @@ export async function generateOfficialRpsPdf(data: OfficialRpsData): Promise<Buf
     // Header Landscape
     React.createElement(
       PdfView,
-      { style: pdfStyles.headerTable },
+      { style: pdfStyles.headerTable, wrap: false },
       React.createElement(
         PdfView,
         { style: pdfStyles.headerLogoCol },
