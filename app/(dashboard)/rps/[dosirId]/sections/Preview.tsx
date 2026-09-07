@@ -99,6 +99,9 @@ export function PreviewSection({
 
   const docxUrl = `/api/export/rps/${dosir.id}?format=docx`
   const pdfUrl = `/api/export/rps/${dosir.id}?format=pdf`
+  const downloadLatestExport = (url: string) => {
+    window.location.assign(`${url}&download=${Date.now()}`)
+  }
 
   return (
     <div className="space-y-8 pb-24 font-sans">
@@ -140,7 +143,16 @@ export function PreviewSection({
               variant="default"
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm font-medium"
-              render={<a href={docxUrl} download />}
+              render={
+                <a
+                  href={docxUrl}
+                  download
+                  onClick={(event) => {
+                    event.preventDefault()
+                    downloadLatestExport(docxUrl)
+                  }}
+                />
+              }
             >
               <FileText className="h-4 w-4" /> Unduh Word (.docx)
             </Button>
@@ -149,7 +161,16 @@ export function PreviewSection({
               variant="default"
               size="sm"
               className="bg-red-600 hover:bg-red-700 text-white gap-2 shadow-sm font-medium"
-              render={<a href={pdfUrl} download />}
+              render={
+                <a
+                  href={pdfUrl}
+                  download
+                  onClick={(event) => {
+                    event.preventDefault()
+                    downloadLatestExport(pdfUrl)
+                  }}
+                />
+              }
             >
               <FileDown className="h-4 w-4" /> Unduh PDF (.pdf)
             </Button>
