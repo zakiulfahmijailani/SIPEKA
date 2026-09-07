@@ -6,7 +6,6 @@ import {
   BorderStyle,
   Document as DocxDocument,
   Footer,
-  Header,
   HeightRule,
   HorizontalPositionAlign,
   HorizontalPositionRelativeFrom,
@@ -448,64 +447,60 @@ function createDraftWatermark() {
   })
 }
 
-function createOfficialDocxHeader(logoBuffer: Buffer, kodeMk: string, isLandscape = false) {
+function createOfficialDocxHeaderTable(logoBuffer: Buffer, kodeMk: string, isLandscape = false) {
   const rightWidth = isLandscape ? 13680 : 7560
-  return new Header({
-    children: [
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: TABLE_BORDERS_ALL,
-        rows: [
-          new TableRow({
-            height: { value: 980, rule: HeightRule.ATLEAST },
-            tableHeader: true,
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: TABLE_BORDERS_ALL,
+    rows: [
+      new TableRow({
+        height: { value: 980, rule: HeightRule.ATLEAST },
+        tableHeader: true,
+        children: [
+          new TableCell({
+            width: { size: 1530, type: WidthType.DXA },
+            verticalAlign: VerticalAlign.CENTER,
             children: [
-              new TableCell({
-                width: { size: 1530, type: WidthType.DXA },
-                verticalAlign: VerticalAlign.CENTER,
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 20, after: 20 },
                 children: [
-                  new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    spacing: { before: 20, after: 20 },
-                    children: [
-                      new ImageRun({
-                        data: logoBuffer,
-                        transformation: { width: 88, height: 63 },
-                        type: "jpg",
-                      }),
-                    ],
+                  new ImageRun({
+                    data: logoBuffer,
+                    transformation: { width: 88, height: 63 },
+                    type: "jpg",
                   }),
                 ],
               }),
-              new TableCell({
-                width: { size: rightWidth, type: WidthType.DXA },
-                verticalAlign: VerticalAlign.CENTER,
+            ],
+          }),
+          new TableCell({
+            width: { size: rightWidth, type: WidthType.DXA },
+            verticalAlign: VerticalAlign.CENTER,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 20, after: 10 },
                 children: [
-                  new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    spacing: { before: 20, after: 10 },
-                    children: [
-                      new TextRun({ text: "SYLLABUS", bold: true, size: 28, font: "Cambria" }),
-                    ],
-                  }),
-                  new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    spacing: { before: 10, after: 20 },
-                    children: [
-                      new TextRun({ text: "(RENCANA PEMBELAJARAN SEMESTER)", bold: true, size: 20, font: "Cambria" }),
-                    ],
-                  }),
-                  new Paragraph({
-                    alignment: AlignmentType.RIGHT,
-                    spacing: { before: 10, after: 10 },
-                    children: [
-                      new TextRun({ text: `[${kodeMk}]   Pg. `, size: 16, font: "Calibri" }),
-                      new TextRun({ children: [PageNumber.CURRENT], bold: true, size: 16, font: "Calibri" }),
-                      new TextRun({ text: " / ", size: 16, font: "Calibri" }),
-                      new TextRun({ children: [PageNumber.TOTAL_PAGES], bold: true, size: 16, font: "Calibri" }),
-                      new TextRun({ text: "   ", size: 16, font: "Calibri" }),
-                    ],
-                  }),
+                  new TextRun({ text: "SYLLABUS", bold: true, size: 28, font: "Cambria" }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 10, after: 20 },
+                children: [
+                  new TextRun({ text: "(RENCANA PEMBELAJARAN SEMESTER)", bold: true, size: 20, font: "Cambria" }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { before: 10, after: 10 },
+                children: [
+                  new TextRun({ text: `[${kodeMk}]   Pg. `, size: 16, font: "Calibri" }),
+                  new TextRun({ children: [PageNumber.CURRENT], bold: true, size: 16, font: "Calibri" }),
+                  new TextRun({ text: " / ", size: 16, font: "Calibri" }),
+                  new TextRun({ children: [PageNumber.TOTAL_PAGES], bold: true, size: 16, font: "Calibri" }),
+                  new TextRun({ text: "   ", size: 16, font: "Calibri" }),
                 ],
               }),
             ],
@@ -852,6 +847,8 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
   // SECTION 1 (Portrait - Page 1)
   const section1Children = [
     ...(data.isDraft ? [createDraftWatermark()] : []),
+    createOfficialDocxHeaderTable(logoBuffer, data.mk.kode, false),
+    new Paragraph({ spacing: { after: 100 } }),
     table0,
     sectionTitle("COURSE DESCRIPTION", "Deskripsi Matakuliah"),
     p(dash(data.rps?.deskripsi_mk), { size: 18 }),
@@ -865,6 +862,12 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
   // SECTION 2 (Portrait - Page 2)
   const section2Children = [
     ...(data.isDraft ? [createDraftWatermark()] : []),
+    // Word may position a leading table above the printable area when a
+    // same-orientation section starts immediately after another section.
+    // A minimal paragraph gives the table a stable in-flow anchor.
+    new Paragraph({ spacing: { before: 0, after: 0, line: 20 } }),
+    createOfficialDocxHeaderTable(logoBuffer, data.mk.kode, false),
+    new Paragraph({ spacing: { after: 100 } }),
     sectionTitle("SUBJECT LEARNING OUTCOME", "Capaian Pembelajaran Mata Kuliah"),
     table2Cpmk,
     sectionTitle("METHODS OF INSTRUCTION", "Metode Pembelajaran"),
@@ -893,6 +896,8 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
   // SECTION 3 (Landscape - Page 3)
   const section3Children = [
     ...(data.isDraft ? [createDraftWatermark()] : []),
+    createOfficialDocxHeaderTable(logoBuffer, data.mk.kode, true),
+    new Paragraph({ spacing: { after: 80 } }),
     sectionTitle("COURSE OUTLINE", "Rencana Pembelajaran Semester"),
     p("This section shows the targeted competencies, topics, sub-topics, specific method of instruction/delivery, material references, and assessment indicators for each session.", { size: 15, after: 60 }),
     table3Outline,
@@ -905,10 +910,9 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
           type: SectionType.NEXT_PAGE,
           page: {
             size: { width: 11909, height: 16834 },
-            margin: { top: 1728, right: 1440, bottom: 719, left: 1440, header: 450, footer: 720 },
+            margin: { top: 720, right: 1440, bottom: 719, left: 1440, header: 450, footer: 720 },
           },
         },
-        headers: { default: createOfficialDocxHeader(logoBuffer, data.mk.kode, false) },
         footers: { default: createOfficialDocxFooter() },
         children: section1Children,
       },
@@ -917,10 +921,9 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
           type: SectionType.NEXT_PAGE,
           page: {
             size: { width: 11909, height: 16834 },
-            margin: { top: 1728, right: 1440, bottom: 719, left: 1440, header: 450, footer: 720 },
+            margin: { top: 720, right: 1440, bottom: 719, left: 1440, header: 450, footer: 720 },
           },
         },
-        headers: { default: createOfficialDocxHeader(logoBuffer, data.mk.kode, false) },
         footers: { default: createOfficialDocxFooter() },
         children: section2Children,
       },
@@ -934,7 +937,6 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
             margin: { top: 720, right: 821, bottom: 720, left: 720, header: 446, footer: 720 },
           },
         },
-        headers: { default: createOfficialDocxHeader(logoBuffer, data.mk.kode, true) },
         footers: { default: createOfficialDocxFooter() },
         children: section3Children,
       },
