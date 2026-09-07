@@ -243,6 +243,16 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
 
   // Split into sessions 1-7, UTS, sessions 8-14, UAS
   const getMeetingData = (m: any) => {
+    if (!m.materi?.trim()) {
+      return {
+        competency: "—",
+        topic: "—",
+        formAndDuration: "—",
+        references: "—",
+        indicators: "—",
+      }
+    }
+
     const subCpmkList = m.subCpmkMappings
       .map((map: any) => `${map.subCpmk.kode} — ${map.subCpmk.deskripsi}`)
       .join("\n")
