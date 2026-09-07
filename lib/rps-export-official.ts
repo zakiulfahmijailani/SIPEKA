@@ -700,7 +700,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
     cplDataCols.push(
       new TableCell({
         width: { size: colWidth, type: WidthType.DXA },
-        children: [p(isChecked ? "✓" : "", { bold: true, size: 18, align: AlignmentType.CENTER })],
+        children: [p(isChecked ? "X" : "", { bold: true, size: 18, align: AlignmentType.CENTER })],
       }),
     )
   })
@@ -1160,7 +1160,7 @@ export async function generateOfficialRpsPdf(data: OfficialRpsData): Promise<Buf
           React.createElement(
             PdfText,
             { style: [pdfStyles.tableCell, { flex: 1, textAlign: "center", fontFamily: "Helvetica-Bold" }], key: `val-${c.id}` },
-            Array.isArray(data.mappedCplCodes) && data.mappedCplCodes.includes(c.kode) ? "✓" : "",
+            Array.isArray(data.mappedCplCodes) && data.mappedCplCodes.includes(c.kode) ? "X" : "",
           ),
         ),
       ),
