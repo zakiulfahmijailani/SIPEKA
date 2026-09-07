@@ -25,6 +25,8 @@ import { revalidatePath } from "next/cache"
 import { getCurrentSession } from "@/lib/current-session"
 import { createNotification } from "@/lib/notifications"
 import { calculateRpsReadiness } from "@/lib/rps-readiness"
+import { collapseRpsAssignments } from "@/lib/rps-assignment-canonical"
+import { resolveCanonicalRpsAssignment } from "@/lib/rps-assignment-server"
 
 export type RpsStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REVISION_REQUIRED" | "ARCHIVED"
 type BloomLevel = "C1" | "C2" | "C3" | "C4" | "C5" | "C6"
@@ -238,14 +240,15 @@ export async function hydrateBlankRpsFromTemplate(dosirMkId: string) {
     const session = await getCurrentSession()
     if (!session?.user) return { success: false, hydrated: false, error: "Unauthorized" }
 
-    const dosir = await db.query.dosirMk.findFirst({ where: eq(dosirMk.id, dosirMkId), with: { mk: true } })
-    if (!dosir) return { success: false, hydrated: false, error: "Penugasan mata kuliah tidak ditemukan" }
-    if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
+    const resolved = await resolveCanonicalRpsAssignment(dosirMkId)
+    if (!resolved) return { success: false, hydrated: false, error: "Penugasan mata kuliah tidak ditemukan" }
+    const dosir = resolved.canonical
+    if (session.user.role === "DOSEN" && resolved.requested.dosen_id !== session.user.id) {
       return { success: false, hydrated: false, error: "Anda tidak ditugaskan pada mata kuliah ini" }
     }
 
     const targetRps = await db.query.rps.findFirst({
-      where: eq(rps.dosir_mk_id, dosirMkId),
+      where: eq(rps.dosir_mk_id, dosir.id),
       orderBy: (table, { desc }) => [desc(table.version)],
       with: { cpmks: true },
     })
@@ -264,7 +267,7 @@ export async function hydrateBlankRpsFromTemplate(dosirMkId: string) {
 
     await db.delete(cpmk).where(eq(cpmk.rps_id, targetRps.id))
     await copyCpmkTemplateToRps(targetRps.id, dosir.mk_id)
-    revalidatePath(`/rps/${dosirMkId}`)
+    revalidatePath(`/rps/${dosir.id}`)
     return { success: true, hydrated: true }
   } catch (error) {
     console.error(error)
@@ -275,20 +278,19 @@ export async function hydrateBlankRpsFromTemplate(dosirMkId: string) {
 export async function initializeRpsForDosir(dosirMkId: string) {
   const startTime = performance.now()
   try {
+    const resolved = await resolveCanonicalRpsAssignment(dosirMkId)
+    if (!resolved) {
+      return { success: false, error: "Penugasan mata kuliah tidak ditemukan" }
+    }
+    const dosir = resolved.canonical
+    const canonicalDosirMkId = dosir.id
+
     const existing = await db.query.rps.findFirst({
-      where: eq(rps.dosir_mk_id, dosirMkId),
+      where: eq(rps.dosir_mk_id, canonicalDosirMkId),
       orderBy: (table, { desc }) => [desc(table.version)],
     })
     if (existing) {
-      return { success: true, data: existing, durationMs: Math.round(performance.now() - startTime) }
-    }
-
-    const dosir = await db.query.dosirMk.findFirst({
-      where: eq(dosirMk.id, dosirMkId),
-      with: { mk: true },
-    })
-    if (!dosir) {
-      return { success: false, error: "Penugasan mata kuliah tidak ditemukan" }
+      return { success: true, data: existing, canonicalDosirMkId, durationMs: Math.round(performance.now() - startTime) }
     }
 
     const [cpmkTemplates, assessmentTemplates] = await Promise.all([
@@ -310,7 +312,7 @@ export async function initializeRpsForDosir(dosirMkId: string) {
       .insert(rps)
       .values({
         id: rpsId,
-        dosir_mk_id: dosirMkId,
+        dosir_mk_id: canonicalDosirMkId,
         status: "DRAFT",
         version: 1,
         deskripsi_mk: dosir.mk.deskripsi || null,
@@ -432,9 +434,9 @@ export async function initializeRpsForDosir(dosirMkId: string) {
     }
 
     const durationMs = Math.round(performance.now() - startTime)
-    console.log(`[RPS Batch Init] Initialized RPS ${insertedRps.id} for dosir ${dosirMkId} in ${durationMs}ms`)
-    revalidatePath(`/rps/${dosirMkId}`)
-    return { success: true, data: insertedRps, durationMs }
+    console.log(`[RPS Batch Init] Initialized RPS ${insertedRps.id} for dosir ${canonicalDosirMkId} in ${durationMs}ms`)
+    revalidatePath(`/rps/${canonicalDosirMkId}`)
+    return { success: true, data: insertedRps, canonicalDosirMkId, durationMs }
   } catch (error) {
     console.error("[RPS Batch Init Error]", error)
     return { success: false, error: "Gagal menginisialisasi RPS untuk penugasan ini" }
@@ -445,14 +447,17 @@ export async function backfillAllMissingRps() {
   const startTime = performance.now()
   try {
     const allDosirs = await db.query.dosirMk.findMany({
-      columns: { id: true, mk_id: true },
+      where: eq(dosirMk.is_active, true),
+      columns: { id: true, mk_id: true, dosen_id: true, tahun_akademik_id: true, kelas: true },
       with: {
-        rps: { columns: { id: true } },
+        mk: { columns: { kode: true } },
+        rps: { columns: { id: true, status: true, version: true, updated_at: true } },
       },
     })
 
-    const missingDosirs = allDosirs.filter((d) => !d.rps || d.rps.length === 0)
-    console.log(`[RPS Backfill] Found ${missingDosirs.length} dosirs without RPS out of ${allDosirs.length} total`)
+    const canonicalDosirs = collapseRpsAssignments(allDosirs)
+    const missingDosirs = canonicalDosirs.filter((d) => !d.rps || d.rps.length === 0)
+    console.log(`[RPS Backfill] Found ${missingDosirs.length} MK without RPS out of ${canonicalDosirs.length} canonical MK assignments`)
 
     const results = []
     for (const d of missingDosirs) {
@@ -464,7 +469,7 @@ export async function backfillAllMissingRps() {
     console.log(`[RPS Backfill] Completed backfill for ${missingDosirs.length} dosirs in ${durationMs}ms`)
     return {
       success: true,
-      totalDosirs: allDosirs.length,
+      totalDosirs: canonicalDosirs.length,
       backfilledCount: missingDosirs.length,
       durationMs,
       results,

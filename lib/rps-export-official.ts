@@ -31,7 +31,7 @@ import {
   View as PdfView,
   renderToBuffer,
 } from "@react-pdf/renderer"
-import { and, asc, desc, eq } from "drizzle-orm"
+import { and, asc, desc, eq, inArray } from "drizzle-orm"
 
 import { db } from "@/db"
 import {
@@ -43,6 +43,7 @@ import {
   rps,
   users,
 } from "@/db/schema"
+import { resolveCanonicalRpsAssignment } from "@/lib/rps-assignment-server"
 
 export type OfficialRpsData = {
   dosir: any
@@ -91,22 +92,17 @@ const dash = (val?: string | null) => (val && val.trim() ? val.trim() : "—")
 const cleanStr = (val?: string | null) => (val && val.trim() ? val.trim() : "")
 
 export async function getOfficialRpsExportData(dosirId: string): Promise<OfficialRpsData | null> {
-  const dosir = await db.query.dosirMk.findFirst({
-    where: eq(dosirMk.id, dosirId),
-    with: {
-      mk: true,
-      dosen: true,
-      tahunAkademik: true,
-    },
-  })
-  if (!dosir) return null
+  const resolved = await resolveCanonicalRpsAssignment(dosirId)
+  if (!resolved) return null
+  const dosir = resolved.canonical
 
   // Resolve all assigned lecturers for this course & class (team teaching)
   const coLecturers = await db.query.dosirMk.findMany({
     where: and(
       eq(dosirMk.mk_id, dosir.mk_id),
       eq(dosirMk.tahun_akademik_id, dosir.tahun_akademik_id),
-      eq(dosirMk.kelas, dosir.kelas),
+      eq(dosirMk.is_active, true),
+      inArray(dosirMk.kelas, resolved.classNames),
     ),
     with: { dosen: true },
   })
@@ -150,7 +146,7 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
 
   // RPS details
   const rpsData = await db.query.rps.findFirst({
-    where: eq(rps.dosir_mk_id, dosirId),
+    where: eq(rps.dosir_mk_id, dosir.id),
     orderBy: [desc(rps.version)],
     with: {
       cpmks: {

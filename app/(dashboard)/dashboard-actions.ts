@@ -8,6 +8,7 @@ import {
 import { eq, and, count, sql, desc } from "drizzle-orm"
 import { calculateCplAttainment } from "./laporan/actions"
 import { calculateRpsReadiness } from "@/lib/rps-readiness"
+import { collapseRpsAssignments } from "@/lib/rps-assignment-canonical"
 
 export async function getDashboardStats(role: string, userId: string, selectedTaId?: string) {
   try {
@@ -93,6 +94,7 @@ export async function getDashboardStats(role: string, userId: string, selectedTa
       const myDosirs = await db.query.dosirMk.findMany({
         where: and(
           eq(dosirMk.dosen_id, userId),
+          eq(dosirMk.is_active, true),
           activeTa ? eq(dosirMk.tahun_akademik_id, activeTa.id) : undefined
         ),
         with: {
@@ -110,7 +112,8 @@ export async function getDashboardStats(role: string, userId: string, selectedTa
         }
       })
 
-      const processedDosirs = myDosirs.map(d => {
+      const canonicalDosirs = collapseRpsAssignments(myDosirs)
+      const processedDosirs = canonicalDosirs.map(d => {
         const latestRps = [...d.rps].sort((a, b) => b.version - a.version)[0] ?? null
         const readiness = calculateRpsReadiness(latestRps)
         const totalStudents = d.enrollments.length

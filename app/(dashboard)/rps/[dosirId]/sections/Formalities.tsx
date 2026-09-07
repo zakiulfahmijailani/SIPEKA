@@ -1,8 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { debounce } from "lodash"
 import { FileText, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,28 +38,50 @@ function initialState(rps: any, dosir: any): Formalities {
   }
 }
 
-export function FormalitiesSection({ rpsId, initialRps, dosir, registerSave }: { rpsId: string; initialRps: any; dosir: any; registerSave: RegisterRpsSectionSave }) {
+export function FormalitiesSection({ rpsId, initialRps, dosir, registerSave, onSaved }: { rpsId: string; initialRps: any; dosir: any; registerSave: RegisterRpsSectionSave; onSaved?: (data: Formalities) => void }) {
   const [form, setForm] = useState(() => initialState(initialRps, dosir))
   const [isSaving, setIsSaving] = useState(false)
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const debouncedSaveRef = useRef<ReturnType<typeof debounce> | null>(null)
 
-  useEffect(() => setForm(initialState(initialRps, dosir)), [initialRps, dosir])
-
-  const debouncedSave = useCallback(
-    debounce(async (data: Formalities) => {
+  const persist = useCallback((data: Formalities) => {
+    const snapshot = { ...data }
+    const queued = saveQueueRef.current.then(async () => {
       setIsSaving(true)
-      await saveRpsFormalities(rpsId, data)
-      setIsSaving(false)
-    }, 900),
-    [rpsId],
-  )
+      try {
+        const result = await saveRpsFormalities(rpsId, snapshot)
+        if (result.success) {
+          onSaved?.(snapshot)
+        } else {
+          toast.error(result.error || "Perubahan deskripsi belum tersimpan")
+        }
+        return result
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Perubahan deskripsi belum tersimpan"
+        toast.error(message)
+        return { success: false, error: message }
+      } finally {
+        setIsSaving(false)
+      }
+    })
+
+    saveQueueRef.current = queued.then(() => undefined, () => undefined)
+    return queued
+  }, [onSaved, rpsId])
+
+  useEffect(() => {
+    const debounced = debounce((data: Formalities) => { void persist(data) }, 900)
+    debouncedSaveRef.current = debounced
+    return () => {
+      debounced.flush()
+      debouncedSaveRef.current = null
+    }
+  }, [persist])
 
   const saveNow = useCallback(async () => {
-    debouncedSave.cancel()
-    setIsSaving(true)
-    const result = await saveRpsFormalities(rpsId, form)
-    setIsSaving(false)
-    return result
-  }, [debouncedSave, form, rpsId])
+    debouncedSaveRef.current?.cancel()
+    return persist(form)
+  }, [form, persist])
 
   useEffect(() => {
     registerSave(saveNow)
@@ -68,7 +91,7 @@ export function FormalitiesSection({ rpsId, initialRps, dosir, registerSave }: {
   const update = (field: keyof Formalities, value: string) => {
     const next = { ...form, [field]: value }
     setForm(next)
-    debouncedSave(next)
+    debouncedSaveRef.current?.(next)
   }
 
   return (

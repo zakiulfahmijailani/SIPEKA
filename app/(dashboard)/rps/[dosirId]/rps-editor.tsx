@@ -89,6 +89,20 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
     sectionSaveRef.current = save
   }, [])
 
+  const handleFormalitiesSaved = useCallback((data: Record<string, string>) => {
+    setRpsData((current: any) => current ? { ...current, ...data, updated_at: new Date().toISOString() } : current)
+    setPreviewData(null)
+  }, [])
+
+  const handleMeetingsSaved = useCallback((data: any[]) => {
+    setMeetingsData(data.map((item) => ({
+      ...item,
+      subCpmkMappings: (item.sub_cpmk_ids || []).map((id: string) => ({ sub_cpmk_id: id })),
+    })))
+    setRpsData((current: any) => current ? { ...current, updated_at: new Date().toISOString() } : current)
+    setPreviewData(null)
+  }, [])
+
   const sections = [
     { id: "IDENTITAS",  label: "Identitas MK",          icon: Book },
     { id: "FORMALITAS", label: "Deskripsi & Pengesahan", icon: FileCheck },
@@ -342,6 +356,28 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
     }
   }
 
+  const handleSectionChange = async (nextSection: SectionType) => {
+    if (nextSection === activeSection || isSaving) return
+
+    const saveCurrentSection = sectionSaveRef.current
+    if (saveCurrentSection && canEdit) {
+      setIsSaving(true)
+      try {
+        const result = await saveCurrentSection()
+        if (!result.success) {
+          toast.error(result.error || "Bagian ini belum berhasil disimpan")
+          return
+        }
+        setPreviewData(null)
+      } finally {
+        setIsSaving(false)
+      }
+    }
+
+    sectionSaveRef.current = null
+    setActiveSection(nextSection)
+  }
+
   const renderSection = () => {
     if (!rpsData) {
       if (isInitializing) {
@@ -422,7 +458,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
       case "IDENTITAS":
         return <IdentitasSection dosir={dosir} />
       case "FORMALITAS":
-        return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} registerSave={registerSectionSave} />
+        return <FormalitiesSection rpsId={rpsData.id} initialRps={rpsData} dosir={dosir} registerSave={registerSectionSave} onSaved={handleFormalitiesSaved} />
       case "CPL":
         return <CplSection cpls={mappedCpls} />
       case "CPMK":
@@ -430,7 +466,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
       case "ASSESSMENT":
         return <AssessmentSection rpsId={rpsData.id} initialKomponens={komponensData || []} cpmks={cpmksData || []} registerSave={registerSectionSave} />
       case "MEETINGS":
-        return <MeetingsSection rpsId={rpsData.id} initialMeetings={meetingsData || []} cpmks={cpmksData || []} registerSave={registerSectionSave} />
+        return <MeetingsSection rpsId={rpsData.id} initialMeetings={meetingsData || []} cpmks={cpmksData || []} registerSave={registerSectionSave} onSaved={handleMeetingsSaved} />
       case "REFERENCES":
         return <ReferencesSection rpsId={rpsData.id} initialReferences={referencesData || []} registerSave={registerSectionSave} />
       case "PREVIEW":
@@ -490,7 +526,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {isSaving ? "Menyimpan..." : "Simpan progres"}
               </Button>
-              <Button size="sm" className="gap-2" onClick={() => setActiveSection("PREVIEW")} disabled={isSaving}>
+              <Button size="sm" className="gap-2" onClick={() => void handleSectionChange("PREVIEW")} disabled={isSaving}>
                 <Send className="h-4 w-4" /> Ajukan RPS
               </Button>
             </>
@@ -508,7 +544,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
           {sections.map((s) => (
             <button
               key={s.id}
-              onClick={() => setActiveSection(s.id as SectionType)}
+              onClick={() => void handleSectionChange(s.id as SectionType)}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all",
                 activeSection === s.id

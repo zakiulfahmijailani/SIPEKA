@@ -21,11 +21,12 @@ interface MeetingsSectionProps {
   initialMeetings: any[]
   cpmks: any[]
   registerSave: RegisterRpsSectionSave
+  onSaved?: (data: any[]) => void
 }
 
 type ExcelMeetingRow = Record<string, unknown>
 
-export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }: MeetingsSectionProps) {
+export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave, onSaved }: MeetingsSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const subCpmks = useMemo(
     () => cpmks.flatMap((item) => (item.subCpmks || []).map((sub: any) => ({ ...sub, cpmkKode: item.kode }))),
@@ -56,26 +57,46 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
     }),
   )
   const [isSaving, setIsSaving] = useState(false)
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const debouncedSaveRef = useRef<ReturnType<typeof debounce> | null>(null)
 
   const completedWeeks = meetings.filter((item) => item.materi?.trim() && item.metode?.trim()).length
 
-  const debouncedSave = useCallback(
-    debounce(async (data: any[]) => {
+  const persist = useCallback((data: any[]) => {
+    const snapshot = data.map((item) => ({ ...item, sub_cpmk_ids: [...(item.sub_cpmk_ids || [])] }))
+    const queued = saveQueueRef.current.then(async () => {
       setIsSaving(true)
-      const result = await saveMeetings(rpsId, data)
-      if (!result.success) toast.error(result.error)
-      setIsSaving(false)
-    }, 1400),
-    [rpsId],
-  )
+      try {
+        const result = await saveMeetings(rpsId, snapshot)
+        if (result.success) onSaved?.(snapshot)
+        else toast.error(result.error)
+        return result
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Gagal menyimpan rencana pertemuan"
+        toast.error(message)
+        return { success: false, error: message }
+      } finally {
+        setIsSaving(false)
+      }
+    })
+
+    saveQueueRef.current = queued.then(() => undefined, () => undefined)
+    return queued
+  }, [onSaved, rpsId])
+
+  useEffect(() => {
+    const debounced = debounce((data: any[]) => { void persist(data) }, 1400)
+    debouncedSaveRef.current = debounced
+    return () => {
+      debounced.flush()
+      debouncedSaveRef.current = null
+    }
+  }, [persist])
 
   const saveNow = useCallback(async () => {
-    debouncedSave.cancel()
-    setIsSaving(true)
-    const result = await saveMeetings(rpsId, meetings)
-    setIsSaving(false)
-    return result
-  }, [debouncedSave, meetings, rpsId])
+    debouncedSaveRef.current?.cancel()
+    return persist(meetings)
+  }, [meetings, persist])
 
   useEffect(() => {
     registerSave(saveNow)
@@ -86,7 +107,7 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
     const next = [...meetings]
     next[index] = { ...next[index], [field]: value }
     setMeetings(next)
-    debouncedSave(next)
+    debouncedSaveRef.current?.(next)
   }
 
   const toggleSubCpmk = (index: number, id: string) => {
@@ -97,7 +118,7 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
       sub_cpmk_ids: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     }
     setMeetings(next)
-    debouncedSave(next)
+    debouncedSaveRef.current?.(next)
   }
 
   const handleDownloadTemplate = () => {
@@ -248,9 +269,7 @@ export function MeetingsSection({ rpsId, initialMeetings, cpmks, registerSave }:
         })
 
         setMeetings(updated)
-        setIsSaving(true)
-        const res = await saveMeetings(rpsId, updated)
-        setIsSaving(false)
+        const res = await persist(updated)
         if (res.success) {
           toast.success(`${rowsByWeek.size} data rencana mingguan berhasil ditarik dari Excel dan disimpan!`)
         } else {

@@ -1,10 +1,11 @@
 import { getCurrentSession } from "@/lib/current-session"
 import { db } from "@/db"
-import { dosirMk, rps, petaKurikulum } from "@/db/schema"
+import { rps, petaKurikulum } from "@/db/schema"
 import { redirect, notFound } from "next/navigation"
 import { RpsEditor } from "./rps-editor"
 import { eq, desc } from "drizzle-orm"
 import { initializeRpsForDosir } from "../actions"
+import { resolveCanonicalRpsAssignment } from "@/lib/rps-assignment-server"
 
 export const dynamic = "force-dynamic"
 
@@ -17,33 +18,31 @@ export default async function RpsEditorPage(props: {
   const params = await props.params
   const dosirId = params.dosirId
 
-  // 1. Fetch dosir details (MK + Dosen + TA)
-  const dosir = await db.query.dosirMk.findFirst({
-    where: eq(dosirMk.id, dosirId),
-    with: {
-      mk: true,
-      dosen: true,
-      tahunAkademik: true,
-    }
-  })
-
-  if (!dosir) notFound()
+  // Satu RPS dipakai bersama untuk seluruh kelas MK yang diampu dosen pada semester ini.
+  const resolved = await resolveCanonicalRpsAssignment(dosirId)
+  if (!resolved) notFound()
 
   // Authorization check
-  if (session.user.role === "DOSEN" && dosir.dosen_id !== session.user.id) {
+  if (session.user.role === "DOSEN" && resolved.requested.dosen_id !== session.user.id) {
     redirect("/rps")
   }
 
+  if (resolved.canonical.id !== dosirId) {
+    redirect(`/rps/${resolved.canonical.id}`)
+  }
+
+  const dosir = resolved.canonical
+
   // 2. Fetch lightweight RPS header (no heavy joins)
   let rpsData = await db.query.rps.findFirst({
-    where: eq(rps.dosir_mk_id, dosirId),
+    where: eq(rps.dosir_mk_id, dosir.id),
     orderBy: [desc(rps.version)],
   })
   let initializationError: string | null = null
 
   // Inisialisasi cepat jika penugasan lama belum memiliki baris RPS
   if (!rpsData) {
-    const initResult = await initializeRpsForDosir(dosirId)
+    const initResult = await initializeRpsForDosir(dosir.id)
     if (initResult.success && initResult.data) {
       rpsData = initResult.data as any
     } else {
