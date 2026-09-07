@@ -249,11 +249,11 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
     const forms = [m.bentuk_pembelajaran, m.metode, m.estimasi_waktu].filter(Boolean).join("\n")
     const indicators = [m.indikator, m.kriteria_penilaian ? `Kriteria: ${m.kriteria_penilaian}` : ""].filter(Boolean).join("\n")
     return {
-      competency: subCpmkList || "Mampu memahami materi pembelajaran sesi ini",
-      topic: m.materi || `Materi Sesi`,
-      formAndDuration: forms || "Kuliah & Diskusi (TM: 2x50\")",
-      references: m.referensi || "Bahan ajar & modul",
-      indicators: indicators || "Ketepatan penjelasan dan partisipasi aktif",
+      competency: subCpmkList || "—",
+      topic: m.materi?.trim() || "—",
+      formAndDuration: forms || "—",
+      references: m.referensi?.trim() || "—",
+      indicators: indicators || "—",
     }
   }
 
@@ -267,10 +267,10 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
         type: "SESSION",
         sessionNum: s,
         competency: "—",
-        topic: `Materi Perkuliahan Sesi ${s}`,
-        formAndDuration: "Kuliah & Diskusi (2x50\")",
-        references: "Bahan ajar perkuliahan",
-        indicators: "Partisipasi kelas dan latihan",
+        topic: "—",
+        formAndDuration: "—",
+        references: "—",
+        indicators: "—",
       })
     }
   }
@@ -298,10 +298,10 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
         type: "SESSION",
         sessionNum: s,
         competency: "—",
-        topic: `Materi Perkuliahan Sesi ${s}`,
-        formAndDuration: "Kuliah & Diskusi (2x50\")",
-        references: "Bahan ajar perkuliahan",
-        indicators: "Partisipasi kelas dan latihan",
+        topic: "—",
+        formAndDuration: "—",
+        references: "—",
+        indicators: "—",
       })
     }
   }
