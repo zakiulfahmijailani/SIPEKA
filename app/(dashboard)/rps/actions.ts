@@ -738,7 +738,10 @@ export async function saveMeetings(rpsId: string, data: MeetingInput[]) {
   try {
     await assertCanEditRps(rpsId)
     for (const item of data) {
-      const cleanMateri = item.materi?.trim() ? item.materi.trim() : `Minggu ${item.minggu_ke}`
+      const rawMateri = item.materi?.trim() || ""
+      // Versi lama otomatis menyimpan placeholder "Minggu N" sebagai materi.
+      // Kosongkan kembali placeholder tersebut agar progres hanya menghitung isian dosen.
+      const cleanMateri = rawMateri === `Minggu ${item.minggu_ke}` ? "" : rawMateri
       const cleanMetode = item.metode?.trim() || null
       const cleanMedia = item.media?.trim() || null
       const cleanEstimasi = item.estimasi_waktu?.trim() || null

@@ -35,12 +35,16 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm"
 
 import { db } from "@/db"
 import {
+  cpmk,
   cpl,
   dosirMk,
+  komponenPenilaian,
   mkPrasyarat,
   petaKurikulum,
   programSettings,
   rps,
+  rpsPertemuan,
+  rpsReferensi,
   users,
 } from "@/db/schema"
 import { resolveCanonicalRpsAssignment } from "@/lib/rps-assignment-server"
@@ -150,14 +154,14 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
     orderBy: [desc(rps.version)],
     with: {
       cpmks: {
-        orderBy: [asc(rps.version)],
+        orderBy: [asc(cpmk.urutan)],
         with: {
           cplMappings: { with: { cpl: true } },
-          subCpmks: { orderBy: [asc(cpl.urutan)] },
+          subCpmks: { orderBy: (table, { asc }) => [asc(table.urutan)] },
         },
       },
       komponens: {
-        orderBy: [asc(rps.version)],
+        orderBy: [asc(komponenPenilaian.urutan)],
         with: {
           cpmkMappings: true,
           subCpmkMappings: { with: { subCpmk: true } },
@@ -165,13 +169,13 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
         },
       },
       pertemuans: {
-        orderBy: [asc(rps.version)],
+        orderBy: [asc(rpsPertemuan.minggu_ke)],
         with: {
           subCpmkMappings: { with: { subCpmk: true } },
         },
       },
       referensis: {
-        orderBy: [asc(rps.version)],
+        orderBy: [asc(rpsReferensi.urutan)],
       },
     },
   })
