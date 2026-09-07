@@ -12,10 +12,10 @@ import {
   HorizontalPositionRelativeFrom,
   ImageRun,
   Packer,
-  PageBreak,
   PageNumber,
   PageOrientation,
   Paragraph,
+  SectionType,
   ShadingType,
   Table,
   TableCell,
@@ -849,7 +849,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
     rows: table3OutlineRows,
   })
 
-  // SECTION 1 (Portrait - Pages 1 & 2)
+  // SECTION 1 (Portrait - Page 1)
   const section1Children = [
     ...(data.isDraft ? [createDraftWatermark()] : []),
     table0,
@@ -860,10 +860,11 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
     sectionTitle("LEARNING OUTCOME", "Capaian Pembelajaran*"),
     table1Cpl,
     p("*beri tanda pada CP yang dibebankan pada MK", { size: 14, font: "Calibri", after: 60 }),
-    new Paragraph({ children: [new PageBreak()] }),
-    ...(data.isDraft ? [createDraftWatermark()] : []),
+  ]
 
-    // PAGE 2
+  // SECTION 2 (Portrait - Page 2)
+  const section2Children = [
+    ...(data.isDraft ? [createDraftWatermark()] : []),
     sectionTitle("SUBJECT LEARNING OUTCOME", "Capaian Pembelajaran Mata Kuliah"),
     table2Cpmk,
     sectionTitle("METHODS OF INSTRUCTION", "Metode Pembelajaran"),
@@ -889,8 +890,8 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
     p(data.perlengkapan, { size: 16 }),
   ]
 
-  // SECTION 2 (Landscape - Page 3)
-  const section2Children = [
+  // SECTION 3 (Landscape - Page 3)
+  const section3Children = [
     ...(data.isDraft ? [createDraftWatermark()] : []),
     sectionTitle("COURSE OUTLINE", "Rencana Pembelajaran Semester"),
     p("This section shows the targeted competencies, topics, sub-topics, specific method of instruction/delivery, material references, and assessment indicators for each session.", { size: 15, after: 60 }),
@@ -901,6 +902,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
     sections: [
       {
         properties: {
+          type: SectionType.NEXT_PAGE,
           page: {
             size: { width: 11909, height: 16834 },
             margin: { top: 1728, right: 1440, bottom: 719, left: 1440, header: 450, footer: 720 },
@@ -912,6 +914,19 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
       },
       {
         properties: {
+          type: SectionType.NEXT_PAGE,
+          page: {
+            size: { width: 11909, height: 16834 },
+            margin: { top: 1728, right: 1440, bottom: 719, left: 1440, header: 450, footer: 720 },
+          },
+        },
+        headers: { default: createOfficialDocxHeader(logoBuffer, data.mk.kode, false) },
+        footers: { default: createOfficialDocxFooter() },
+        children: section2Children,
+      },
+      {
+        properties: {
+          type: SectionType.NEXT_PAGE,
           page: {
             // docx swaps width and height when LANDSCAPE is set, so provide the
             // normal A4 dimensions here to avoid rotating them back to portrait.
@@ -921,7 +936,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
         },
         headers: { default: createOfficialDocxHeader(logoBuffer, data.mk.kode, true) },
         footers: { default: createOfficialDocxFooter() },
-        children: section2Children,
+        children: section3Children,
       },
     ],
   })
