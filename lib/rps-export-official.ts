@@ -867,7 +867,9 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
       {
         properties: {
           page: {
-            size: { width: 16834, height: 11909, orientation: PageOrientation.LANDSCAPE },
+            // docx swaps width and height when LANDSCAPE is set, so provide the
+            // normal A4 dimensions here to avoid rotating them back to portrait.
+            size: { width: 11909, height: 16834, orientation: PageOrientation.LANDSCAPE },
             margin: { top: 720, right: 821, bottom: 720, left: 720, header: 446, footer: 720 },
           },
         },
