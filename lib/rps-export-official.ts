@@ -8,6 +8,8 @@ import {
   Footer,
   Header,
   HeightRule,
+  HorizontalPositionAlign,
+  HorizontalPositionRelativeFrom,
   ImageRun,
   Packer,
   PageBreak,
@@ -20,6 +22,8 @@ import {
   TableRow,
   TextRun,
   VerticalAlign,
+  VerticalPositionAlign,
+  VerticalPositionRelativeFrom,
   WidthType,
 } from "docx"
 import {
@@ -401,6 +405,45 @@ function sectionTitle(titleEn: string, titleId: string) {
     children: [
       new TextRun({ text: titleEn.toUpperCase(), bold: true, size: 20, font: "Calibri" }),
       new TextRun({ text: `\n${titleId}`, bold: true, size: 18, font: "Calibri" }),
+    ],
+  })
+}
+
+function createDraftWatermark() {
+  const svg = Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300">
+      <text x="400" y="180" text-anchor="middle"
+        transform="rotate(-30 400 150)"
+        font-family="Arial, sans-serif" font-size="150" font-weight="700"
+        fill="#FCA5A5" fill-opacity="0.28">DRAFT</text>
+    </svg>
+  `)
+  const transparentPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  )
+
+  return new Paragraph({
+    spacing: { before: 0, after: 0 },
+    children: [
+      new ImageRun({
+        type: "svg",
+        data: svg,
+        fallback: { type: "png", data: transparentPng },
+        transformation: { width: 520, height: 195 },
+        floating: {
+          horizontalPosition: {
+            relative: HorizontalPositionRelativeFrom.PAGE,
+            align: HorizontalPositionAlign.CENTER,
+          },
+          verticalPosition: {
+            relative: VerticalPositionRelativeFrom.PAGE,
+            align: VerticalPositionAlign.CENTER,
+          },
+          behindDocument: true,
+          allowOverlap: true,
+        },
+      }),
     ],
   })
 }
@@ -808,6 +851,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
 
   // SECTION 1 (Portrait - Pages 1 & 2)
   const section1Children = [
+    ...(data.isDraft ? [createDraftWatermark()] : []),
     table0,
     sectionTitle("COURSE DESCRIPTION", "Deskripsi Matakuliah"),
     p(dash(data.rps?.deskripsi_mk), { size: 18 }),
@@ -817,6 +861,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
     table1Cpl,
     p("*beri tanda pada CP yang dibebankan pada MK", { size: 14, font: "Calibri", after: 60 }),
     new Paragraph({ children: [new PageBreak()] }),
+    ...(data.isDraft ? [createDraftWatermark()] : []),
 
     // PAGE 2
     sectionTitle("SUBJECT LEARNING OUTCOME", "Capaian Pembelajaran Mata Kuliah"),
@@ -846,6 +891,7 @@ export async function generateOfficialRpsDocx(data: OfficialRpsData): Promise<Bu
 
   // SECTION 2 (Landscape - Page 3)
   const section2Children = [
+    ...(data.isDraft ? [createDraftWatermark()] : []),
     sectionTitle("COURSE OUTLINE", "Rencana Pembelajaran Semester"),
     p("This section shows the targeted competencies, topics, sub-topics, specific method of instruction/delivery, material references, and assessment indicators for each session.", { size: 15, after: 60 }),
     table3Outline,
