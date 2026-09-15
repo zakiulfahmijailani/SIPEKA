@@ -1008,9 +1008,10 @@ export async function saveReferences(rpsId: string, data: Array<{ jenis: string;
   try {
     await assertCanEditRps(rpsId)
 
+    const allowedReferenceTypes = new Set(["Buku", "Jurnal", "Web", "Lainnya"])
     const references = data
       .map((item) => ({
-        jenis: item.jenis?.trim() || "Buku",
+        jenis: allowedReferenceTypes.has(item.jenis?.trim()) ? item.jenis.trim() : "Buku",
         teks: item.teks?.trim() || "",
       }))
       .filter((item) => item.teks.length > 0)
