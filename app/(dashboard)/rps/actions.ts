@@ -1007,18 +1007,38 @@ export async function deleteKomponen(id: string) {
 export async function saveReferences(rpsId: string, data: Array<{ jenis: string; teks: string }>) {
   try {
     await assertCanEditRps(rpsId)
-    
-      await db.delete(rpsReferensi).where(eq(rpsReferensi.rps_id, rpsId))
-      if (data.length > 0) {
-        await db.insert(rpsReferensi).values(data.map((item, index) => ({
+
+    const references = data
+      .map((item) => ({
+        jenis: item.jenis?.trim() || "Buku",
+        teks: item.teks?.trim() || "",
+      }))
+      .filter((item) => item.teks.length > 0)
+
+    if (references.length > 0) {
+      // Neon HTTP tidak mendukung transaksi interaktif, tetapi db.batch()
+      // menjalankan seluruh statement sebagai satu transaksi.
+      await db.batch([
+        db.delete(rpsReferensi).where(eq(rpsReferensi.rps_id, rpsId)),
+        db.insert(rpsReferensi).values(references.map((item, index) => ({
           rps_id: rpsId,
           jenis: item.jenis,
           teks: item.teks,
           urutan: index + 1,
-        })))
-      }
+        }))),
+      ])
+    } else {
+      await db.delete(rpsReferensi).where(eq(rpsReferensi.rps_id, rpsId))
+    }
+
+    const savedReferences = await db.query.rpsReferensi.findMany({
+      where: eq(rpsReferensi.rps_id, rpsId),
+      orderBy: [asc(rpsReferensi.urutan)],
+    })
+
     revalidatePath("/dashboard")
-    return { success: true }
+    revalidatePath("/rps")
+    return { success: true, data: savedReferences }
   } catch (error) {
     console.error(error)
     return { success: false, error: "Gagal menyimpan referensi" }

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Plus, Trash, Loader2, BookOpen } from "lucide-react"
 import { debounce } from "lodash"
+import { toast } from "sonner"
 import { saveReferences } from "../../actions"
 import type { RegisterRpsSectionSave } from "../rps-save-progress"
 import {
@@ -20,28 +21,53 @@ interface ReferencesSectionProps {
   rpsId: string
   initialReferences: any[]
   registerSave: RegisterRpsSectionSave
+  onSaved?: (data: any[]) => void
 }
 
-export function ReferencesSection({ rpsId, initialReferences, registerSave }: ReferencesSectionProps) {
+export function ReferencesSection({ rpsId, initialReferences, registerSave, onSaved }: ReferencesSectionProps) {
   const [refs, setRefs] = useState<any[]>(initialReferences)
   const [isSaving, setIsSaving] = useState(false)
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const debouncedSaveRef = useRef<ReturnType<typeof debounce> | null>(null)
 
-  const debouncedSave = useCallback(
-    debounce(async (data: any[]) => {
+  const persist = useCallback((data: any[]) => {
+    const snapshot = data.map((item) => ({ ...item }))
+    const queued = saveQueueRef.current.then(async () => {
       setIsSaving(true)
-      await saveReferences(rpsId, data)
-      setIsSaving(false)
-    }, 1500),
-    [rpsId]
-  )
+      try {
+        const result = await saveReferences(rpsId, snapshot)
+        if (result.success) {
+          onSaved?.(result.data || snapshot)
+        } else {
+          toast.error(result.error || "Referensi belum tersimpan")
+        }
+        return result
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Referensi belum tersimpan"
+        toast.error(message)
+        return { success: false, error: message }
+      } finally {
+        setIsSaving(false)
+      }
+    })
+
+    saveQueueRef.current = queued.then(() => undefined, () => undefined)
+    return queued
+  }, [onSaved, rpsId])
+
+  useEffect(() => {
+    const debounced = debounce((data: any[]) => { void persist(data) }, 1500)
+    debouncedSaveRef.current = debounced
+    return () => {
+      debounced.flush()
+      debouncedSaveRef.current = null
+    }
+  }, [persist])
 
   const saveNow = useCallback(async () => {
-    debouncedSave.cancel()
-    setIsSaving(true)
-    const result = await saveReferences(rpsId, refs)
-    setIsSaving(false)
-    return result
-  }, [debouncedSave, refs, rpsId])
+    debouncedSaveRef.current?.cancel()
+    return persist(refs)
+  }, [persist, refs])
 
   useEffect(() => {
     registerSave(saveNow)
@@ -60,14 +86,14 @@ export function ReferencesSection({ rpsId, initialReferences, registerSave }: Re
   const handleDelete = (index: number) => {
     const updated = refs.filter((_, i) => i !== index)
     setRefs(updated)
-    debouncedSave(updated)
+    debouncedSaveRef.current?.(updated)
   }
 
   const handleChange = (index: number, field: string, value: any) => {
     const updated = [...refs]
-    updated[index][field] = value
+    updated[index] = { ...updated[index], [field]: value }
     setRefs(updated)
-    debouncedSave(updated)
+    debouncedSaveRef.current?.(updated)
   }
 
   return (

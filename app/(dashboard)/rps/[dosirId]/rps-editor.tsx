@@ -103,6 +103,12 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
     setPreviewData(null)
   }, [])
 
+  const handleReferencesSaved = useCallback((data: any[]) => {
+    setReferencesData(data)
+    setRpsData((current: any) => current ? { ...current, referensis: data, updated_at: new Date().toISOString() } : current)
+    setPreviewData(null)
+  }, [])
+
   const sections = [
     { id: "IDENTITAS",  label: "Identitas MK",          icon: Book },
     { id: "FORMALITAS", label: "Deskripsi & Pengesahan", icon: FileCheck },
@@ -468,7 +474,7 @@ export function RpsEditor({ dosir, initialRps, mappedCpls, currentUser, initialI
       case "MEETINGS":
         return <MeetingsSection rpsId={rpsData.id} initialMeetings={meetingsData || []} cpmks={cpmksData || []} registerSave={registerSectionSave} onSaved={handleMeetingsSaved} />
       case "REFERENCES":
-        return <ReferencesSection rpsId={rpsData.id} initialReferences={referencesData || []} registerSave={registerSectionSave} />
+        return <ReferencesSection rpsId={rpsData.id} initialReferences={referencesData || []} registerSave={registerSectionSave} onSaved={handleReferencesSaved} />
       case "PREVIEW":
         return <PreviewSection dosir={dosir} rps={previewData || rpsData} mappedCpls={mappedCpls} onStatusChange={handleStatusChange} currentUser={currentUser} />
       default:
