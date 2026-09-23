@@ -149,6 +149,7 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
       with: { cpl: true },
     }),
   ])
+  const validCourseCpls = new Set(coursePetaCpls.map((p) => p.cpl.kode))
   const mappedCplCodes = new Set(coursePetaCpls.map((p) => p.cpl.kode))
 
   // RPS details
@@ -195,7 +196,10 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
   // Build CPMK rows
   const sortedCpmks = [...(rpsData?.cpmks ?? [])].sort((a, b) => a.urutan - b.urutan)
   const cpmkRows = sortedCpmks.map((c) => {
-    const cpls = c.cplMappings.map((m) => m.cpl.kode).join(", ")
+    const validMappings = c.cplMappings.filter((m) =>
+      validCourseCpls.has(m.cpl.kode)
+    )
+    const cpls = validMappings.map((m) => m.cpl.kode).join(", ")
     return {
       kode: c.kode,
       deskripsi: c.deskripsi,
@@ -204,9 +208,13 @@ export async function getOfficialRpsExportData(dosirId: string): Promise<Officia
     }
   })
 
-  // Ensure mapped CPLs from CPMK mappings are also reflected in mappedCplCodes
+  // Ensure mapped CPLs from CPMK mappings are also reflected in mappedCplCodes, but only valid ones
   sortedCpmks.forEach((c) => {
-    c.cplMappings.forEach((m) => mappedCplCodes.add(m.cpl.kode))
+    c.cplMappings.forEach((m) => {
+      if (validCourseCpls.has(m.cpl.kode)) {
+        mappedCplCodes.add(m.cpl.kode)
+      }
+    })
   })
 
   // Assessment summary & categorization

@@ -12,6 +12,7 @@ import {
   komponenPenilaian,
   komponenSubCpmk,
   pertemuanSubCpmk,
+  petaKurikulum,
   rps,
   rpsPertemuan,
   rpsReferensi,
@@ -837,6 +838,22 @@ export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
   try {
     await assertCanEditRps(rpsId)
     
+    const targetRps = await db.query.rps.findFirst({
+      where: eq(rps.id, rpsId),
+      with: { dosirMk: true },
+    })
+    const validCpls = targetRps?.dosirMk?.mk_id
+      ? await db.query.petaKurikulum.findMany({
+          where: eq(petaKurikulum.mk_id, targetRps.dosirMk.mk_id),
+        })
+      : []
+    const validCplIds = new Set(validCpls.map((p) => p.cpl_id))
+
+    if (!targetRps) return { success: false, error: "RPS tidak ditemukan" }
+    if (data.some((item) => item.cpl_id && !validCplIds.has(item.cpl_id))) {
+      return { success: false, error: "CPL pada CPMK harus berasal dari CPL yang dibebankan ke mata kuliah ini" }
+    }
+
       for (const item of data) {
         const [saved] = await db.insert(cpmk).values({
           rps_id: rpsId,
@@ -851,7 +868,7 @@ export async function saveCpmks(rpsId: string, data: CpmkInput[]) {
 
         await db.delete(cpmkCpl).where(eq(cpmkCpl.cpmk_id, saved.id))
         if (item.cpl_id) {
-          await db.insert(cpmkCpl).values({ cpmk_id: saved.id, cpl_id: item.cpl_id })
+          await db.insert(cpmkCpl).values({ cpmk_id: saved.id, cpl_id: item.cpl_id }).onConflictDoNothing()
         }
 
         for (const sub of item.subCpmks ?? []) {

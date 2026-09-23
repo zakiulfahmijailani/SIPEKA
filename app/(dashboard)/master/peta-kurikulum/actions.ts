@@ -5,6 +5,7 @@ import { petaKurikulum } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { MOCK_SESSION } from "@/lib/mock-session"
+import { syncCourseRps } from "@/lib/sync-cpmk-cpl"
 
 export async function togglePetaKurikulum(mk_id: string, cpl_id: string) {
   try {
@@ -34,7 +35,15 @@ export async function togglePetaKurikulum(mk_id: string, cpl_id: string) {
       })
     }
 
+    // Auto-sync all RPS associated with this course
+    try {
+      await syncCourseRps(mk_id)
+    } catch (syncErr) {
+      console.error("Auto-sync error in togglePetaKurikulum:", syncErr)
+    }
+
     revalidatePath("/master/peta-kurikulum")
+    revalidatePath("/rps")
     return { success: true, isAdded: !existing }
   } catch (error) {
     console.error("Error toggling peta kurikulum:", error)

@@ -17,6 +17,7 @@ import {
   users,
 } from "@/db/schema"
 import { getCurrentSession } from "@/lib/current-session"
+import { syncCourseRps } from "@/lib/sync-cpmk-cpl"
 
 type CourseInput = {
   kode: string
@@ -446,7 +447,7 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
 
     // neon-http does not support Drizzle transactions; keep the import on the same
     // database facade so it also works in the deployed server action.
-    await (async (tx: typeof db) => {
+    const importedMkIds = await (async (tx: typeof db) => {
       const cplByCode = new Map<string, string>()
       if (scope === "templates") {
         const existingCpls = await tx.select({ id: cpl.id, kode: cpl.kode }).from(cpl)
@@ -594,7 +595,12 @@ export async function importOperationalWorkbook(formData: FormData): Promise<Ope
           }
         }
       }
+      return importedMkIds
     })(db)
+
+    for (const mkId of importedMkIds) {
+      await syncCourseRps(mkId)
+    }
 
     revalidatePath("/dashboard")
     revalidatePath("/rps")

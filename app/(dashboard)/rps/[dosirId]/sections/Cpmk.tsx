@@ -19,14 +19,22 @@ interface CpmkSectionProps {
 }
 
 export function CpmkSection({ rpsId, initialCpmks, mappedCpls, registerSave }: CpmkSectionProps) {
+  const getMappedCplId = (c: any) => {
+    const validMapping = c.cplMappings?.find((m: any) =>
+      mappedCpls.some((mc: any) => mc.id === (m.cpl_id || m.cpl?.id))
+    )
+    return validMapping ? (validMapping.cpl_id || validMapping.cpl?.id) : ""
+  }
+
   const [cpmks, setCpmks] = useState<any[]>(
     initialCpmks.length > 0 ? initialCpmks.map(c => ({
       ...c,
       metode_pencapaian: c.metode_pencapaian || "Tatap muka, diskusi, dan latihan terstruktur",
-      cpl_id: c.cplMappings?.[0]?.cpl_id || "",
+      cpl_id: getMappedCplId(c),
       subCpmks: c.subCpmks || [],
     })) : []
   )
+
   const [isSaving, setIsSaving] = useState(false)
   const subCpmkCount = cpmks.reduce((total, cpmk) => total + (cpmk.subCpmks?.length || 0), 0)
 
@@ -60,8 +68,8 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls, registerSave }: C
     const newCpmk = {
       kode: `CPMK${cpmks.length + 1}`,
       deskripsi: "",
-      metode_pencapaian: "Tatap muka dan diskusi",
-      cpl_id: mappedCpls[0]?.id || "",
+      metode_pencapaian: "Tatap muka, diskusi, dan latihan terstruktur",
+      cpl_id: "",
       urutan: cpmks.length + 1,
       subCpmks: [],
     }
@@ -182,29 +190,38 @@ export function CpmkSection({ rpsId, initialCpmks, mappedCpls, registerSave }: C
                </div>
                <div className="min-w-0 space-y-2">
                  <Label className="text-xs font-semibold uppercase tracking-wide text-slate-500">CPL Terkait</Label>
-                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                   {mappedCpls.map((mappedCpl) => {
-                     const isSelected = mappedCpl.id === c.cpl_id
+                 <div className="space-y-2">
+                   <select
+                     value={c.cpl_id || ""}
+                     onChange={(e) => handleChange(idx, "cpl_id", e.target.value)}
+                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                   >
+                     <option value="">-- Pilih CPL Terkait --</option>
+                     {mappedCpls.map((mc) => (
+                       <option key={mc.id} value={mc.id}>
+                         {mc.kode} — {mc.rumusan.slice(0, 90)}{mc.rumusan.length > 90 ? "..." : ""}
+                       </option>
+                     ))}
+                   </select>
+
+                   {(() => {
+                     const assignedCpl = mappedCpls.find((mc) => mc.id === c.cpl_id)
+                     if (assignedCpl) {
+                       return (
+                         <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-relaxed text-slate-700">
+                           <span className="rounded-md bg-blue-600 px-2 py-0.5 font-mono text-[11px] font-bold text-white shrink-0">
+                             {assignedCpl.kode}
+                           </span>
+                           <span className="line-clamp-2">{assignedCpl.rumusan}</span>
+                         </div>
+                       )
+                     }
                      return (
-                       <button
-                         key={mappedCpl.id}
-                         type="button"
-                         onClick={() => handleChange(idx, "cpl_id", mappedCpl.id)}
-                         className={`rounded-xl border px-3 py-2.5 text-left transition-all ${
-                           isSelected
-                             ? "border-blue-600 bg-blue-50 shadow-sm shadow-blue-100"
-                             : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
-                         }`}
-                       >
-                         <span className={`block text-xs font-bold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
-                           {mappedCpl.kode}
-                         </span>
-                         <span className="mt-0.5 line-clamp-2 block text-[11px] leading-4 text-slate-500">
-                           {mappedCpl.rumusan}
-                         </span>
-                       </button>
+                       <p className="text-xs italic text-amber-600">
+                         Belum ada CPL yang dipilih untuk {c.kode}.
+                       </p>
                      )
-                   })}
+                   })()}
                  </div>
                </div>
             </div>
